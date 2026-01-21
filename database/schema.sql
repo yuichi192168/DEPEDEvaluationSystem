@@ -10,6 +10,8 @@ CREATE TABLE IF NOT EXISTS positions (
     id INT AUTO_INCREMENT PRIMARY KEY,
     position_name VARCHAR(255) NOT NULL,
     position_group ENUM('A', 'B', 'C') NOT NULL,
+    salary_grade VARCHAR(50),
+    item_number VARCHAR(100),
     description TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,

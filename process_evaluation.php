@@ -98,6 +98,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Perform evaluation
     $evaluation = $evaluator->evaluateApplicant($applicantData, $baselineData);
     
+    // Save evaluation to database if requested
+    if (isset($_POST['save_to_database']) && $_POST['save_to_database'] === '1') {
+        try {
+            require_once 'classes/EvaluationStorage.php';
+            $storage = new EvaluationStorage();
+            $additionalDataForStorage = [
+                'application_code' => $_POST['application_code'] ?? '',
+                'schools_division_office' => $_POST['schools_division_office'] ?? '',
+                'contact_number' => $_POST['contact_number'] ?? '',
+                'job_group_sg_level' => $_POST['job_group_sg_level'] ?? '',
+                'hrmpsb_chair' => $_POST['hrmpsb_chair'] ?? '',
+                'notes' => $_POST['evaluation_notes'] ?? ''
+            ];
+            $evaluationId = $storage->saveEvaluation($evaluation, $additionalDataForStorage);
+            // Evaluation saved successfully
+        } catch (Exception $e) {
+            // Log error but continue with report generation
+            error_log("Failed to save evaluation: " . $e->getMessage());
+        }
+    }
+    
     // Prepare additional data for IES report
     $additionalData = [
         'application_code' => $_POST['application_code'] ?? '',

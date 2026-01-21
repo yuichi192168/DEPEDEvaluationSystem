@@ -141,7 +141,19 @@ class IESExport {
         foreach ($criteriaOrder as $criterion) {
             if (isset($evaluation['criteria'][$criterion])) {
                 $criteria = $evaluation['criteria'][$criterion];
-                $computation = $criteria['applicant_level'] . '-' . $criteria['baseline_level'] . '=' . $criteria['increment'];
+                // Format computation - handle null increment for weighted criteria
+                if ($criteria['increment'] === null) {
+                    // Check if Outstanding Accomplishments (direct points, not weighted rating)
+                    if ($criterion === 'outstanding_accomplishments') {
+                        $computation = 'min(' . $criteria['applicant_level'] . ', ' . $criteria['weight'] . ')';
+                    } else {
+                        // Weighted computation for Performance, Application, Potential
+                        $computation = '(' . $criteria['applicant_level'] . '/5) × ' . $criteria['weight'];
+                    }
+                } else {
+                    // Increment-based computation for Education, Training, Experience
+                    $computation = $criteria['applicant_level'] . '-' . $criteria['baseline_level'] . '=' . $criteria['increment'];
+                }
                 $score = $criteria['final_score'] == intval($criteria['final_score']) 
                     ? intval($criteria['final_score']) 
                     : number_format($criteria['final_score'], 1);
@@ -323,7 +335,7 @@ class IESExport {
             'performance' => 'Performance',
             'outstanding_accomplishments' => 'Outstanding Accomplishments',
             'application_of_education' => 'Application of Education',
-            'application_of_ld' => 'Application of Learning and Development)',
+            'application_of_ld' => 'Application of Learning and Development',
             'potential' => 'Potential (Written Text, BEI, Work Sample Test)'
         ];
         
@@ -331,7 +343,19 @@ class IESExport {
         foreach ($criteriaOrder as $criterion) {
             if (isset($evaluation['criteria'][$criterion])) {
                 $criteria = $evaluation['criteria'][$criterion];
-                $computation = $criteria['applicant_level'] . '-' . $criteria['baseline_level'] . '=' . $criteria['increment'];
+                // Format computation - handle null increment for weighted criteria
+                if ($criteria['increment'] === null) {
+                    // Check if Outstanding Accomplishments (direct points, not weighted rating)
+                    if ($criterion === 'outstanding_accomplishments') {
+                        $computation = 'min(' . $criteria['applicant_level'] . ', ' . $criteria['weight'] . ')';
+                    } else {
+                        // Weighted computation for Performance, Application, Potential
+                        $computation = '(' . $criteria['applicant_level'] . '/5) × ' . $criteria['weight'];
+                    }
+                } else {
+                    // Increment-based computation for Education, Training, Experience
+                    $computation = $criteria['applicant_level'] . '-' . $criteria['baseline_level'] . '=' . $criteria['increment'];
+                }
                 $score = $criteria['final_score'] == intval($criteria['final_score']) 
                     ? intval($criteria['final_score']) 
                     : number_format($criteria['final_score'], 1);
@@ -503,14 +527,26 @@ class IESExport {
             'performance' => 'Performance',
             'outstanding_accomplishments' => 'Outstanding Accomplishments',
             'application_of_education' => 'Application of Education',
-            'application_of_ld' => 'Application of Learning and Development)',
+            'application_of_ld' => 'Application of Learning and Development',
             'potential' => 'Potential (Written Text, BEI, Work Sample Test)'
         ];
         
         foreach ($criteriaOrder as $criterion) {
             if (isset($evaluation['criteria'][$criterion])) {
                 $criteria = $evaluation['criteria'][$criterion];
-                $computation = $criteria['applicant_level'] . '-' . $criteria['baseline_level'] . '=' . $criteria['increment'];
+                // Format computation - handle null increment for weighted criteria
+                if ($criteria['increment'] === null) {
+                    // Check if Outstanding Accomplishments (direct points, not weighted rating)
+                    if ($criterion === 'outstanding_accomplishments') {
+                        $computation = 'min(' . $criteria['applicant_level'] . ', ' . $criteria['weight'] . ')';
+                    } else {
+                        // Weighted computation for Performance, Application, Potential
+                        $computation = '(' . $criteria['applicant_level'] . '/5) × ' . $criteria['weight'];
+                    }
+                } else {
+                    // Increment-based computation for Education, Training, Experience
+                    $computation = $criteria['applicant_level'] . '-' . $criteria['baseline_level'] . '=' . $criteria['increment'];
+                }
                 $score = $criteria['final_score'] == intval($criteria['final_score']) 
                     ? intval($criteria['final_score']) 
                     : number_format($criteria['final_score'], 1);

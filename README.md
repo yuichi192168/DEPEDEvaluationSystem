@@ -27,7 +27,7 @@ This system automatically computes the Comparative Assessment Score of applicant
 
 2. Ensure PHP is installed and configured
 
-3. (Optional) Configure database settings in `config/database.php`
+3. (Optional) Configure database settings via `initialize.php` / `classes/DBConnection.php` (or the legacy wrapper `config/database.php`)
 
 4. Access the system via web browser:
    ```
@@ -164,7 +164,7 @@ DEPEDEvaluationSystem/
 │   ├── HRMPSBEvaluator.php      # Core evaluation logic
 │   └── IESReportGenerator.php    # IES report generation
 ├── config/
-│   └── database.php              # Database configuration
+│   └── database.php              # Database configuration wrapper (uses classes/DBConnection.php)
 ├── index.php                     # Main input form
 ├── process_evaluation.php        # Evaluation processor
 ├── test_sample.php              # Sample test case

@@ -267,7 +267,7 @@ class IESReportGenerator {
             'performance' => 'Performance',
             'outstanding_accomplishments' => 'Outstanding Accomplishments',
             'application_of_education' => 'Application of Education',
-            'application_of_ld' => 'Application of Learning and Development)',
+            'application_of_ld' => 'Application of Learning and Development',
             'potential' => 'Potential (Written Text, BEI, Work Sample Test)'
         ];
         
@@ -276,8 +276,22 @@ class IESReportGenerator {
                 $criteria = $evaluation['criteria'][$criterion];
                 $totalScore += $criteria['final_score'];
                 
-                // Format computation as "6-6=0" style
-                $computation = $criteria['applicant_level'] . '-' . $criteria['baseline_level'] . '=' . $criteria['increment'];
+                // Format computation
+                // For increment-based criteria: "6-6=0"
+                // For weighted criteria (increment is null): "(rating/5) × weight"
+                // For Outstanding Accomplishments: "min(points, weight)"
+                if ($criteria['increment'] === null) {
+                    // Check if Outstanding Accomplishments (direct points, not weighted rating)
+                    if ($criterion === 'outstanding_accomplishments') {
+                        $computation = 'min(' . $criteria['applicant_level'] . ', ' . $criteria['weight'] . ')';
+                    } else {
+                        // Weighted computation for Performance, Application, Potential
+                        $computation = '(' . $criteria['applicant_level'] . '/5) × ' . $criteria['weight'];
+                    }
+                } else {
+                    // Increment-based computation for Education, Training, Experience
+                    $computation = $criteria['applicant_level'] . '-' . $criteria['baseline_level'] . '=' . $criteria['increment'];
+                }
                 
                 // Format score (remove decimals if whole number)
                 $score = $criteria['final_score'] == intval($criteria['final_score']) 
@@ -381,7 +395,19 @@ class IESReportGenerator {
         foreach ($criteriaOrder as $criterion) {
             if (isset($evaluation['criteria'][$criterion])) {
                 $criteria = $evaluation['criteria'][$criterion];
-                $computation = "{$criteria['applicant_level']}-{$criteria['baseline_level']}={$criteria['increment']}";
+                // Format computation
+                if ($criteria['increment'] === null) {
+                    // Check if Outstanding Accomplishments (direct points, not weighted rating)
+                    if ($criterion === 'outstanding_accomplishments') {
+                        $computation = "min({$criteria['applicant_level']}, {$criteria['weight']})";
+                    } else {
+                        // Weighted computation for Performance, Application, Potential
+                        $computation = "({$criteria['applicant_level']}/5) × {$criteria['weight']}";
+                    }
+                } else {
+                    // Increment-based computation for Education, Training, Experience
+                    $computation = "{$criteria['applicant_level']}-{$criteria['baseline_level']}={$criteria['increment']}";
+                }
                 $text .= sprintf("%-25s %-8s %-20s %-15s %-8.1f\n",
                     $criteria['criterion'],
                     $criteria['weight'] . '%',

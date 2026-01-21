@@ -1,0 +1,230 @@
+<?php
+/**
+ * Evaluation Storage Helper
+ * Stores and retrieves evaluations from database for Annex G-1 consolidation
+ */
+
+require_once __DIR__ . '/DBConnection.php';
+
+class EvaluationStorage {
+    private $conn;
+    
+    public function __construct() {
+        $db = new DBConnection();
+        $this->conn = $db->conn;
+    }
+    
+    /**
+     * Save evaluation to database
+     */
+    public function saveEvaluation($evaluation, $additionalData = []) {
+        // Start transaction
+        $this->conn->begin_transaction();
+        
+        try {
+            // Insert or get applicant
+            $applicantId = $this->getOrCreateApplicant(
+                $evaluation['applicant_name'],
+                $evaluation['position_applied'],
+                $evaluation['position_group'],
+                $additionalData
+            );
+            
+            // Insert or get position
+            $positionId = $this->getOrCreatePosition(
+                $evaluation['position_applied'],
+                $evaluation['position_group']
+            );
+            
+            // Insert evaluation
+            $stmt = $this->conn->prepare("
+                INSERT INTO evaluations (
+                    applicant_id, position_id, position_group, total_score, 
+                    evaluation_date, evaluator_name, status, notes
+                ) VALUES (?, ?, ?, ?, CURDATE(), ?, 'pending', ?)
+            ");
+            
+            $evaluatorName = $additionalData['hrmpsb_chair'] ?? '';
+            $notes = $additionalData['notes'] ?? '';
+            
+            $stmt->bind_param(
+                "iissss",
+                $applicantId,
+                $positionId,
+                $evaluation['position_group'],
+                $evaluation['total_score'],
+                $evaluatorName,
+                $notes
+            );
+            
+            $stmt->execute();
+            $evaluationId = $this->conn->insert_id;
+            
+            // Insert evaluation details
+            foreach ($evaluation['criteria'] as $criterion => $details) {
+                $detailStmt = $this->conn->prepare("
+                    INSERT INTO evaluation_details (
+                        evaluation_id, criterion, applicant_qualification, applicant_level,
+                        baseline_qualification, baseline_level, increment, weight, points, final_score
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ");
+                
+                $increment = $details['increment'] ?? 0;
+                $weight = $details['weight'] ?? 0;
+                $points = $details['points'] ?? 0;
+                
+                $detailStmt->bind_param(
+                    "issisiiidd",
+                    $evaluationId,
+                    $criterion,
+                    $details['applicant_qualification'] ?? '',
+                    $details['applicant_level'] ?? 0,
+                    $details['baseline_qualification'] ?? '',
+                    $details['baseline_level'] ?? 0,
+                    $increment,
+                    $weight,
+                    $points,
+                    $details['final_score'] ?? 0
+                );
+                
+                $detailStmt->execute();
+            }
+            
+            // Commit transaction
+            $this->conn->commit();
+            return $evaluationId;
+            
+        } catch (Exception $e) {
+            $this->conn->rollback();
+            throw $e;
+        }
+    }
+    
+    /**
+     * Get all evaluations for a specific position
+     */
+    public function getEvaluationsByPosition($positionName) {
+        $stmt = $this->conn->prepare("
+            SELECT 
+                e.id,
+                e.total_score,
+                e.evaluation_date,
+                e.notes as remarks,
+                a.name as applicant_name,
+                p.position_name,
+                p.position_group,
+                GROUP_CONCAT(
+                    CONCAT(ed.criterion, ':', ed.final_score)
+                    ORDER BY ed.criterion SEPARATOR '|'
+                ) as criteria_scores
+            FROM evaluations e
+            INNER JOIN applicants a ON e.applicant_id = a.id
+            LEFT JOIN positions p ON e.position_id = p.id
+            LEFT JOIN evaluation_details ed ON e.id = ed.evaluation_id
+            WHERE p.position_name = ? OR e.notes LIKE ?
+            GROUP BY e.id
+            ORDER BY e.total_score DESC
+        ");
+        
+        $positionLike = '%' . $positionName . '%';
+        $stmt->bind_param("ss", $positionName, $positionLike);
+        $stmt->execute();
+        
+        $result = $stmt->get_result();
+        $evaluations = [];
+        
+        while ($row = $result->fetch_assoc()) {
+            // Reconstruct evaluation structure
+            $evaluation = [
+                'id' => $row['id'],
+                'applicant_name' => $row['applicant_name'],
+                'position_applied' => $row['position_name'],
+                'position_group' => $row['position_group'],
+                'total_score' => floatval($row['total_score']),
+                'remarks' => $row['remarks'],
+                'criteria' => []
+            ];
+            
+            // Fetch full details for each criterion
+            $detailStmt = $this->conn->prepare("
+                SELECT * FROM evaluation_details 
+                WHERE evaluation_id = ? 
+                ORDER BY criterion
+            ");
+            $detailStmt->bind_param("i", $row['id']);
+            $detailStmt->execute();
+            $detailResult = $detailStmt->get_result();
+            
+            while ($detail = $detailResult->fetch_assoc()) {
+                $evaluation['criteria'][$detail['criterion']] = [
+                    'applicant_qualification' => $detail['applicant_qualification'] ?? '',
+                    'applicant_level' => intval($detail['applicant_level'] ?? 0),
+                    'baseline_qualification' => $detail['baseline_qualification'] ?? '',
+                    'baseline_level' => intval($detail['baseline_level'] ?? 0),
+                    'increment' => intval($detail['increment'] ?? 0),
+                    'weight' => intval($detail['weight'] ?? 0),
+                    'points' => floatval($detail['points'] ?? 0),
+                    'final_score' => floatval($detail['final_score'] ?? 0)
+                ];
+            }
+            
+            $evaluations[] = $evaluation;
+        }
+        
+        return $evaluations;
+    }
+    
+    /**
+     * Get applicant or create if not exists
+     */
+    private function getOrCreateApplicant($name, $positionName, $positionGroup, $additionalData) {
+        // Try to find existing applicant
+        $stmt = $this->conn->prepare("SELECT id FROM applicants WHERE name = ? LIMIT 1");
+        $stmt->bind_param("s", $name);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        
+        if ($row = $result->fetch_assoc()) {
+            return $row['id'];
+        }
+        
+        // Create new applicant
+        $positionId = $this->getOrCreatePosition($positionName, $positionGroup);
+        
+        $stmt = $this->conn->prepare("
+            INSERT INTO applicants (name, position_applied_id, position_group) 
+            VALUES (?, ?, ?)
+        ");
+        $stmt->bind_param("sis", $name, $positionId, $positionGroup);
+        $stmt->execute();
+        
+        return $this->conn->insert_id;
+    }
+    
+    /**
+     * Get position or create if not exists
+     */
+    private function getOrCreatePosition($positionName, $positionGroup) {
+        // Try to find existing position
+        $stmt = $this->conn->prepare("SELECT id FROM positions WHERE position_name = ? LIMIT 1");
+        $stmt->bind_param("s", $positionName);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        
+        if ($row = $result->fetch_assoc()) {
+            return $row['id'];
+        }
+        
+        // Create new position
+        $stmt = $this->conn->prepare("
+            INSERT INTO positions (position_name, position_group, description) 
+            VALUES (?, ?, ?)
+        ");
+        $description = "Position Group " . $positionGroup;
+        $stmt->bind_param("sss", $positionName, $positionGroup, $description);
+        $stmt->execute();
+        
+        return $this->conn->insert_id;
+    }
+}
+
