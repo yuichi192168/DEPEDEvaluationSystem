@@ -660,7 +660,7 @@ $positions = getAllPositions();
             <div class="btn-group">
                 <button type="submit" class="btn-primary">Generate Evaluation Report</button>
                 <button type="reset" class="btn-secondary" onclick="resetForm()">Reset Form</button>
-                <a href="comparative_assessment_results.php?view=all" class="btn-primary">📊 View All Results</a>
+                <a href="comparative_assessment_results.php?view=all" class="btn-primary">View All Results</a>
             </div>
         </form>
     </div>
