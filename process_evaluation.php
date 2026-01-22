@@ -7,6 +7,7 @@
 require_once 'classes/HRMPSBEvaluator.php';
 require_once 'classes/IESReportGenerator.php';
 require_once 'classes/IESExport.php';
+require_once 'classes/ComparativeAssessmentReport.php';
 require_once 'config/baseline_library.php';
 
 // Handle POST request
@@ -99,6 +100,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $evaluation = $evaluator->evaluateApplicant($applicantData, $baselineData);
     
     // Save evaluation to database if requested
+    $evaluationId = null;
     if (isset($_POST['save_to_database']) && $_POST['save_to_database'] === '1') {
         try {
             require_once 'classes/EvaluationStorage.php';
@@ -116,6 +118,101 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } catch (Exception $e) {
             // Log error but continue with report generation
             error_log("Failed to save evaluation: " . $e->getMessage());
+        }
+    }
+    
+    // Save to Comparative Assessment Results if requested
+    if (isset($_POST['save_to_car']) && $_POST['save_to_car'] === '1') {
+        try {
+            $car = new ComparativeAssessmentReport();
+            
+            // Get or create applicant and position IDs
+            $positionId = $_POST['position_id'] ?? null;
+            $applicantId = $_POST['applicant_id'] ?? null;
+            
+            // If IDs not provided, create them
+            if (!$positionId || !$applicantId) {
+                $conn = DBConnection::getConnection();
+                
+                if (!$applicantId) {
+                    // Create or find applicant
+                    $applicantName = $_POST['applicant_name'] ?? 'Unknown';
+                    $positionGroup = $_POST['position_group'] ?? 'A';
+                    
+                    $query = "SELECT id FROM applicants WHERE name = ? LIMIT 1";
+                    $stmt = $conn->prepare($query);
+                    $stmt->bind_param('s', $applicantName);
+                    $stmt->execute();
+                    $result = $stmt->get_result();
+                    
+                    if ($result->num_rows > 0) {
+                        $row = $result->fetch_assoc();
+                        $applicantId = $row['id'];
+                    } else {
+                        // Create new applicant
+                        $query = "INSERT INTO applicants (name, position_group) VALUES (?, ?)";
+                        $stmt = $conn->prepare($query);
+                        $stmt->bind_param('ss', $applicantName, $positionGroup);
+                        $stmt->execute();
+                        $applicantId = $conn->insert_id;
+                    }
+                    $stmt->close();
+                }
+                
+                if (!$positionId) {
+                    // Create or find position
+                    $positionName = $_POST['position_applied'] ?? 'Unknown';
+                    
+                    $query = "SELECT id FROM positions WHERE position_name = ? LIMIT 1";
+                    $stmt = $conn->prepare($query);
+                    $stmt->bind_param('s', $positionName);
+                    $stmt->execute();
+                    $result = $stmt->get_result();
+                    
+                    if ($result->num_rows > 0) {
+                        $row = $result->fetch_assoc();
+                        $positionId = $row['id'];
+                    } else {
+                        // Create new position
+                        $positionGroup = $_POST['position_group'] ?? 'A';
+                        $query = "INSERT INTO positions (position_name, position_group) VALUES (?, ?)";
+                        $stmt = $conn->prepare($query);
+                        $stmt->bind_param('ss', $positionName, $positionGroup);
+                        $stmt->execute();
+                        $positionId = $conn->insert_id;
+                    }
+                    $stmt->close();
+                }
+            }
+            
+            // Prepare scores for CAR
+            $scores = [
+                'application_code' => $_POST['application_code'] ?? '',
+                'education' => $evaluation['individual_scores']['education'] ?? 0,
+                'training' => $evaluation['individual_scores']['training'] ?? 0,
+                'experience' => $evaluation['individual_scores']['experience'] ?? 0,
+                'performance' => $evaluation['individual_scores']['performance'] ?? 0,
+                'outstanding_accomplishments' => $evaluation['individual_scores']['outstanding_accomplishments'] ?? 0,
+                'application_of_education' => $evaluation['individual_scores']['application_of_education'] ?? 0,
+                'application_of_ld' => $evaluation['individual_scores']['application_of_ld'] ?? 0,
+                'potential' => $evaluation['individual_scores']['potential'] ?? 0,
+                'total_score' => $evaluation['total_score'] ?? 0,
+                'background_yes' => $_POST['background_yes'] ?? false,
+                'background_no' => $_POST['background_no'] ?? false,
+                'for_appointment' => $_POST['for_appointment'] ?? false,
+                'for_probation' => $_POST['for_probation'] ?? false
+            ];
+            
+            $remarks = $_POST['car_remarks'] ?? '';
+            $assessmentDate = $_POST['assessment_date'] ?? date('Y-m-d');
+            
+            // Pass evaluationId to fetch actual scores from evaluation_details
+            if ($car->saveResult($positionId, $applicantId, $scores, $remarks, $assessmentDate, $evaluationId)) {
+                $car->generateRankings($positionId);
+                // CAR saved successfully
+            }
+        } catch (Exception $e) {
+            error_log("Failed to save to CAR: " . $e->getMessage());
         }
     }
     

@@ -11,12 +11,11 @@ require_once __DIR__ . '/../classes/DBConnection.php';
 
 /**
  * Legacy helper to get a mysqli connection.
- * Internally uses the DBConnection class which reads settings
+ * Internally uses the DBConnection singleton which reads settings
  * from initialize.php (local or InfinityFree).
  */
 function getDBConnection(): mysqli {
-    $db = new DBConnection();
-    return $db->conn;
+    return DBConnection::getConnection();
 }
 ?>
 

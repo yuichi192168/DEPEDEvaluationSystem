@@ -127,6 +127,39 @@ CREATE TABLE IF NOT EXISTS evaluation_details (
     INDEX idx_criterion (criterion)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Table: comparative_assessment_results
+CREATE TABLE IF NOT EXISTS comparative_assessment_results (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    position_id INT NOT NULL,
+    applicant_id INT NOT NULL,
+    application_code VARCHAR(100),
+    education_score DECIMAL(10,2) DEFAULT 0,
+    training_score DECIMAL(10,2) DEFAULT 0,
+    experience_score DECIMAL(10,2) DEFAULT 0,
+    performance_score DECIMAL(10,2) DEFAULT 0,
+    outstanding_accomplishments_score DECIMAL(10,2) DEFAULT 0,
+    application_of_education_score DECIMAL(10,2) DEFAULT 0,
+    application_of_ld_score DECIMAL(10,2) DEFAULT 0,
+    potential_score DECIMAL(10,2) DEFAULT 0,
+    total_score DECIMAL(10,2) DEFAULT 0,
+    rank INT,
+    remarks TEXT,
+    background_yes BOOLEAN DEFAULT FALSE,
+    background_no BOOLEAN DEFAULT FALSE,
+    for_appointment BOOLEAN DEFAULT FALSE,
+    for_probation BOOLEAN DEFAULT FALSE,
+    assessment_date DATE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (position_id) REFERENCES positions(id) ON DELETE CASCADE,
+    FOREIGN KEY (applicant_id) REFERENCES applicants(id) ON DELETE CASCADE,
+    INDEX idx_position_id (position_id),
+    INDEX idx_applicant_id (applicant_id),
+    INDEX idx_total_score (total_score),
+    INDEX idx_rank (rank),
+    UNIQUE KEY unique_position_applicant (position_id, applicant_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- Sample Data: Positions
 INSERT INTO positions (position_name, position_group, description) VALUES
 ('Information and Communications Technology', 'A', 'Non-Teaching Level 1 - General'),

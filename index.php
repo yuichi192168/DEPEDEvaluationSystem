@@ -158,6 +158,28 @@ $positions = getAllPositions();
         background: #A08080;
     }
     
+    /* Enhanced styling for View CAR button */
+    a.btn-primary {
+        padding: 12px 30px;
+        border: none;
+        border-radius: 5px;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s;
+        text-decoration: none;
+        display: inline-block;
+        text-align: center;
+        background: linear-gradient(135deg, #E04040 0%, #E06060 100%);
+        color: #ffffff;
+        min-width: 150px;
+    }
+    
+    a.btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(224, 64, 64, 0.4);
+    }
+    
     .info-box {
         background: #E0C0C0;
         border-left: 4px solid #E04040;
@@ -238,6 +260,10 @@ $positions = getAllPositions();
         </div>
         
         <form method="POST" action="process_evaluation.php" id="evaluationForm">
+            
+            <!-- Hidden fields to enable database and CAR saving -->
+            <input type="hidden" name="save_to_database" value="1">
+            <input type="hidden" name="save_to_car" value="1">
             
             <!-- Position Information -->
             <div class="form-section">
@@ -634,6 +660,7 @@ $positions = getAllPositions();
             <div class="btn-group">
                 <button type="submit" class="btn-primary">Generate Evaluation Report</button>
                 <button type="reset" class="btn-secondary" onclick="resetForm()">Reset Form</button>
+                <a href="comparative_assessment_results.php?view=all" class="btn-primary">📊 View All Results</a>
             </div>
         </form>
     </div>

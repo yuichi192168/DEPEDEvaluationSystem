@@ -256,26 +256,44 @@ class CARReportGenerator {
             $isBelowThreshold = $currentScore < $thresholdScore;
             $isTie = ($previousScore !== null && abs($currentScore - $previousScore) < 0.01);
             
-            // Determine display rank (show same rank for ties)
-            $displayRank = $rank;
-            if ($isTie) {
-                // Use the rank where the tie started
-                $displayRank = $tieStartRank;
+            // Use pre-calculated rank if available (from comparative_assessment_results)
+            if (isset($evaluation['rank'])) {
+                $displayRank = $evaluation['rank'];
             } else {
-                // New score, update tie start rank
-                $tieStartRank = $rank;
+                // Calculate rank from evaluation_details structure
+                $displayRank = $rank;
+                if ($isTie) {
+                    $displayRank = $tieStartRank;
+                } else {
+                    $tieStartRank = $rank;
+                }
             }
             
             // Extract scores for each criterion
-            $educationScore = $evaluation['criteria']['education']['final_score'] ?? 0;
-            $trainingScore = $evaluation['criteria']['training']['final_score'] ?? 0;
-            $experienceScore = $evaluation['criteria']['experience']['final_score'] ?? 0;
-            $performanceScore = $evaluation['criteria']['performance']['final_score'] ?? 0;
-            $accomplishmentsScore = $evaluation['criteria']['outstanding_accomplishments']['final_score'] ?? 0;
-            $applicationOfEdScore = $evaluation['criteria']['application_of_education']['final_score'] ?? 0;
-            $applicationOfLDScore = $evaluation['criteria']['application_of_ld']['final_score'] ?? 0;
-            $applicationCombinedScore = $applicationOfEdScore + $applicationOfLDScore;
-            $potentialScore = $evaluation['criteria']['potential']['final_score'] ?? 0;
+            // Support both evaluation_details structure and comparative_assessment_results structure
+            if (isset($evaluation['criteria'])) {
+                // Old structure: from evaluation_details
+                $educationScore = $evaluation['criteria']['education']['final_score'] ?? 0;
+                $trainingScore = $evaluation['criteria']['training']['final_score'] ?? 0;
+                $experienceScore = $evaluation['criteria']['experience']['final_score'] ?? 0;
+                $performanceScore = $evaluation['criteria']['performance']['final_score'] ?? 0;
+                $accomplishmentsScore = $evaluation['criteria']['outstanding_accomplishments']['final_score'] ?? 0;
+                $applicationOfEdScore = $evaluation['criteria']['application_of_education']['final_score'] ?? 0;
+                $applicationOfLDScore = $evaluation['criteria']['application_of_ld']['final_score'] ?? 0;
+                $applicationCombinedScore = $applicationOfEdScore + $applicationOfLDScore;
+                $potentialScore = $evaluation['criteria']['potential']['final_score'] ?? 0;
+            } else {
+                // New structure: from comparative_assessment_results
+                $educationScore = $evaluation['education_score'] ?? 0;
+                $trainingScore = $evaluation['training_score'] ?? 0;
+                $experienceScore = $evaluation['experience_score'] ?? 0;
+                $performanceScore = $evaluation['performance_score'] ?? 0;
+                $accomplishmentsScore = $evaluation['outstanding_accomplishments_score'] ?? 0;
+                $applicationOfEdScore = $evaluation['application_of_education_score'] ?? 0;
+                $applicationOfLDScore = $evaluation['application_of_ld_score'] ?? 0;
+                $applicationCombinedScore = $applicationOfEdScore + $applicationOfLDScore;
+                $potentialScore = $evaluation['potential_score'] ?? 0;
+            }
             
             // Format scores (remove decimals if whole number)
             $formatScore = function($score) {

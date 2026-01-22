@@ -58,19 +58,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     
     // Get position group from position name
     $positionGroup = 'A';
+    $positionId = null;
     if (!empty($positionName)) {
         $baseline = getBaselineForPosition('custom');
         foreach (getAllPositions() as $key => $pos) {
             if (stripos($pos['position_name'], $positionName) !== false || stripos($positionName, $pos['position_name']) !== false) {
                 $positionGroup = $pos['position_group'];
+                $positionId = $pos['id'];
                 break;
             }
         }
     }
     
-    // Get evaluations from storage
+    // Get comparative assessment results from storage
     $storage = new EvaluationStorage();
-    $evaluations = $storage->getEvaluationsByPosition($positionName);
+    
+    // First try to get from comparative_assessment_results table
+    $evaluations = [];
+    if ($positionId) {
+        $evaluations = $storage->getComparativeAssessmentResults($positionId);
+    }
+    
+    // Fallback to evaluation details if no CAR results found
+    if (empty($evaluations)) {
+        $evaluations = $storage->getEvaluationsByPosition($positionName);
+    }
     
     if (empty($evaluations)) {
         die('No evaluations found for position: ' . htmlspecialchars($positionName) . '<br><br><a href="view_car.php">Go back</a>');

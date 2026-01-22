@@ -6,6 +6,9 @@
  * Implements Increment Method for Comparative Assessment
  */
 
+// Only define class once
+if (!class_exists('HRMPSBEvaluator', false)) {
+
 class HRMPSBEvaluator {
     
     // Position Group Weights
@@ -555,5 +558,7 @@ class HRMPSBEvaluator {
         return $this->weights;
     }
 }
+
+} // end if !class_exists
 ?>
 

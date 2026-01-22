@@ -6,12 +6,15 @@
 
 require_once __DIR__ . '/DBConnection.php';
 
+// Only define class once
+if (!class_exists('EvaluationStorage', false)) {
+
 class EvaluationStorage {
     private $conn;
     
     public function __construct() {
-        $db = new DBConnection();
-        $this->conn = $db->conn;
+        // Use singleton connection
+        $this->conn = DBConnection::getConnection();
     }
     
     /**
@@ -69,22 +72,28 @@ class EvaluationStorage {
                     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ");
                 
+                // Prepare all variables for binding (cannot use ?? directly in bind_param)
                 $increment = $details['increment'] ?? 0;
                 $weight = $details['weight'] ?? 0;
                 $points = $details['points'] ?? 0;
+                $applicantQual = $details['applicant_qualification'] ?? '';
+                $applicantLvl = $details['applicant_level'] ?? 0;
+                $baselineQual = $details['baseline_qualification'] ?? '';
+                $baselineLvl = $details['baseline_level'] ?? 0;
+                $finalScore = $details['final_score'] ?? 0;
                 
                 $detailStmt->bind_param(
                     "issisiiidd",
                     $evaluationId,
                     $criterion,
-                    $details['applicant_qualification'] ?? '',
-                    $details['applicant_level'] ?? 0,
-                    $details['baseline_qualification'] ?? '',
-                    $details['baseline_level'] ?? 0,
+                    $applicantQual,
+                    $applicantLvl,
+                    $baselineQual,
+                    $baselineLvl,
                     $increment,
                     $weight,
                     $points,
-                    $details['final_score'] ?? 0
+                    $finalScore
                 );
                 
                 $detailStmt->execute();
@@ -226,5 +235,72 @@ class EvaluationStorage {
         
         return $this->conn->insert_id;
     }
+    
+    /**
+     * Get comparative assessment results for a position with ranking
+     */
+    public function getComparativeAssessmentResults($positionId) {
+        $query = "
+            SELECT 
+                car.id,
+                car.position_id,
+                car.applicant_id,
+                car.application_code,
+                car.education_score,
+                car.training_score,
+                car.experience_score,
+                car.performance_score,
+                car.outstanding_accomplishments_score,
+                car.application_of_education_score,
+                car.application_of_ld_score,
+                car.potential_score,
+                car.total_score,
+                car.remarks,
+                a.name as applicant_name,
+                p.position_name,
+                p.position_group,
+                @rank := IF(@prev_score = car.total_score, @rank, @rank + @rank_increment) as rank,
+                @rank_increment := IF(@prev_score = car.total_score, 0, 1) as rank_increment,
+                @prev_score := car.total_score as prev_score
+            FROM comparative_assessment_results car
+            INNER JOIN applicants a ON car.applicant_id = a.id
+            INNER JOIN positions p ON car.position_id = p.id
+            CROSS JOIN (SELECT @rank := 0, @prev_score := NULL, @rank_increment := 1) init
+            WHERE car.position_id = ?
+            ORDER BY car.total_score DESC
+        ";
+        
+        $stmt = $this->conn->prepare($query);
+        $stmt->bind_param("i", $positionId);
+        $stmt->execute();
+        
+        $result = $stmt->get_result();
+        $results = [];
+        
+        while ($row = $result->fetch_assoc()) {
+            $results[] = [
+                'id' => $row['id'],
+                'applicant_name' => $row['applicant_name'],
+                'application_code' => $row['application_code'],
+                'position_applied' => $row['position_name'],
+                'position_group' => $row['position_group'],
+                'education_score' => floatval($row['education_score']),
+                'training_score' => floatval($row['training_score']),
+                'experience_score' => floatval($row['experience_score']),
+                'performance_score' => floatval($row['performance_score']),
+                'outstanding_accomplishments_score' => floatval($row['outstanding_accomplishments_score']),
+                'application_of_education_score' => floatval($row['application_of_education_score']),
+                'application_of_ld_score' => floatval($row['application_of_ld_score']),
+                'potential_score' => floatval($row['potential_score']),
+                'total_score' => floatval($row['total_score']),
+                'rank' => intval($row['rank']),
+                'remarks' => $row['remarks']
+            ];
+        }
+        
+        return $results;
+    }
 }
 
+} // end if !class_exists
+?>

@@ -9,8 +9,7 @@ require_once 'classes/DBConnection.php';
 require_once 'classes/CARReportGeneratorG1.php';
 require_once 'classes/HRMPSBEvaluator.php';
 
-$db = new DBConnection();
-$conn = $db->connect();
+$conn = DBConnection::getConnection();
 
 $message = '';
 $error = '';
