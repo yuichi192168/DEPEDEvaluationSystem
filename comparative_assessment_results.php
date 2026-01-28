@@ -404,7 +404,7 @@ if ($viewMode === 'all') {
     <div class="container">
         <!-- Navigation -->
         <div class="navigation">
-            <a href="index.php" class="nav-btn secondary">← Back to Evaluation Form</a>
+            <a href="index.php" class="nav-btn secondary">Back to Evaluation Form</a>
             <a href="comparative_assessment_results.php?view=all" class="nav-btn" 
                style="<?php echo ($viewMode === 'all') ? 'background: #333; font-weight: bold;' : ''; ?>">
                View All Applicants

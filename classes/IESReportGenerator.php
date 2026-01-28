@@ -34,6 +34,9 @@ class IESReportGenerator {
 <head>
     <meta charset="UTF-8">
     <title>Individual Evaluation Sheet (IES) - Annex G</title>
+    <link rel="icon" type="image/x-icon" href="images/favicon.ico">
+    <link rel="icon" type="image/png" sizes="32x32" href="images/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="images/favicon-16x16.png">
     <style>
         @media print {
             @page {
@@ -357,7 +360,7 @@ class IESReportGenerator {
         
         // Add navigation buttons
         $html .= '<div style="margin-top: 40px; padding: 20px; border-top: 2px solid #ddd; display: flex; gap: 10px; justify-content: center;">
-            <button onclick="window.history.back()" style="padding: 10px 30px; background-color: #6c757d; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px;">← Back</button>
+            <button onclick="window.history.back()" style="padding: 10px 30px; background-color: #6c757d; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px;">Back</button>
             <button onclick="window.location.href=\'index.php\'" style="padding: 10px 30px; background-color: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px;">Home</button>
         </div>';
         

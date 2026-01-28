@@ -172,7 +172,7 @@ $conn = null;
                 <a href="<?php echo isset($_GET['sample_data']) ? '../comparative_assessment_results.php' : '?sample_data=1'; ?>">
                     <?php echo isset($_GET['sample_data']) ? '→ View CAR Results' : '→ Load Sample Data'; ?>
                 </a>
-                <a href="../index.php">← Back to Home</a>
+                <a href="../index.php">Back to Home</a>
             </div>
         <?php endif; ?>
     </div>
