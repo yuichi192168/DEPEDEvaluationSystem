@@ -335,13 +335,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <select id="position_id" name="position_id" required>
                         <option value="">-- Select Position --</option>
                         <?php foreach ($positions as $pos): ?>
-                            <option value="<?php echo htmlspecialchars($pos['id']); ?>">
+                            <option value="<?php echo htmlspecialchars($pos['id']); ?>" data-salary-grade="<?php echo htmlspecialchars($pos['salary_grade']); ?>" data-position-group="<?php echo htmlspecialchars($pos['position_group']); ?>">
                                 <?php echo htmlspecialchars($pos['position_name']); ?> 
                                 (SG <?php echo htmlspecialchars($pos['salary_grade']); ?>, Group <?php echo $pos['position_group']; ?>)
                             </option>
                         <?php endforeach; ?>
                     </select>
                     <span class="help-text">Select the position for which you want to generate the consolidated assessment results</span>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="selected_salary_grade">Salary Grade:</label>
+                        <input type="text" id="selected_salary_grade" name="selected_salary_grade" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label for="selected_position_group">Position Group:</label>
+                        <input type="text" id="selected_position_group" name="selected_position_group" readonly>
+                    </div>
                 </div>
             </div>
             
@@ -382,5 +393,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </div>
         </form>
     </div>
+    
+    <script>
+        // Auto-populate salary grade and position group when position is selected
+        document.getElementById('position_id').addEventListener('change', function() {
+            const selectedOption = this.options[this.selectedIndex];
+            const salaryGrade = selectedOption.getAttribute('data-salary-grade');
+            const positionGroup = selectedOption.getAttribute('data-position-group');
+            
+            if (salaryGrade && positionGroup) {
+                document.getElementById('selected_salary_grade').value = 'SG ' + salaryGrade;
+                document.getElementById('selected_position_group').value = 'Group ' + positionGroup;
+            } else {
+                document.getElementById('selected_salary_grade').value = '';
+                document.getElementById('selected_position_group').value = '';
+            }
+        });
+    </script>
 </body>
 </html>

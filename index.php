@@ -890,6 +890,9 @@ $positions = getAllPositions();
                 // Update position group
                 document.getElementById('position_group').value = pos.position_group;
                 
+                // Auto-populate Job Group/SG-Level with salary grade
+                document.getElementById('job_group_sg_level').value = 'Group ' + pos.position_group + ' / Salary Grade ' + pos.salary_grade;
+                
                 // Load baseline education
                 document.getElementById('baseline_education_degree').value = pos.education.degree;
                 document.getElementById('baseline_education_masters_units').value = pos.education.masters_units || 0;
@@ -917,6 +920,7 @@ $positions = getAllPositions();
                 calculatePreview();
             } else {
                 document.getElementById('baselineInfo').style.display = 'none';
+                document.getElementById('job_group_sg_level').value = '';
             }
         });
         
