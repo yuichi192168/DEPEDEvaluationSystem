@@ -350,7 +350,7 @@ while ($row = $positionsResult->fetch_assoc()) {
                 <div class="form-group">
                     <label for="schools_division_office">Schools Division Office</label>
                     <input type="text" id="schools_division_office" name="schools_division_office"
-                           placeholder="City Schools Division of Cabuyao">
+                           value="City Schools Division of Cabuyao">
                 </div>
             </div>
             
