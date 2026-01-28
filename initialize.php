@@ -8,6 +8,4 @@ if(!defined('DB_USERNAME')) define('DB_USERNAME',"root");
 if(!defined('DB_PASSWORD')) define('DB_PASSWORD',"");
 if(!defined('DB_NAME')) define('DB_NAME',"deped_evaluation");
 if(!defined('DB_PORT')) define('DB_PORT',"3307");
-// Note: XAMPP typicallyss uses port 3306 (default MySQL), but some setups use 3307
-// DBConnection.php will auto-detect and fallback between 3306 and 3307
 ?>
