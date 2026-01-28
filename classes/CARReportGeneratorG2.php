@@ -68,9 +68,9 @@ class CARReportGeneratorG2 {
 <head>
     <meta charset="UTF-8">
     <title>Comparative Assessment Results (CAR) - Annex G-2</title>
-    <link rel="icon" type="image/x-icon" href="images/favicon.ico">
-    <link rel="icon" type="image/png" sizes="32x32" href="images/favicon-32x32.png">
-    <link rel="icon" type="image/png" sizes="16x16" href="images/favicon-16x16.png">
+    <link rel="icon" type="image/x-icon" href="/DEPEDEvaluationSystem/images/favicon.ico">
+    <link rel="icon" type="image/png" sizes="32x32" href="/DEPEDEvaluationSystem/images/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/DEPEDEvaluationSystem/images/favicon-16x16.png">
     <style>
         @media print {
             @page {
