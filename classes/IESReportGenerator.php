@@ -355,6 +355,12 @@ class IESReportGenerator {
         $html .= '</div>
         </div>';
         
+        // Add navigation buttons
+        $html .= '<div style="margin-top: 40px; padding: 20px; border-top: 2px solid #ddd; display: flex; gap: 10px; justify-content: center;">
+            <button onclick="window.history.back()" style="padding: 10px 30px; background-color: #6c757d; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px;">← Back</button>
+            <button onclick="window.location.href=\'index.php\'" style="padding: 10px 30px; background-color: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px;">🏠 Home</button>
+        </div>';
+        
         $html .= '</body></html>';
         
         return $html;
