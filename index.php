@@ -635,7 +635,7 @@ $positions = getAllPositions();
                 <div class="form-group">
                     <label for="hrmpsb_chair">HRMPSB Chair Name</label>
                     <input type="text" id="hrmpsb_chair" name="hrmpsb_chair" 
-                           placeholder="RANDY D. PUNZALAN, CESO VI">
+                           value="RANDY D. PUNZALAN, CESO VI">
                     <span class="help-text">Name of the HRMPSB Chair for attestation</span>
                 </div>
             </div>
