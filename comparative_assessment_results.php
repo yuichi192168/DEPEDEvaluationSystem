@@ -529,6 +529,91 @@ if ($viewMode === 'all') {
                 </div>
             </div>
             
+            <!-- Evaluation Criteria Reference -->
+            <div style="margin: 20px 0; padding: 15px; background: #f5f5f5; border-left: 4px solid #E04040; border-radius: 4px;">
+                <h3 style="color: #E04040; margin-bottom: 12px; font-size: 13px;">Evaluation Criteria and Maximum Points</h3>
+                <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+                    <thead>
+                        <tr style="background: #eeeeee;">
+                            <th style="padding: 8px; text-align: left; border: 1px solid #ccc;">Criteria</th>
+                            <th style="padding: 8px; text-align: center; border: 1px solid #ccc; width: 100px;">Max Points</th>
+                            <th style="padding: 8px; text-align: left; border: 1px solid #ccc;">Scoring Method</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php
+                        // Map criteria keys to descriptions and scoring methods
+                        $criteriaDescriptions = [
+                            'a' => ['Education', 'Increment scoring based on levels'],
+                            'b' => ['Training', 'Increment scoring based on levels'],
+                            'c' => ['Experience', 'Increment scoring based on levels'],
+                            'd' => ['Performance', 'Rating / 5 × Max Points'],
+                            'e' => ['Outstanding Accomplishments', 'Direct points (capped at max)'],
+                            'f' => ['Application of Education', 'Rating / 5 × Max Points'],
+                            'g' => ['Application of Learning & Development', 'Rating / 5 × Max Points'],
+                            'h' => ['Potential', 'Rating / 5 × Max Points']
+                        ];
+                        
+                        // Get criteria from the database or use defaults
+                        $defaultCriteria = [
+                            'TEACHING POSITIONS' => [
+                                'a' => 10, 'b' => 10, 'c' => 10, 'd' => 10, 'e' => 35, 'f' => 0, 'g' => 0, 'h' => 25
+                            ],
+                            'HIGHER TEACHING POSITIONS' => [
+                                'a' => 5, 'b' => 10, 'c' => 15, 'd' => 20, 'e' => 15, 'f' => 10, 'g' => 10, 'h' => 15
+                            ],
+                            'SCHOOL ADMINISTRATION POSITION' => [
+                                'a' => 10, 'b' => 10, 'c' => 10, 'd' => 25, 'e' => 10, 'f' => 10, 'g' => 10, 'h' => 15
+                            ],
+                            'RELATED TEACHING POSITION' => [
+                                'a' => 10, 'b' => 10, 'c' => 10, 'd' => 20, 'e' => 10, 'f' => 10, 'g' => 10, 'h' => 20
+                            ],
+                            'NON-TEACHING LEVEL I' => [
+                                'a' => 5, 'b' => 5, 'c' => 20, 'd' => 20, 'e' => 10, 'f' => 10, 'g' => 10, 'h' => 20
+                            ],
+                            'NON-TEACHING LEVEL II' => [
+                                'a' => 5, 'b' => 10, 'c' => 15, 'd' => 20, 'e' => 10, 'f' => 10, 'g' => 10, 'h' => 20
+                            ]
+                        ];
+                        
+                        // Determine position group from position details
+                        $positionGroup = 'NON-TEACHING LEVEL I'; // Default
+                        if ($positionDetails && isset($positionDetails['position_name'])) {
+                            // Try to find position in baseline library to get group
+                            require_once 'config/baseline_library.php';
+                            $positions_lib = getAllPositions();
+                            foreach ($positions_lib as $pos) {
+                                if ($pos['position_name'] === $positionDetails['position_name']) {
+                                    $positionGroup = $pos['position_group'] ?? 'NON-TEACHING LEVEL I';
+                                    break;
+                                }
+                            }
+                        }
+                        
+                        $criteria = $defaultCriteria[$positionGroup] ?? $defaultCriteria['NON-TEACHING LEVEL I'];
+                        $totalMaxPoints = 0;
+                        
+                        foreach ($criteria as $key => $maxPoints) {
+                            $totalMaxPoints += $maxPoints;
+                            $desc = $criteriaDescriptions[$key] ?? ["Criteria $key", "See detailed rules"];
+                            echo '<tr>';
+                            echo '<td style="padding: 8px; border: 1px solid #ddd;">' . htmlspecialchars($desc[0]) . '</td>';
+                            echo '<td style="padding: 8px; border: 1px solid #ddd; text-align: center; font-weight: bold;">' . $maxPoints . '</td>';
+                            echo '<td style="padding: 8px; border: 1px solid #ddd; font-size: 11px; color: #555;">' . htmlspecialchars($desc[1]) . '</td>';
+                            echo '</tr>';
+                        }
+                        ?>
+                    </tbody>
+                    <tfoot>
+                        <tr style="background: #eeeeee; font-weight: bold;">
+                            <td style="padding: 8px; border: 1px solid #ccc;">TOTAL MAXIMUM POINTS</td>
+                            <td style="padding: 8px; border: 1px solid #ccc; text-align: center;"><?php echo $totalMaxPoints; ?></td>
+                            <td style="padding: 8px; border: 1px solid #ccc;"></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+            
             <?php if (count($results) > 0): ?>
                 <!-- Comparative Assessment Result Table -->
                 <table class="results-table">
