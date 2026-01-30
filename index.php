@@ -943,63 +943,100 @@ $positions = getAllPositions();
             hiddenField.value = months;
         }
 
-        // Load baseline when position is selected
-        document.getElementById('position_key').addEventListener('change', async function() {
-            const positionKey = this.value;
-                if (positionKey !== 'custom' && positions[positionKey]) {
-                const pos = positions[positionKey];
-                
-                // Update position name
-                document.getElementById('position_applied').value = pos.position_name;
-                
-                // Update position group select to the group that contains this position (if known)
-                const gsel = document.getElementById('position_group_select');
-                if (gsel && window.positionGroups) {
-                    let foundIndex = null;
-                    window.positionGroups.forEach((g, idx) => {
-                        if (g.positions && g.positions.indexOf(pos.position_name) !== -1) foundIndex = idx;
-                    });
-                    if (foundIndex !== null) {
-                        gsel.value = foundIndex;
-                        gsel.dispatchEvent(new Event('change'));
-                    }
-                }
-                
-                // Auto-populate Job Group/SG-Level with salary grade
-                document.getElementById('job_group_sg_level').value = 'Group ' + pos.position_group + ' / Salary Grade ' + pos.salary_grade;
-                
-                // Load baseline education
-                document.getElementById('baseline_education_degree').value = pos.education.degree;
-                document.getElementById('baseline_education_masters_units').value = pos.education.masters_units || 0;
-                document.getElementById('baseline_education_doctoral_units').value = pos.education.doctoral_units || 0;
-                
-                // Load baseline training and experience
-                document.getElementById('baseline_training').value = pos.training || 0;
-                document.getElementById('baseline_experience').value = pos.experience || 0;
-                
-                // Load other baselines
-                document.getElementById('baseline_performance').value = pos.performance || 0;
-                document.getElementById('baseline_outstanding_accomplishments').value = pos.outstanding_accomplishments || 0;
-                document.getElementById('baseline_application_of_education').value = pos.application_of_education || 0;
-                document.getElementById('baseline_application_of_ld').value = pos.application_of_ld || 0;
-                document.getElementById('baseline_potential').value = pos.potential || 0;
-                
-                // Load dynamic evaluation criteria based on position and salary grade
-                await loadEvaluationCriteria();
-                
-                // Show baseline info
-                const baselineInfo = document.getElementById('baselineInfo');
-                const baselineText = document.getElementById('baselineText');
-                baselineInfo.style.display = 'block';
-                baselineText.textContent = `Education: ${pos.education.degree} (Level ${convertEducationToLevel(pos.education.degree, pos.education.masters_units || 0, pos.education.doctoral_units || 0)}), Training: ${pos.training || 0} hrs (Level ${convertTrainingToLevel(pos.training || 0)}), Experience: ${pos.experience || 0} mos (Level ${convertExperienceToLevel(pos.experience || 0)})`;
-                
-                // Update levels and recalculate with new criteria
+        // Centralized setter for selected position (single source of truth)
+        async function setSelectedPosition(keyOrName) {
+            const selInput = document.getElementById('position_key');
+            const appliedInput = document.getElementById('position_applied');
+
+            // Handle custom
+            if (!keyOrName || keyOrName === 'custom') {
+                window.selectedPositionKey = null;
+                if (selInput) selInput.value = 'custom';
+                if (appliedInput) appliedInput.value = '';
+                document.getElementById('job_group_sg_level').value = '';
+                document.getElementById('baselineInfo').style.display = 'none';
                 updateAllLevels();
                 calculatePreview();
-            } else {
-                document.getElementById('baselineInfo').style.display = 'none';
-                document.getElementById('job_group_sg_level').value = '';
+                return;
             }
+
+            // Resolve by key first
+            let pos = positions[keyOrName];
+            let resolvedKey = keyOrName;
+            if (!pos) {
+                // Resolve by displayed name
+                for (const k in positions) {
+                    if (positions[k] && positions[k].position_name === keyOrName) {
+                        pos = positions[k];
+                        resolvedKey = k;
+                        break;
+                    }
+                }
+            }
+
+            // If still not resolved, treat keyOrName as display text
+            if (!pos) {
+                window.selectedPositionKey = null;
+                if (appliedInput) appliedInput.value = keyOrName || '';
+                document.getElementById('job_group_sg_level').value = '';
+                document.getElementById('baselineInfo').style.display = 'none';
+                updateAllLevels();
+                calculatePreview();
+                return;
+            }
+
+            // Now we have a resolved pos and resolvedKey
+            window.selectedPositionKey = resolvedKey;
+
+            // Ensure the select uses the internal key
+            if (selInput) {
+                try { selInput.value = resolvedKey; } catch (e) { /* ignore */ }
+            }
+
+            // Update Position Applied For exactly as stored
+            if (appliedInput) appliedInput.value = pos.position_name;
+
+            // Update position group select to the group that contains this position (if known)
+            const gsel = document.getElementById('position_group_select');
+            if (gsel && window.positionGroups) {
+                let foundIndex = null;
+                window.positionGroups.forEach((g, idx) => {
+                    if (g.positions && g.positions.indexOf(pos.position_name) !== -1) foundIndex = idx;
+                });
+                if (foundIndex !== null) {
+                    gsel.value = foundIndex;
+                }
+            }
+
+            // Auto-populate Job Group/SG-Level and baseline fields
+            document.getElementById('job_group_sg_level').value = 'Group ' + pos.position_group + ' / Salary Grade ' + pos.salary_grade;
+            document.getElementById('baseline_education_degree').value = pos.education.degree;
+            document.getElementById('baseline_education_masters_units').value = pos.education.masters_units || 0;
+            document.getElementById('baseline_education_doctoral_units').value = pos.education.doctoral_units || 0;
+            document.getElementById('baseline_training').value = pos.training || 0;
+            document.getElementById('baseline_experience').value = pos.experience || 0;
+            document.getElementById('baseline_performance').value = pos.performance || 0;
+            document.getElementById('baseline_outstanding_accomplishments').value = pos.outstanding_accomplishments || 0;
+            document.getElementById('baseline_application_of_education').value = pos.application_of_education || 0;
+            document.getElementById('baseline_application_of_ld').value = pos.application_of_ld || 0;
+            document.getElementById('baseline_potential').value = pos.potential || 0;
+
+            // Load dynamic evaluation criteria (non-blocking)
+            await loadEvaluationCriteria();
+
+            // Show baseline info and recalc
+            const baselineInfo = document.getElementById('baselineInfo');
+            const baselineText = document.getElementById('baselineText');
+            baselineInfo.style.display = 'block';
+            baselineText.textContent = `Education: ${pos.education.degree} (Level ${convertEducationToLevel(pos.education.degree, pos.education.masters_units || 0, pos.education.doctoral_units || 0)}), Training: ${pos.training || 0} hrs (Level ${convertTrainingToLevel(pos.training || 0)}), Experience: ${pos.experience || 0} mos (Level ${convertExperienceToLevel(pos.experience || 0)})`;
+
+            updateAllLevels();
+            calculatePreview();
+        }
+
+        // Wire select change to centralized setter
+        document.getElementById('position_key').addEventListener('change', function() {
+            setSelectedPosition(this.value);
         });
         
         // Update level displays
