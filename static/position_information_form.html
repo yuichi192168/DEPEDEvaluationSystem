@@ -1,0 +1,99 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Position Information - Form Snippet</title>
+  <style>label{display:block;margin-top:8px}select,input,textarea{width:100%;max-width:640px;padding:6px}</style>
+</head>
+<body>
+  <h2>Position Information</h2>
+
+  <form id="positionForm">
+    <label for="selectPosition">Select Position (choose group → position)</label>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;max-width:660px">
+      <select id="groupSelect" aria-label="Position Group"></select>
+      <select id="positionSelect" aria-label="Position"></select>
+    </div>
+
+    <label>Salary Grade
+      <input type="number" id="salaryGrade" min="1" max="27" placeholder="e.g. 11">
+    </label>
+
+    <label>Minimum Qualification Standards (auto-populated)
+      <textarea id="qsText" rows="4" readonly></textarea>
+    </label>
+
+    <div style="margin-top:12px">
+      <button type="button" id="previewBtn">Preview IES (simulate)</button>
+    </div>
+  </form>
+
+  <script>
+    // This snippet expects APIs:
+    // - ../api/get_position_groups.php -> [{group,positions},...]
+    // - ../api/get_qs.php?position=... -> QS object with qs_text
+
+    async function loadGroups(){
+      const res = await fetch('../api/get_position_groups.php');
+      const groups = await res.json();
+      const gsel = document.getElementById('groupSelect');
+      gsel.innerHTML = '';
+      groups.forEach((g,i)=>{
+        const opt = document.createElement('option'); opt.value = i; opt.textContent = g.group; gsel.appendChild(opt);
+      });
+      gsel.addEventListener('change', onGroupChange);
+      if (groups.length) { gsel.value = 0; onGroupChange(); }
+    }
+
+    async function onGroupChange(){
+      const gsel = document.getElementById('groupSelect');
+      const idx = parseInt(gsel.value);
+      const res = await fetch('../api/get_position_groups.php');
+      const groups = await res.json();
+      const selected = groups[idx] || {positions:[]};
+      const psel = document.getElementById('positionSelect');
+      psel.innerHTML = '';
+      selected.positions.forEach(p=>{
+        const o = document.createElement('option'); o.value = p; o.textContent = p; psel.appendChild(o);
+      });
+      psel.addEventListener('change', onPositionChange);
+      psel.value = selected.positions[0] || '';
+      onPositionChange();
+    }
+
+    async function onPositionChange(){
+      const psel = document.getElementById('positionSelect');
+      const pos = psel.value;
+      const qst = document.getElementById('qsText');
+      if (!pos) { qst.value = ''; return; }
+      try {
+        const res = await fetch('../api/get_qs.php?position=' + encodeURIComponent(pos));
+        const data = await res.json();
+        qst.value = data.qs_text || JSON.stringify(data, null, 2);
+      } catch(e){ qst.value = 'Unable to fetch QS'; }
+    }
+
+    // Example: preview by preparing applicant payload and calling process API
+    document.getElementById('previewBtn').addEventListener('click', async ()=>{
+      const pos = document.getElementById('positionSelect').value;
+      const sg = parseInt(document.getElementById('salaryGrade').value) || null;
+      const payload = {
+        position: pos,
+        salary_grade: sg,
+        applicant: {
+          personal_information: {name: 'Preview Applicant'},
+          education_level: 'Bachelor of Science',
+          training_hours: 0,
+          experience_years: 0,
+          eligibilities: []
+        }
+      };
+      const r = await fetch('../api/process_individual_application.php',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+      const out = await r.json();
+      alert('Preview result:\n' + JSON.stringify(out, null, 2));
+    });
+
+    loadGroups();
+  </script>
+</body>
+</html>

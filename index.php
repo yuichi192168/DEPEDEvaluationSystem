@@ -4,6 +4,7 @@
  * Enhanced Version with Baseline Library and Level Pickers
  */
 require_once 'config/baseline_library.php';
+require_once 'config/evaluation_criteria.php';
 
 $positions = getAllPositions();
 ?>
@@ -274,42 +275,34 @@ $positions = getAllPositions();
             <!-- Position Information -->
             <div class="form-section">
                 <h2>Position Information</h2>
+                
                 <div class="form-row">
+                    <div class="form-group">
+                        <label for="position_group_select">Select Position Group *</label>
+                        <select id="position_group_select" name="position_group" required>
+                            <option value="">Loading groups…</option>
+                        </select>
+                        <span class="help-text">Pick a position group to view available positions</span>
+                    </div>
                     <div class="form-group">
                         <label for="position_key">Select Position (Auto-loads Baseline) *</label>
                         <select id="position_key" name="position_key" required>
                             <option value="custom">-- Custom Position (Manual Entry) --</option>
-                            <?php foreach ($positions as $key => $pos): ?>
-                                <?php if ($key !== 'custom'): ?>
-                                    <option value="<?php echo htmlspecialchars($key); ?>">
-                                        <?php echo htmlspecialchars($pos['position_name']); ?> (Group <?php echo $pos['position_group']; ?>)
-                                    </option>
-                                <?php endif; ?>
-                            <?php endforeach; ?>
                         </select>
-                        <span class="help-text">Selecting a position automatically loads baseline qualification standards</span>
+                        <span class="help-text">First select a Position Group, then choose a position from that group</span>
                     </div>
+                </div>
+                <div class="form-row">
                     <div class="form-group">
                         <label for="position_applied">Position Applied For *</label>
                         <input type="text" id="position_applied" name="position_applied" required 
                                placeholder="Information and Communications Technology">
                         <span class="help-text">This field auto-fills when you select a position above</span>
                     </div>
-                </div>
-                <div class="form-row">
                     <div class="form-group">
-                        <label for="position_group">Position Group *</label>
-                        <select id="position_group" name="position_group" required>
-                            <option value="A">Group A: Non-Teaching Level 1 (General)</option>
-                            <option value="B">Group B: Non-Teaching Level 2</option>
-                            <option value="C">Group C: School Administration</option>
-                        </select>
-                        <span class="help-text">Auto-updates when position is selected</span>
-                    </div>
-                    <div class="form-group">
-                        <label for="job_group_sg_level">Job Group/SG-Level</label>
-                        <input type="text" id="job_group_sg_level" name="job_group_sg_level" 
-                               placeholder="Non-Teaching Position / Contract of Service">
+                        <label for="job_group_sg_level">Job Group / Salary Grade</label>
+                        <input type="text" id="job_group_sg_level" name="job_group_sg_level" readonly>
+                        <span class="help-text">Auto-filled from selected position</span>
                     </div>
                 </div>
                 <div class="form-row">
@@ -611,7 +604,8 @@ $positions = getAllPositions();
             
             <!-- Live Preview -->
             <div id="livePreview" class="live-preview">
-                <h3>Live Calculation Preview</h3>
+                <h3>Live Calculation Preview - Evaluation Criteria</h3>
+                <p id="criteriaDescription" style="color: #666; font-size: 12px; margin-bottom: 10px;"></p>
                 <table class="preview-table">
                     <thead>
                         <tr>
@@ -619,7 +613,7 @@ $positions = getAllPositions();
                             <th>Applicant Level</th>
                             <th>Baseline Level</th>
                             <th>Increment</th>
-                            <th>Weight</th>
+                            <th>Max Points</th>
                             <th>Score</th>
                         </tr>
                     </thead>
@@ -674,6 +668,68 @@ $positions = getAllPositions();
     <script>
         // Position baseline data
         const positions = <?php echo json_encode($positions); ?>;
+
+        // Populate Position Group select by calling backend API and wire cascading behavior
+        async function loadPositionGroups() {
+            try {
+                const resp = await fetch('api/get_position_groups.php');
+                const groups = await resp.json();
+                const gsel = document.getElementById('position_group_select');
+                if (!gsel) return;
+                
+                gsel.innerHTML = '<option value="">-- Select a Position Group --</option>';
+                groups.forEach((g, idx) => {
+                    const opt = document.createElement('option');
+                    opt.value = idx;
+                    opt.textContent = g.group;
+                    gsel.appendChild(opt);
+                });
+                
+                // expose for other handlers
+                window.positionGroups = groups;
+                
+                // When group changes, populate position_key with positions from that group
+                gsel.addEventListener('change', function() {
+                    const groupIdx = parseInt(this.value);
+                    const selectedGroup = groups[groupIdx];
+                    const psel = document.getElementById('position_key');
+                    if (!psel) return;
+                    
+                    // Clear and add custom option
+                    psel.innerHTML = '<option value="custom">-- Custom Position (Manual Entry) --</option>';
+                    
+                    if (selectedGroup && selectedGroup.positions && selectedGroup.positions.length) {
+                        selectedGroup.positions.forEach(posName => {
+                            // Try to find the key for this position in the baseline library
+                            let foundKey = null;
+                            for (const k in positions) {
+                                if (positions[k] && positions[k].position_name === posName) {
+                                    foundKey = k;
+                                    break;
+                                }
+                            }
+                            
+                            // Create option element
+                            const o = document.createElement('option');
+                            o.value = foundKey || posName;
+                            o.textContent = posName;
+                            psel.appendChild(o);
+                        });
+                        
+                        // Auto-select first position in group (skip custom)
+                        if (psel.options.length > 1) {
+                            psel.selectedIndex = 1;
+                            psel.dispatchEvent(new Event('change'));
+                        }
+                    }
+                });
+            } catch (e) {
+                console.error('Failed to load position groups', e);
+            }
+        }
+
+        // Load groups on startup
+        loadPositionGroups();
         
         // Level conversion functions (client-side)
         function convertEducationToLevel(degree, mastersUnits, doctoralUnits) {
@@ -731,9 +787,12 @@ $positions = getAllPositions();
         
         // Position group weights
         const weights = {
-            'A': { education: 5, training: 5, experience: 20, performance: 20, outstanding_accomplishments: 10, application_of_education: 10, application_of_ld: 10, potential: 20 },
-            'B': { education: 5, training: 10, experience: 15, performance: 20, outstanding_accomplishments: 10, application_of_education: 10, application_of_ld: 10, potential: 20 },
-            'C': { education: 10, training: 10, experience: 10, performance: 25, outstanding_accomplishments: 10, application_of_education: 10, application_of_ld: 10, potential: 15 }
+            'TEACHING POSITIONS': { education: 10, training: 10, experience: 10, performance: 10, outstanding_accomplishments: 35, application_of_education: 10, application_of_ld: 10, potential: 5 },
+            'HIGHER TEACHING POSITIONS': { education: 5, training: 10, experience: 15, performance: 20, outstanding_accomplishments: 10, application_of_education: 10, application_of_ld: 10, potential: 20 },
+            'NON-TEACHING LEVEL I': { education: 5, training: 5, experience: 20, performance: 20, outstanding_accomplishments: 10, application_of_education: 10, application_of_ld: 10, potential: 20 },
+            'NON-TEACHING LEVEL II': { education: 5, training: 10, experience: 15, performance: 20, outstanding_accomplishments: 10, application_of_education: 10, application_of_ld: 10, potential: 20 },
+            'RELATED TEACHING POSITION': { education: 10, training: 10, experience: 10, performance: 20, outstanding_accomplishments: 10, application_of_education: 10, application_of_ld: 10, potential: 20 },
+            'SCHOOL ADMINISTRATION POSITION': { education: 10, training: 10, experience: 10, performance: 25, outstanding_accomplishments: 10, application_of_education: 10, application_of_ld: 10, potential: 15 }
         };
         
         // Helper: sync education dropdown to underlying degree/units fields
@@ -885,16 +944,26 @@ $positions = getAllPositions();
         }
 
         // Load baseline when position is selected
-        document.getElementById('position_key').addEventListener('change', function() {
+        document.getElementById('position_key').addEventListener('change', async function() {
             const positionKey = this.value;
-            if (positionKey !== 'custom' && positions[positionKey]) {
+                if (positionKey !== 'custom' && positions[positionKey]) {
                 const pos = positions[positionKey];
                 
                 // Update position name
                 document.getElementById('position_applied').value = pos.position_name;
                 
-                // Update position group
-                document.getElementById('position_group').value = pos.position_group;
+                // Update position group select to the group that contains this position (if known)
+                const gsel = document.getElementById('position_group_select');
+                if (gsel && window.positionGroups) {
+                    let foundIndex = null;
+                    window.positionGroups.forEach((g, idx) => {
+                        if (g.positions && g.positions.indexOf(pos.position_name) !== -1) foundIndex = idx;
+                    });
+                    if (foundIndex !== null) {
+                        gsel.value = foundIndex;
+                        gsel.dispatchEvent(new Event('change'));
+                    }
+                }
                 
                 // Auto-populate Job Group/SG-Level with salary grade
                 document.getElementById('job_group_sg_level').value = 'Group ' + pos.position_group + ' / Salary Grade ' + pos.salary_grade;
@@ -915,13 +984,16 @@ $positions = getAllPositions();
                 document.getElementById('baseline_application_of_ld').value = pos.application_of_ld || 0;
                 document.getElementById('baseline_potential').value = pos.potential || 0;
                 
+                // Load dynamic evaluation criteria based on position and salary grade
+                await loadEvaluationCriteria();
+                
                 // Show baseline info
                 const baselineInfo = document.getElementById('baselineInfo');
                 const baselineText = document.getElementById('baselineText');
                 baselineInfo.style.display = 'block';
                 baselineText.textContent = `Education: ${pos.education.degree} (Level ${convertEducationToLevel(pos.education.degree, pos.education.masters_units || 0, pos.education.doctoral_units || 0)}), Training: ${pos.training || 0} hrs (Level ${convertTrainingToLevel(pos.training || 0)}), Experience: ${pos.experience || 0} mos (Level ${convertExperienceToLevel(pos.experience || 0)})`;
                 
-                // Update levels and recalculate
+                // Update levels and recalculate with new criteria
                 updateAllLevels();
                 calculatePreview();
             } else {
@@ -991,73 +1063,187 @@ $positions = getAllPositions();
         }
         
         // Calculate and display preview
+        // Load evaluation criteria dynamically based on position group and salary grade
+        async function loadEvaluationCriteria() {
+            const selPosKey = document.getElementById('position_key').value;
+            let positionGroup = null;
+            let salaryGrade = null;
+            
+            if (selPosKey && positions[selPosKey]) {
+                positionGroup = positions[selPosKey].position_group;
+                salaryGrade = positions[selPosKey].salary_grade;
+            } else {
+                // Fallback: use selected group name directly
+                const gsel = document.getElementById('position_group_select');
+                if (gsel && window.positionGroups) {
+                    const gidx = parseInt(gsel.value);
+                    if (window.positionGroups[gidx]) {
+                        positionGroup = window.positionGroups[gidx].group;
+                    }
+                }
+            }
+            
+            if (!positionGroup) {
+                return null;
+            }
+            
+            try {
+                const url = `api/get_evaluation_criteria.php?position_group=${encodeURIComponent(positionGroup)}&salary_grade=${salaryGrade || ''}`;
+                const resp = await fetch(url);
+                const data = await resp.json();
+                window.currentCriteria = data.criteria;
+                window.currentTotalPoints = data.total_points;
+                return data;
+            } catch (e) {
+                console.error('Failed to load evaluation criteria:', e);
+                return null;
+            }
+        }
+
         function calculatePreview() {
             // Ensure dropdown-driven fields are in sync before computing
             syncEducationFromDropdown();
             syncTrainingFromDropdown();
             syncExperienceFromDropdown();
 
-            const positionGroup = document.getElementById('position_group').value;
-            const groupWeights = weights[positionGroup];
+            // Determine group for weight lookup
+            let positionGroup = null;
+            const selPosKey = document.getElementById('position_key').value;
+            if (selPosKey && positions[selPosKey]) {
+                positionGroup = positions[selPosKey].position_group;
+            } else {
+                // Fallback: use selected group name directly
+                const gsel = document.getElementById('position_group_select');
+                if (gsel && window.positionGroups) {
+                    const gidx = parseInt(gsel.value);
+                    if (window.positionGroups[gidx]) {
+                        positionGroup = window.positionGroups[gidx].group;
+                    }
+                }
+            }
             
-            // Get applicant levels
-            const appEduDegree = document.getElementById('applicant_education_degree').value;
-            const appMastersUnits = parseInt(document.getElementById('applicant_education_masters_units').value) || 0;
-            const appDoctoralUnits = parseInt(document.getElementById('applicant_education_doctoral_units').value) || 0;
-            const appEduLevel = convertEducationToLevel(appEduDegree, appMastersUnits, appDoctoralUnits);
+            // If we have dynamically loaded criteria, use that; otherwise use hardcoded mapping
+            let criteriaList = [];
             
-            const appTrainingLevel = convertTrainingToLevel(parseFloat(document.getElementById('applicant_training').value) || 0);
-            const appExperienceLevel = convertExperienceToLevel(parseFloat(document.getElementById('applicant_experience').value) || 0);
-            const appPerformance = parseFloat(document.getElementById('applicant_performance').value) || 0; // rating 1..5
-            const appOA = parseFloat(document.getElementById('applicant_outstanding_accomplishments').value) || 0; // direct points
-            const appAOE = parseFloat(document.getElementById('applicant_application_of_education').value) || 0; // rating 1..5
-            const appAOLD = parseFloat(document.getElementById('applicant_application_of_ld').value) || 0; // rating 1..5
-            const appPotential = parseFloat(document.getElementById('applicant_potential').value) || 0; // rating 1..5
-            
-            // Get baseline levels
-            const baseEduDegree = document.getElementById('baseline_education_degree').value;
-            const baseMastersUnits = parseInt(document.getElementById('baseline_education_masters_units').value) || 0;
-            const baseDoctoralUnits = parseInt(document.getElementById('baseline_education_doctoral_units').value) || 0;
-            const baseEduLevel = convertEducationToLevel(baseEduDegree, baseMastersUnits, baseDoctoralUnits);
-            
-            const baseTrainingLevel = convertTrainingToLevel(parseFloat(document.getElementById('baseline_training').value) || 0);
-            const baseExperienceLevel = convertExperienceToLevel(parseFloat(document.getElementById('baseline_experience').value) || 0);
-            const basePerformance = parseFloat(document.getElementById('baseline_performance').value) || 0;
-            const baseOA = parseFloat(document.getElementById('baseline_outstanding_accomplishments').value) || 0;
-            const baseAOE = parseFloat(document.getElementById('baseline_application_of_education').value) || 0;
-            const baseAOLD = parseFloat(document.getElementById('baseline_application_of_ld').value) || 0;
-            const basePotential = parseFloat(document.getElementById('baseline_potential').value) || 0;
-            
-            // Calculate increments and scores
-            const criteria = [
-                { name: 'Education', appLevel: appEduLevel, baseLevel: baseEduLevel, weight: groupWeights.education, scoring: 'increment' },
-                { name: 'Training', appLevel: appTrainingLevel, baseLevel: baseTrainingLevel, weight: groupWeights.training, scoring: 'increment' },
-                { name: 'Experience', appLevel: appExperienceLevel, baseLevel: baseExperienceLevel, weight: groupWeights.experience, scoring: 'increment' },
-                { name: 'Performance', appLevel: appPerformance, baseLevel: basePerformance, weight: groupWeights.performance, scoring: 'weighted' },
-                { name: 'Outstanding Accomplishments', appLevel: appOA, baseLevel: baseOA, weight: groupWeights.outstanding_accomplishments, scoring: 'direct_points' },
-                { name: 'Application of Education', appLevel: appAOE, baseLevel: baseAOE, weight: groupWeights.application_of_education, scoring: 'weighted' },
-                { name: 'Application of L&D', appLevel: appAOLD, baseLevel: baseAOLD, weight: groupWeights.application_of_ld, scoring: 'weighted' },
-                { name: 'Potential', appLevel: appPotential, baseLevel: basePotential, weight: groupWeights.potential, scoring: 'weighted' }
-            ];
+            if (window.currentCriteria && Object.keys(window.currentCriteria).length > 0) {
+                // Build criteria from dynamic data
+                const appEduDegree = document.getElementById('applicant_education_degree').value;
+                const appMastersUnits = parseInt(document.getElementById('applicant_education_masters_units').value) || 0;
+                const appDoctoralUnits = parseInt(document.getElementById('applicant_education_doctoral_units').value) || 0;
+                const appEduLevel = convertEducationToLevel(appEduDegree, appMastersUnits, appDoctoralUnits);
+                
+                const baseEduDegree = document.getElementById('baseline_education_degree').value;
+                const baseMastersUnits = parseInt(document.getElementById('baseline_education_masters_units').value) || 0;
+                const baseDoctoralUnits = parseInt(document.getElementById('baseline_education_doctoral_units').value) || 0;
+                const baseEduLevel = convertEducationToLevel(baseEduDegree, baseMastersUnits, baseDoctoralUnits);
+                
+                const appTrainingLevel = convertTrainingToLevel(parseFloat(document.getElementById('applicant_training').value) || 0);
+                const baseTrainingLevel = convertTrainingToLevel(parseFloat(document.getElementById('baseline_training').value) || 0);
+                
+                const appExperienceLevel = convertExperienceToLevel(parseFloat(document.getElementById('applicant_experience').value) || 0);
+                const baseExperienceLevel = convertExperienceToLevel(parseFloat(document.getElementById('baseline_experience').value) || 0);
+                
+                const appPerformance = parseFloat(document.getElementById('applicant_performance').value) || 0;
+                const basePerformance = parseFloat(document.getElementById('baseline_performance').value) || 0;
+                
+                const appOA = parseFloat(document.getElementById('applicant_outstanding_accomplishments').value) || 0;
+                const baseOA = parseFloat(document.getElementById('baseline_outstanding_accomplishments').value) || 0;
+                
+                const appAOE = parseFloat(document.getElementById('applicant_application_of_education').value) || 0;
+                const baseAOE = parseFloat(document.getElementById('baseline_application_of_education').value) || 0;
+                
+                const appAOLD = parseFloat(document.getElementById('applicant_application_of_ld').value) || 0;
+                const baseAOLD = parseFloat(document.getElementById('baseline_application_of_ld').value) || 0;
+                
+                const appPotential = parseFloat(document.getElementById('applicant_potential').value) || 0;
+                const basePotential = parseFloat(document.getElementById('baseline_potential').value) || 0;
+                
+                // Map criteria keys to data
+                const criteriaData = {
+                    'a': { appLevel: appEduLevel, baseLevel: baseEduLevel, scoring: 'increment' },
+                    'b': { appLevel: appTrainingLevel, baseLevel: baseTrainingLevel, scoring: 'increment' },
+                    'c': { appLevel: appExperienceLevel, baseLevel: baseExperienceLevel, scoring: 'increment' },
+                    'd': { appLevel: appPerformance, baseLevel: basePerformance, scoring: 'weighted' },
+                    'e': { appLevel: appOA, baseLevel: baseOA, scoring: 'direct_points' },
+                    'f': { appLevel: appAOE, baseLevel: baseAOE, scoring: 'weighted' },
+                    'g': { appLevel: appAOLD, baseLevel: baseAOLD, scoring: 'weighted' },
+                    'h': { appLevel: appPotential, baseLevel: basePotential, scoring: 'weighted' }
+                };
+                
+                // Build criteria list from loaded criteria
+                Object.keys(window.currentCriteria).forEach(key => {
+                    const criterionDef = window.currentCriteria[key];
+                    const data = criteriaData[key] || { appLevel: 0, baseLevel: 0, scoring: 'weighted' };
+                    
+                    criteriaList.push({
+                        key: key,
+                        name: criterionDef.name,
+                        max_points: criterionDef.max_points,
+                        appLevel: data.appLevel,
+                        baseLevel: data.baseLevel,
+                        scoring: data.scoring
+                    });
+                });
+            } else {
+                // Fallback to hardcoded criteria
+                const groupWeights = weights[positionGroup] || weights['NON-TEACHING LEVEL I'];
+                
+                const appEduDegree = document.getElementById('applicant_education_degree').value;
+                const appMastersUnits = parseInt(document.getElementById('applicant_education_masters_units').value) || 0;
+                const appDoctoralUnits = parseInt(document.getElementById('applicant_education_doctoral_units').value) || 0;
+                const appEduLevel = convertEducationToLevel(appEduDegree, appMastersUnits, appDoctoralUnits);
+                
+                const appTrainingLevel = convertTrainingToLevel(parseFloat(document.getElementById('applicant_training').value) || 0);
+                const appExperienceLevel = convertExperienceToLevel(parseFloat(document.getElementById('applicant_experience').value) || 0);
+                const appPerformance = parseFloat(document.getElementById('applicant_performance').value) || 0;
+                const appOA = parseFloat(document.getElementById('applicant_outstanding_accomplishments').value) || 0;
+                const appAOE = parseFloat(document.getElementById('applicant_application_of_education').value) || 0;
+                const appAOLD = parseFloat(document.getElementById('applicant_application_of_ld').value) || 0;
+                const appPotential = parseFloat(document.getElementById('applicant_potential').value) || 0;
+                
+                const baseEduDegree = document.getElementById('baseline_education_degree').value;
+                const baseMastersUnits = parseInt(document.getElementById('baseline_education_masters_units').value) || 0;
+                const baseDoctoralUnits = parseInt(document.getElementById('baseline_education_doctoral_units').value) || 0;
+                const baseEduLevel = convertEducationToLevel(baseEduDegree, baseMastersUnits, baseDoctoralUnits);
+                
+                const baseTrainingLevel = convertTrainingToLevel(parseFloat(document.getElementById('baseline_training').value) || 0);
+                const baseExperienceLevel = convertExperienceToLevel(parseFloat(document.getElementById('baseline_experience').value) || 0);
+                const basePerformance = parseFloat(document.getElementById('baseline_performance').value) || 0;
+                const baseOA = parseFloat(document.getElementById('baseline_outstanding_accomplishments').value) || 0;
+                const baseAOE = parseFloat(document.getElementById('baseline_application_of_education').value) || 0;
+                const baseAOLD = parseFloat(document.getElementById('baseline_application_of_ld').value) || 0;
+                const basePotential = parseFloat(document.getElementById('baseline_potential').value) || 0;
+                
+                criteriaList = [
+                    { name: 'Education', max_points: groupWeights.education, appLevel: appEduLevel, baseLevel: baseEduLevel, scoring: 'increment' },
+                    { name: 'Training', max_points: groupWeights.training, appLevel: appTrainingLevel, baseLevel: baseTrainingLevel, scoring: 'increment' },
+                    { name: 'Experience', max_points: groupWeights.experience, appLevel: appExperienceLevel, baseLevel: baseExperienceLevel, scoring: 'increment' },
+                    { name: 'Performance', max_points: groupWeights.performance, appLevel: appPerformance, baseLevel: basePerformance, scoring: 'weighted' },
+                    { name: 'Outstanding Accomplishments', max_points: groupWeights.outstanding_accomplishments, appLevel: appOA, baseLevel: baseOA, scoring: 'direct_points' },
+                    { name: 'Application of Education', max_points: groupWeights.application_of_education, appLevel: appAOE, baseLevel: baseAOE, scoring: 'weighted' },
+                    { name: 'Application of L&D', max_points: groupWeights.application_of_ld, appLevel: appAOLD, baseLevel: baseAOLD, scoring: 'weighted' },
+                    { name: 'Potential', max_points: groupWeights.potential, appLevel: appPotential, baseLevel: basePotential, scoring: 'weighted' }
+                ];
+            }
             
             let totalScore = 0;
             const tbody = document.getElementById('previewTableBody');
             tbody.innerHTML = '';
             
-            criteria.forEach(criterion => {
+            criteriaList.forEach(criterion => {
                 let increment = '';
                 let score = 0;
 
                 if (criterion.scoring === 'increment') {
                     const inc = calculateIncrement(criterion.appLevel, criterion.baseLevel);
                     increment = `${criterion.appLevel} - ${criterion.baseLevel} = ${inc}`;
-                    score = convertIncrementToPoints(inc, criterion.weight);
+                    score = convertIncrementToPoints(inc, criterion.max_points);
                 } else if (criterion.scoring === 'weighted') {
-                    increment = `(${criterion.appLevel} / 5) × ${criterion.weight}`;
-                    score = convertRatingToWeightedPoints(criterion.appLevel, criterion.weight, 5);
+                    increment = `(${criterion.appLevel} / 5) × ${criterion.max_points}`;
+                    score = convertRatingToWeightedPoints(criterion.appLevel, criterion.max_points, 5);
                 } else if (criterion.scoring === 'direct_points') {
-                    increment = `min(${criterion.appLevel}, ${criterion.weight})`;
-                    score = Math.min(Math.max(0, parseFloat(criterion.appLevel) || 0), parseFloat(criterion.weight) || 0);
+                    increment = `min(${criterion.appLevel}, ${criterion.max_points})`;
+                    score = Math.min(Math.max(0, parseFloat(criterion.appLevel) || 0), parseFloat(criterion.max_points) || 0);
                 }
 
                 totalScore += score;
@@ -1068,13 +1254,19 @@ $positions = getAllPositions();
                     <td>${criterion.appLevel}</td>
                     <td>${criterion.baseLevel}</td>
                     <td>${increment}</td>
-                    <td>${criterion.weight}%</td>
+                    <td>${criterion.max_points}</td>
                     <td>${score.toFixed(2)}</td>
                 `;
                 tbody.appendChild(row);
             });
             
             document.getElementById('totalScore').textContent = totalScore.toFixed(2);
+            
+            // Update criteria description
+            if (window.currentTotalPoints) {
+                document.getElementById('criteriaDescription').textContent = `This position uses a point scale of 0-${window.currentTotalPoints}. Criteria and maximum points are dynamically loaded based on position type and salary grade.`;
+            }
+            
             document.getElementById('livePreview').classList.add('active');
         }
         
@@ -1087,7 +1279,7 @@ $positions = getAllPositions();
             'baseline_education_degree', 'baseline_education_masters_units', 'baseline_education_doctoral_units',
             'baseline_training', 'baseline_experience', 'baseline_performance', 'baseline_outstanding_accomplishments',
             'baseline_application_of_education', 'baseline_application_of_ld', 'baseline_potential',
-            'position_group',
+            'position_group_select',
             'applicant_education_dropdown', 'applicant_training_dropdown', 'applicant_experience_dropdown'
         ];
         
