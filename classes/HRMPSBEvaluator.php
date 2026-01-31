@@ -6,69 +6,80 @@
  * Implements Increment Method for Comparative Assessment
  */
 
+require_once __DIR__ . '/../config/evaluation_criteria.php';
+
 // Only define class once
 if (!class_exists('HRMPSBEvaluator', false)) {
 
 class HRMPSBEvaluator {
     
-    // Position Group Weights
-    const GROUP_A_WEIGHTS = [
-        'education' => 5,
-        'training' => 5,
-        'experience' => 20,
-        'performance' => 20,
-        'outstanding_accomplishments' => 10,
-        'application_of_education' => 10,
-        'application_of_ld' => 10,
-        'potential' => 20
-    ];
-    
-    const GROUP_B_WEIGHTS = [
-        'education' => 5,
-        'training' => 10,
-        'experience' => 15,
-        'performance' => 20,
-        'outstanding_accomplishments' => 10,
-        'application_of_education' => 10,
-        'application_of_ld' => 10,
-        'potential' => 20
-    ];
-    
-    const GROUP_C_WEIGHTS = [
-        'education' => 10,
-        'training' => 10,
-        'experience' => 10,
-        'performance' => 25,
-        'outstanding_accomplishments' => 10,
-        'application_of_education' => 10,
-        'application_of_ld' => 10,
-        'potential' => 15
-    ];
-    
     private $positionGroup;
+    private $salaryGrade;
+    private $category;
     private $weights;
     
-    public function __construct($positionGroup = 'A') {
-        $this->positionGroup = strtoupper($positionGroup);
+    public function __construct($positionGroup = 'TEACHING POSITIONS', $salaryGrade = null, $category = null) {
+        $this->positionGroup = $positionGroup;
+        $this->salaryGrade = $salaryGrade;
+        $this->category = $category;
         $this->setWeights();
     }
     
     /**
-     * Set weights based on position group
+     * Set position group
+     */
+    public function setPositionGroup($positionGroup) {
+        $this->positionGroup = $positionGroup;
+        $this->setWeights();
+    }
+    
+    /**
+     * Set salary grade
+     */
+    public function setSalaryGrade($salaryGrade) {
+        $this->salaryGrade = $salaryGrade;
+        $this->setWeights();
+    }
+    
+    /**
+     * Set category for non-teaching positions
+     */
+    public function setCategory($category) {
+        $this->category = $category;
+        $this->setWeights();
+    }
+    
+    /**
+     * Set weights based on position group using evaluation_criteria.php
      */
     private function setWeights() {
-        switch ($this->positionGroup) {
-            case 'A':
-                $this->weights = self::GROUP_A_WEIGHTS;
-                break;
-            case 'B':
-                $this->weights = self::GROUP_B_WEIGHTS;
-                break;
-            case 'C':
-                $this->weights = self::GROUP_C_WEIGHTS;
-                break;
-            default:
-                $this->weights = self::GROUP_A_WEIGHTS;
+        // Get criteria from evaluation_criteria.php
+        $criteria = getEvaluationCriteria($this->positionGroup, $this->salaryGrade, $this->category);
+        
+        if ($criteria && isset($criteria['criteria'])) {
+            // Build weights array from criteria
+            $this->weights = [
+                'education' => $criteria['criteria']['a']['max_points'] ?? 10,
+                'training' => $criteria['criteria']['b']['max_points'] ?? 10,
+                'experience' => $criteria['criteria']['c']['max_points'] ?? 10,
+                'performance' => $criteria['criteria']['d']['max_points'] ?? 10,
+                'outstanding_accomplishments' => $criteria['criteria']['e']['max_points'] ?? 10,
+                'application_of_education' => $criteria['criteria']['f']['max_points'] ?? 10,
+                'application_of_ld' => $criteria['criteria']['g']['max_points'] ?? 10,
+                'potential' => $criteria['criteria']['h']['max_points'] ?? 10,
+            ];
+        } else {
+            // Fallback to default weights if criteria not found
+            $this->weights = [
+                'education' => 10,
+                'training' => 10,
+                'experience' => 10,
+                'performance' => 10,
+                'outstanding_accomplishments' => 10,
+                'application_of_education' => 10,
+                'application_of_ld' => 10,
+                'potential' => 10,
+            ];
         }
     }
     

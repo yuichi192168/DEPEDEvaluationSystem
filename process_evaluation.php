@@ -4,6 +4,9 @@
  * DepEd HRMPSB Evaluation System
  */
 
+session_start();
+
+require_once 'includes/banners.php';
 require_once 'classes/HRMPSBEvaluator.php';
 require_once 'classes/IESReportGenerator.php';
 require_once 'classes/IESExport.php';
@@ -12,11 +15,25 @@ require_once 'config/baseline_library.php';
 
 // Handle POST request
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    try {
+    // Initialize position variables
+    $positionGroup = 'TEACHING POSITIONS'; // default
+    $salaryGrade = null;
+    $category = null;
     
-    // Get position group
-    $positionGroup = $_POST['position_group'] ?? 'A';
+    // Parse position group and salary grade from job_group_sg_level form field
+    // Format: "Group TEACHING POSITIONS / Salary Grade 11" or similar
+    $jobGroupInput = $_POST['job_group_sg_level'] ?? '';
+    if (!empty($jobGroupInput)) {
+        // Try to parse: "Group {POSITION_GROUP} / Salary Grade {SG}"
+        preg_match('/Group\s+(.+?)\s*\/\s*Salary Grade\s+(\d+)/', $jobGroupInput, $matches);
+        if (!empty($matches)) {
+            $positionGroup = trim($matches[1]);
+            $salaryGrade = intval($matches[2]);
+        }
+    }
     
-    // Check if position_key is provided and load baseline
+    // Check if position_key is provided and load baseline (this can override parsed values)
     $positionKey = $_POST['position_key'] ?? 'custom';
     $baselineFromLibrary = null;
     
@@ -26,10 +43,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($baselineFromLibrary && isset($baselineFromLibrary['position_group'])) {
             $positionGroup = $baselineFromLibrary['position_group'];
         }
+        if ($baselineFromLibrary && isset($baselineFromLibrary['salary_grade'])) {
+            $salaryGrade = $baselineFromLibrary['salary_grade'];
+        }
+        if ($baselineFromLibrary && isset($baselineFromLibrary['category'])) {
+            $category = $baselineFromLibrary['category'];
+        }
     }
     
-    // Initialize evaluator
-    $evaluator = new HRMPSBEvaluator($positionGroup);
+    // Initialize evaluator with position group and salary grade
+    $evaluator = new HRMPSBEvaluator($positionGroup, $salaryGrade, $category);
     
     // Prepare applicant data
     $applicantData = [
@@ -137,7 +160,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if (!$applicantId) {
                     // Create or find applicant
                     $applicantName = $_POST['applicant_name'] ?? 'Unknown';
-                    $positionGroup = $_POST['position_group'] ?? 'A';
+                    $carPositionGroup = $_POST['position_group'] ?? 'A';
                     
                     $query = "SELECT id FROM applicants WHERE name = ? LIMIT 1";
                     $stmt = $conn->prepare($query);
@@ -152,7 +175,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         // Create new applicant
                         $query = "INSERT INTO applicants (name, position_group) VALUES (?, ?)";
                         $stmt = $conn->prepare($query);
-                        $stmt->bind_param('ss', $applicantName, $positionGroup);
+                        $stmt->bind_param('ss', $applicantName, $carPositionGroup);
                         $stmt->execute();
                         $applicantId = $conn->insert_id;
                     }
@@ -174,10 +197,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $positionId = $row['id'];
                     } else {
                         // Create new position
-                        $positionGroup = $_POST['position_group'] ?? 'A';
+                        $carPositionGroup = $_POST['position_group'] ?? 'A';
                         $query = "INSERT INTO positions (position_name, position_group) VALUES (?, ?)";
                         $stmt = $conn->prepare($query);
-                        $stmt->bind_param('ss', $positionName, $positionGroup);
+                        $stmt->bind_param('ss', $positionName, $carPositionGroup);
                         $stmt->execute();
                         $positionId = $conn->insert_id;
                     }
@@ -222,8 +245,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'schools_division_office' => $_POST['schools_division_office'] ?? '',
         'contact_number' => $_POST['contact_number'] ?? '',
         'job_group_sg_level' => $_POST['job_group_sg_level'] ?? '',
-        'hrmpsb_chair' => $_POST['hrmpsb_chair'] ?? ''
+        'hrmpsb_chair' => $_POST['hrmpsb_chair'] ?? '',
+        'position_group' => $positionGroup,
+        'salary_grade' => $salaryGrade, // Use the numeric salary grade already extracted above
+        'category' => $category // Use the category already extracted above
     ];
+    
+    // If baseline from library, get salary grade
+    if ($baselineFromLibrary && isset($baselineFromLibrary['salary_grade'])) {
+        $additionalData['salary_grade'] = $baselineFromLibrary['salary_grade'];
+    }
+    if ($baselineFromLibrary && isset($baselineFromLibrary['category'])) {
+        $additionalData['category'] = $baselineFromLibrary['category'];
+    }
     
     // Output format
     $outputFormat = $_POST['output_format'] ?? 'html';
@@ -231,6 +265,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Handle export formats
     if (in_array($outputFormat, ['word', 'pdf', 'excel'])) {
         $exporter = new IESExport();
+        $exporter->setPositionGroup($positionGroup);
+        if (isset($additionalData['salary_grade'])) {
+            $exporter->setSalaryGrade($additionalData['salary_grade']);
+        }
+        if (isset($additionalData['category'])) {
+            $exporter->setCategory($additionalData['category']);
+        }
         
         switch ($outputFormat) {
             case 'word':
@@ -248,6 +289,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     
     // Generate IES Report (HTML or Text)
     $reportGenerator = new IESReportGenerator();
+    $reportGenerator->setPositionGroup($positionGroup);
+    if (isset($additionalData['salary_grade'])) {
+        $reportGenerator->setSalaryGrade($additionalData['salary_grade']);
+    }
+    if (isset($additionalData['category'])) {
+        $reportGenerator->setCategory($additionalData['category']);
+    }
+    
+    // Set success banner
+    setBannerMessage('success', 'Evaluation saved successfully! ✓ Showing Individual Evaluation Sheet.', true);
     
     if ($outputFormat === 'html') {
         header('Content-Type: text/html; charset=UTF-8');
@@ -258,9 +309,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     
     exit;
+    
+    } catch (Exception $e) {
+        // Log the error
+        error_log("Evaluation processing error: " . $e->getMessage());
+        
+        // Set error banner and redirect to form
+        setBannerMessage('error', 'Error processing evaluation: ' . htmlspecialchars($e->getMessage()), false);
+        header('Location: index.php');
+        exit;
+    }
 }
-
-// If not POST, redirect to form
-header('Location: index.php');
 exit;
 

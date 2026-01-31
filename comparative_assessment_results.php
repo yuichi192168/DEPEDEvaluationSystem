@@ -4,11 +4,52 @@
  * Shows all applicants ranked by their assessment scores in official DepEd HRMPSB format
  */
 
+session_start();
+
+require_once 'includes/banners.php';
 require_once 'classes/ComparativeAssessmentReport.php';
+require_once 'config/evaluation_criteria.php';
+require_once 'config/baseline_library.php';
 
 $car = new ComparativeAssessmentReport();
 $positionId = $_GET['position_id'] ?? null;
 $viewMode = $_GET['view'] ?? 'position'; // 'position' or 'all'
+
+/**
+ * Map database score columns to position-specific criteria
+ * Returns array of ['db_column' => 'score_column', 'criteria_name' => 'name', 'max_points' => points]
+ */
+function getCriteriaMappings($positionGroup, $salaryGrade = null, $category = null) {
+    $dbToKey = [
+        'education_score' => 'a',
+        'training_score' => 'b',
+        'experience_score' => 'c',
+        'performance_score' => 'd',
+        'outstanding_accomplishments_score' => 'e',
+        'application_of_education_score' => 'f',
+        'application_of_ld_score' => 'g',
+        'potential_score' => 'h'
+    ];
+    
+    $criteria = getEvaluationCriteria($positionGroup, $salaryGrade, $category);
+    if (!$criteria || empty($criteria['criteria'])) {
+        return [];
+    }
+    
+    $mappings = [];
+    foreach ($dbToKey as $dbCol => $key) {
+        if (isset($criteria['criteria'][$key])) {
+            $mappings[] = [
+                'db_column' => $dbCol,
+                'key' => $key,
+                'criteria_name' => $criteria['criteria'][$key]['name'],
+                'max_points' => $criteria['criteria'][$key]['max_points']
+            ];
+        }
+    }
+    
+    return $mappings;
+}
 
 // Get positions with results
 $positionsResult = $car->getPositionsWithResults();
@@ -405,9 +446,11 @@ if ($viewMode === 'all') {
             }
         }
     </style>
+    <link rel="stylesheet" href="css/banners.css">
 </head>
 <body>
     <div class="container">
+        <?php displayBannerFromSession(); ?>
         <!-- Navigation -->
         <div class="navigation">
             <a href="index.php" class="nav-btn secondary">Back to Evaluation Form</a>
@@ -443,20 +486,63 @@ if ($viewMode === 'all') {
                         Position: <?php echo htmlspecialchars($posName); ?>
                     </h2>
                     
+                    <?php
+                    // Get position group and salary grade for first applicant to determine criteria
+                    $posGroup = null;
+                    $salGrade = null;
+                    $posCategory = null;
+                    
+                    if (!empty($posData['applicants'])) {
+                        $firstApplicant = $posData['applicants'][0];
+                        
+                        // Try to get position group from applicant data
+                        if (isset($firstApplicant['position_group']) && !empty($firstApplicant['position_group'])) {
+                            $posGroup = $firstApplicant['position_group'];
+                        }
+                        
+                        // If not available, try to infer from position name
+                        if (!$posGroup && isset($firstApplicant['position_name'])) {
+                            $posName = strtoupper($firstApplicant['position_name']);
+                            if (strpos($posName, 'TEACHER') !== false) {
+                                $posGroup = 'TEACHING POSITIONS';
+                            } elseif (strpos($posName, 'PRINCIPAL') !== false || strpos($posName, 'DIRECTOR') !== false || strpos($posName, 'ADMIN') !== false || strpos($posName, 'SUPERVISOR') !== false) {
+                                $posGroup = 'SCHOOL ADMINISTRATION POSITION'; // Use config key, not 'ADMINISTRATIVE POSITIONS'
+                            } else {
+                                $posGroup = 'NON-TEACHING LEVEL I';
+                            }
+                        }
+                        
+                        // Get salary grade
+                        if (isset($firstApplicant['salary_grade'])) {
+                            $salGrade = intval($firstApplicant['salary_grade']);
+                        }
+                        if (isset($firstApplicant['category'])) {
+                            $posCategory = $firstApplicant['category'];
+                        }
+                    }
+                    
+                    // Fallback to default if still not set
+                    if (!$posGroup) {
+                        $posGroup = 'NON-TEACHING LEVEL I';
+                    }
+                    
+                    $criteriaMap = getCriteriaMappings($posGroup, $salGrade, $posCategory);
+                    
+                    // If no criteria found, log for debugging
+                    if (empty($criteriaMap)) {
+                        error_log("WARNING: No criteria found for posGroup=$posGroup, salGrade=$salGrade, posCategory=$posCategory");
+                    }
+                    ?>
+                    
                     <table class="results-table">
                         <thead>
                             <tr>
                                 <th style="width: 5%;">Rank</th>
                                 <th style="width: 20%;">NAME</th>
                                 <th style="width: 10%;">APPLICATION CODE</th>
-                                <th style="width: 7%;">Education</th>
-                                <th style="width: 7%;">Training</th>
-                                <th style="width: 7%;">Experience</th>
-                                <th style="width: 7%;">Performance</th>
-                                <th style="width: 8%;">Outstanding Accomplishments</th>
-                                <th style="width: 8%;">Application of Education</th>
-                                <th style="width: 8%;">Application of L&D</th>
-                                <th style="width: 7%;">Potential</th>
+                                <?php foreach ($criteriaMap as $mapping): ?>
+                                    <th style="width: 7%;"><?php echo htmlspecialchars($mapping['criteria_name']); ?></th>
+                                <?php endforeach; ?>
                                 <th style="width: 8%;">Total</th>
                             </tr>
                         </thead>
@@ -466,14 +552,9 @@ if ($viewMode === 'all') {
                                     <td><?php echo $row['rank'] ?? ($index + 1); ?></td>
                                     <td class="name-column"><?php echo htmlspecialchars($row['name']); ?></td>
                                     <td class="code-column"><?php echo htmlspecialchars($row['application_code'] ?? ''); ?></td>
-                                    <td class="score-column"><?php echo number_format($row['education_score'] ?? 0, 2); ?></td>
-                                    <td class="score-column"><?php echo number_format($row['training_score'] ?? 0, 2); ?></td>
-                                    <td class="score-column"><?php echo number_format($row['experience_score'] ?? 0, 2); ?></td>
-                                    <td class="score-column"><?php echo number_format($row['performance_score'] ?? 0, 2); ?></td>
-                                    <td class="score-column"><?php echo number_format($row['outstanding_accomplishments_score'] ?? 0, 2); ?></td>
-                                    <td class="score-column"><?php echo number_format($row['application_of_education_score'] ?? 0, 2); ?></td>
-                                    <td class="score-column"><?php echo number_format($row['application_of_ld_score'] ?? 0, 2); ?></td>
-                                    <td class="score-column"><?php echo number_format($row['potential_score'] ?? 0, 2); ?></td>
+                                    <?php foreach ($criteriaMap as $mapping): ?>
+                                        <td class="score-column"><?php echo number_format($row[$mapping['db_column']] ?? 0, 2); ?></td>
+                                    <?php endforeach; ?>
                                     <td class="total-column"><?php echo number_format($row['total_score'] ?? 0, 2); ?></td>
                                 </tr>
                             <?php endforeach; ?>
@@ -542,65 +623,59 @@ if ($viewMode === 'all') {
                     </thead>
                     <tbody>
                         <?php
-                        // Map criteria keys to descriptions and scoring methods
-                        $criteriaDescriptions = [
-                            'a' => ['Education', 'Increment scoring based on levels'],
-                            'b' => ['Training', 'Increment scoring based on levels'],
-                            'c' => ['Experience', 'Increment scoring based on levels'],
-                            'd' => ['Performance', 'Rating / 5 × Max Points'],
-                            'e' => ['Outstanding Accomplishments', 'Direct points (capped at max)'],
-                            'f' => ['Application of Education', 'Rating / 5 × Max Points'],
-                            'g' => ['Application of Learning & Development', 'Rating / 5 × Max Points'],
-                            'h' => ['Potential', 'Rating / 5 × Max Points']
-                        ];
+                        // Load evaluation criteria to get position-specific names
+                        require_once 'config/evaluation_criteria.php';
                         
-                        // Get criteria from the database or use defaults
-                        $defaultCriteria = [
-                            'TEACHING POSITIONS' => [
-                                'a' => 10, 'b' => 10, 'c' => 10, 'd' => 10, 'e' => 35, 'f' => 0, 'g' => 0, 'h' => 25
-                            ],
-                            'HIGHER TEACHING POSITIONS' => [
-                                'a' => 5, 'b' => 10, 'c' => 15, 'd' => 20, 'e' => 15, 'f' => 10, 'g' => 10, 'h' => 15
-                            ],
-                            'SCHOOL ADMINISTRATION POSITION' => [
-                                'a' => 10, 'b' => 10, 'c' => 10, 'd' => 25, 'e' => 10, 'f' => 10, 'g' => 10, 'h' => 15
-                            ],
-                            'RELATED TEACHING POSITION' => [
-                                'a' => 10, 'b' => 10, 'c' => 10, 'd' => 20, 'e' => 10, 'f' => 10, 'g' => 10, 'h' => 20
-                            ],
-                            'NON-TEACHING LEVEL I' => [
-                                'a' => 5, 'b' => 5, 'c' => 20, 'd' => 20, 'e' => 10, 'f' => 10, 'g' => 10, 'h' => 20
-                            ],
-                            'NON-TEACHING LEVEL II' => [
-                                'a' => 5, 'b' => 10, 'c' => 15, 'd' => 20, 'e' => 10, 'f' => 10, 'g' => 10, 'h' => 20
-                            ]
+                        // Map generic criterion keys to scoring methods
+                        $scoringMethods = [
+                            'a' => 'Increment scoring based on levels',
+                            'b' => 'Increment scoring based on levels',
+                            'c' => 'Increment scoring based on levels',
+                            'd' => 'Rating / 5 × Max Points',
+                            'e' => 'Direct points (capped at max)',
+                            'f' => 'Rating / 5 × Max Points',
+                            'g' => 'Rating / 5 × Max Points',
+                            'h' => 'Rating / 5 × Max Points'
                         ];
                         
                         // Determine position group from position details
                         $positionGroup = 'NON-TEACHING LEVEL I'; // Default
+                        $salaryGrade = null;
+                        $category = null;
+                        
                         if ($positionDetails && isset($positionDetails['position_name'])) {
-                            // Try to find position in baseline library to get group
+                            // Try to find position in baseline library to get group and salary grade
                             require_once 'config/baseline_library.php';
                             $positions_lib = getAllPositions();
                             foreach ($positions_lib as $pos) {
                                 if ($pos['position_name'] === $positionDetails['position_name']) {
                                     $positionGroup = $pos['position_group'] ?? 'NON-TEACHING LEVEL I';
+                                    $salaryGrade = $pos['salary_grade'] ?? null;
                                     break;
                                 }
                             }
                         }
                         
-                        $criteria = $defaultCriteria[$positionGroup] ?? $defaultCriteria['NON-TEACHING LEVEL I'];
-                        $totalMaxPoints = 0;
+                        // Get position-specific criteria - AUTHORITATIVE SOURCE
+                        $positionCriteria = getEvaluationCriteria($positionGroup, $salaryGrade, $category);
                         
-                        foreach ($criteria as $key => $maxPoints) {
-                            $totalMaxPoints += $maxPoints;
-                            $desc = $criteriaDescriptions[$key] ?? ["Criteria $key", "See detailed rules"];
-                            echo '<tr>';
-                            echo '<td style="padding: 8px; border: 1px solid #ddd;">' . htmlspecialchars($desc[0]) . '</td>';
-                            echo '<td style="padding: 8px; border: 1px solid #ddd; text-align: center; font-weight: bold;">' . $maxPoints . '</td>';
-                            echo '<td style="padding: 8px; border: 1px solid #ddd; font-size: 11px; color: #555;">' . htmlspecialchars($desc[1]) . '</td>';
-                            echo '</tr>';
+                        // Verify criteria were loaded - no fallback allowed
+                        if (!$positionCriteria || empty($positionCriteria['criteria'])) {
+                            echo '<tr><td colspan="3" style="padding: 20px; text-align: center; color: red; font-weight: bold;">ERROR: Evaluation criteria not available for position group: ' . htmlspecialchars($positionGroup) . '</td></tr>';
+                        } else {
+                            $totalMaxPoints = $positionCriteria['total_points'] ?? 100;
+                        
+                            // Display criteria with position-specific names and max points
+                            foreach ($positionCriteria['criteria'] as $key => $criterionDef) {
+                                $maxPoints = $criterionDef['max_points'] ?? 0;
+                                $criteriaName = $criterionDef['name'] ?? "Criteria $key";
+                                $scoringMethod = $scoringMethods[$key] ?? "See detailed rules";
+                                echo '<tr>';
+                                echo '<td style="padding: 8px; border: 1px solid #ddd;">' . htmlspecialchars($criteriaName) . '</td>';
+                                echo '<td style="padding: 8px; border: 1px solid #ddd; text-align: center; font-weight: bold;">' . $maxPoints . '</td>';
+                                echo '<td style="padding: 8px; border: 1px solid #ddd; font-size: 11px; color: #555;">' . htmlspecialchars($scoringMethod) . '</td>';
+                                echo '</tr>';
+                            }
                         }
                         ?>
                     </tbody>
@@ -615,21 +690,79 @@ if ($viewMode === 'all') {
             </div>
             
             <?php if (count($results) > 0): ?>
+                <?php 
+                    // Show success/info banner when CAR results are loaded
+                    $resultCount = count($results);
+                    $positionName = $positionDetails['position_name'] ?? 'Unknown Position';
+                    showInfoBanner("Showing " . $resultCount . " applicant" . ($resultCount !== 1 ? "s" : "") . " for <strong>$positionName</strong>");
+                ?>
                 <!-- Comparative Assessment Result Table -->
+                <?php
+                // Determine position group and salary grade from position details or results data
+                $positionGroup = null;
+                $salaryGrade = null;
+                $positionCategory = null;
+                
+                // Try to get from first result row which should have this data
+                if (!empty($results)) {
+                    $firstResult = $results[0];
+                    if (isset($firstResult['position_group']) && !empty($firstResult['position_group'])) {
+                        $positionGroup = $firstResult['position_group'];
+                    }
+                    if (isset($firstResult['salary_grade'])) {
+                        $salaryGrade = intval($firstResult['salary_grade']);
+                    }
+                    if (isset($firstResult['category'])) {
+                        $positionCategory = $firstResult['category'];
+                    }
+                }
+                
+                // If not found in results, try position library
+                if (!$positionGroup && $positionDetails && isset($positionDetails['position_name'])) {
+                    $positions_lib = getAllPositions();
+                    foreach ($positions_lib as $pos) {
+                        if ($pos['position_name'] === $positionDetails['position_name']) {
+                            $positionGroup = $pos['position_group'] ?? null;
+                            $salaryGrade = $pos['salary_grade'] ?? null;
+                            if (isset($pos['category'])) {
+                                $positionCategory = $pos['category'];
+                            }
+                            break;
+                        }
+                    }
+                }
+                
+                // If still not found, infer from position name
+                if (!$positionGroup && $positionDetails && isset($positionDetails['position_name'])) {
+                    $posName = strtoupper($positionDetails['position_name']);
+                    if (strpos($posName, 'TEACHER') !== false) {
+                        $positionGroup = 'TEACHING POSITIONS';
+                    } elseif (strpos($posName, 'PRINCIPAL') !== false || strpos($posName, 'DIRECTOR') !== false || strpos($posName, 'ADMIN') !== false || strpos($posName, 'SUPERVISOR') !== false) {
+                        $positionGroup = 'SCHOOL ADMINISTRATION POSITION'; // Use config key, not 'ADMINISTRATIVE POSITIONS'
+                    }
+                }
+                
+                // Fallback to default
+                if (!$positionGroup) {
+                    $positionGroup = 'NON-TEACHING LEVEL I';
+                }
+                
+                $criteriaHeaderMap = getCriteriaMappings($positionGroup, $salaryGrade, $positionCategory);
+                
+                // If no criteria found, log for debugging
+                if (empty($criteriaHeaderMap)) {
+                    error_log("WARNING: No criteria found for positionGroup=$positionGroup, salaryGrade=$salaryGrade, positionCategory=$positionCategory");
+                }
+                ?>
                 <table class="results-table">
                     <thead>
                         <tr>
                             <th style="width: 5%;">Rank</th>
                             <th style="width: 20%;">NAME</th>
                             <th style="width: 10%;">APPLICATION CODE</th>
-                            <th style="width: 7%;">Education</th>
-                            <th style="width: 7%;">Training</th>
-                            <th style="width: 7%;">Experience</th>
-                            <th style="width: 7%;">Performance</th>
-                            <th style="width: 8%;">Outstanding Accomplishments</th>
-                            <th style="width: 8%;">Application of Education</th>
-                            <th style="width: 8%;">Application of L&D</th>
-                            <th style="width: 7%;">Potential</th>
+                            <?php foreach ($criteriaHeaderMap as $mapping): ?>
+                                <th style="width: 7%;"><?php echo htmlspecialchars($mapping['criteria_name']); ?></th>
+                            <?php endforeach; ?>
                             <th style="width: 8%;">Total</th>
                             <th style="width: 6%;">Remarks</th>
                             <th style="width: 6%;">For Background Yes</th>
@@ -644,14 +777,9 @@ if ($viewMode === 'all') {
                                 <td><?php echo $row['rank'] ?? ($index + 1); ?></td>
                                 <td class="name-column"><?php echo htmlspecialchars($row['name']); ?></td>
                                 <td class="code-column"><?php echo htmlspecialchars($row['application_code'] ?? ''); ?></td>
-                                <td class="score-column"><?php echo number_format($row['education_score'] ?? 0, 2); ?></td>
-                                <td class="score-column"><?php echo number_format($row['training_score'] ?? 0, 2); ?></td>
-                                <td class="score-column"><?php echo number_format($row['experience_score'] ?? 0, 2); ?></td>
-                                <td class="score-column"><?php echo number_format($row['performance_score'] ?? 0, 2); ?></td>
-                                <td class="score-column"><?php echo number_format($row['outstanding_accomplishments_score'] ?? 0, 2); ?></td>
-                                <td class="score-column"><?php echo number_format($row['application_of_education_score'] ?? 0, 2); ?></td>
-                                <td class="score-column"><?php echo number_format($row['application_of_ld_score'] ?? 0, 2); ?></td>
-                                <td class="score-column"><?php echo number_format($row['potential_score'] ?? 0, 2); ?></td>
+                                <?php foreach ($criteriaHeaderMap as $mapping): ?>
+                                    <td class="score-column"><?php echo number_format($row[$mapping['db_column']] ?? 0, 2); ?></td>
+                                <?php endforeach; ?>
                                 <td class="total-column"><?php echo number_format($row['total_score'] ?? 0, 2); ?></td>
                                 <td style="text-align: center;"><?php echo htmlspecialchars($row['remarks'] ?? ''); ?></td>
                                 <td style="text-align: center;"><?php echo ($row['background_yes'] ? '✓' : ''); ?></td>
@@ -713,11 +841,13 @@ if ($viewMode === 'all') {
             <?php endif; ?>
             
         <?php elseif ($viewMode === 'all' && count($groupedResults) === 0): ?>
+            <?php showWarningBanner("No applicants found in the database. Please complete evaluations first to see Comparative Assessment Results."); ?>
             <div class="empty-message">
-                <p>No applicants found in the database. Please complete evaluations first.</p>
+                <p>No applicants found. <a href="index.php">Go back to complete evaluations</a></p>
             </div>
             
         <?php elseif ($viewMode === 'position' || ($viewMode === 'position' && !$positionId)): ?>
+            <?php showInfoBanner("Select a position below to view Comparative Assessment Results for that position group."); ?>
             <!-- Selector Section (when no position selected or view by position mode) -->
             <div class="selector-section">
                 <div class="selector-row">

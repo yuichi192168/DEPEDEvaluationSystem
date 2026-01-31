@@ -3,6 +3,9 @@
  * DepEd Human Resource Merit Promotion and Selection Board(HRMPSB) Evaluation System
  * Enhanced Version with Baseline Library and Level Pickers
  */
+session_start();
+
+require_once 'includes/banners.php';
 require_once 'config/baseline_library.php';
 require_once 'config/evaluation_criteria.php';
 
@@ -255,10 +258,12 @@ $positions = getAllPositions();
         }
     }
 </style>
-
+    <link rel="stylesheet" href="css/banners.css">
+    <link rel="stylesheet" href="css/form-validation.css">
 </head>
 <body>
     <div class="container">
+        <?php displayBannerFromSession(); ?>
         <h1>DepEd HRMPSB Evaluation System</h1>
         <p class="subtitle">Comparative Assessment Based on DepEd Order No. 007, s. 2023</p>
         
@@ -267,6 +272,15 @@ $positions = getAllPositions();
         </div>
         
         <form method="POST" action="process_evaluation.php" id="evaluationForm">
+            
+            <!-- Form Progress Indicator -->
+            <div class="form-progress" id="form_progress">
+                <label class="progress-label">Form Completion Status</label>
+                <div class="progress-bar">
+                    <div class="progress-fill"></div>
+                </div>
+                <span class="progress-text">0 of 5 required fields completed</span>
+            </div>
             
             <!-- Hidden fields to enable database and CAR saving -->
             <input type="hidden" name="save_to_database" value="1">
@@ -294,21 +308,31 @@ $positions = getAllPositions();
                 </div>
                 <div class="form-row">
                     <div class="form-group">
-                        <label for="position_applied">Position Applied For *</label>
-                        <input type="text" id="position_applied" name="position_applied" required 
-                               placeholder="Information and Communications Technology">
-                        <span class="help-text">This field auto-fills when you select a position above</span>
+                        <label for="position_applied">Position Applied For <span class="required-indicator">*</span></label>
+                        <div class="field-wrapper">
+                            <input type="text" id="position_applied" name="position_applied" required 
+                                   placeholder="Information and Communications Technology">
+                            <span class="valid-indicator" id="position_applied_valid_indicator">✓</span>
+                        </div>
+                        <span class="helper-text">Auto-filled when you select a position</span>
                     </div>
                     <div class="form-group">
-                        <label for="job_group_sg_level">Job Group / Salary Grade</label>
-                        <input type="text" id="job_group_sg_level" name="job_group_sg_level" readonly>
-                        <span class="help-text">Auto-filled from selected position</span>
+                        <label for="job_group_sg_level">Job Group / Salary Grade <span class="required-indicator">*</span></label>
+                        <div class="field-wrapper">
+                            <input type="text" id="job_group_sg_level" name="job_group_sg_level" readonly required>
+                            <span class="valid-indicator" id="job_group_sg_level_valid_indicator">✓</span>
+                        </div>
+                        <span class="helper-text">Auto-filled from selected position</span>
                     </div>
                 </div>
                 <div class="form-row">
                     <div class="form-group">
-                        <label for="applicant_name">Applicant Name *</label>
-                        <input type="text" id="applicant_name" name="applicant_name" required>
+                        <label for="applicant_name">Applicant Name <span class="required-indicator">*</span></label>
+                        <div class="field-wrapper">
+                            <input type="text" id="applicant_name" name="applicant_name" required>
+                            <span class="valid-indicator" id="applicant_name_valid_indicator">✓</span>
+                        </div>
+                        <span class="helper-text">Enter full name of applicant</span>
                     </div>
                     <div class="form-group">
                         <label for="application_code">Application Code</label>
@@ -317,13 +341,21 @@ $positions = getAllPositions();
                 </div>
                 <div class="form-row">
                     <div class="form-group">
-                        <label for="schools_division_office">Schools Division Office</label>
-                        <input type="text" id="schools_division_office" name="schools_division_office" 
-                               value="City Schools Division of Cabuyao">
+                        <label for="schools_division_office">Schools Division Office <span class="required-indicator">*</span></label>
+                        <div class="field-wrapper">
+                            <input type="text" id="schools_division_office" name="schools_division_office" 
+                                   value="City Schools Division of Cabuyao" required>
+                            <span class="valid-indicator" id="schools_division_office_valid_indicator">✓</span>
+                        </div>
+                        <span class="helper-text">Name of your schools division</span>
                     </div>
                     <div class="form-group">
-                        <label for="contact_number">Contact Number</label>
-                        <input type="text" id="contact_number" name="contact_number">
+                        <label for="contact_number">Contact Number <span class="required-indicator">*</span></label>
+                        <div class="field-wrapper">
+                            <input type="text" id="contact_number" name="contact_number" required>
+                            <span class="valid-indicator" id="contact_number_valid_indicator">✓</span>
+                        </div>
+                        <span class="helper-text">Use 09XXXXXXXXX or +639XXXXXXXXX format</span>
                     </div>
                 </div>
                 <div id="baselineInfo" class="baseline-info" style="display: none;">
@@ -658,7 +690,7 @@ $positions = getAllPositions();
             
             <!-- Submit Buttons -->
             <div class="btn-group">
-                <button type="submit" class="btn-primary">Generate Evaluation Report</button>
+                <button type="submit" class="btn-primary action-button" disabled>Generate Evaluation Report</button>
                 <button type="reset" class="btn-secondary" onclick="resetForm()">Reset Form</button>
                 <a href="comparative_assessment_results.php?view=all" class="btn-primary">View All Results</a>
             </div>
@@ -995,6 +1027,12 @@ $positions = getAllPositions();
 
             // Update Position Applied For exactly as stored
             if (appliedInput) appliedInput.value = pos.position_name;
+            
+            // Trigger validation update for dynamically filled fields
+            if (window.formValidator) {
+                window.formValidator.handleFieldChange('position_applied');
+                window.formValidator.handleFieldChange('job_group_sg_level');
+            }
 
             // Update position group select to the group that contains this position (if known)
             const gsel = document.getElementById('position_group_select');
@@ -1106,6 +1144,10 @@ $positions = getAllPositions();
             let positionGroup = null;
             let salaryGrade = null;
             
+            // Clear previous criteria before loading new ones
+            window.currentCriteria = {};
+            window.currentTotalPoints = 0;
+            
             if (selPosKey && positions[selPosKey]) {
                 positionGroup = positions[selPosKey].position_group;
                 salaryGrade = positions[selPosKey].salary_grade;
@@ -1128,11 +1170,24 @@ $positions = getAllPositions();
                 const url = `api/get_evaluation_criteria.php?position_group=${encodeURIComponent(positionGroup)}&salary_grade=${salaryGrade || ''}`;
                 const resp = await fetch(url);
                 const data = await resp.json();
-                window.currentCriteria = data.criteria;
-                window.currentTotalPoints = data.total_points;
+                
+                // Load criteria from authoritative source
+                if (data && data.criteria) {
+                    window.currentCriteria = data.criteria;
+                    window.currentTotalPoints = data.total_points || 100;
+                } else {
+                    // No fallback allowed - log error if criteria not found
+                    console.error('No evaluation criteria found for position group:', positionGroup);
+                    window.currentCriteria = {};
+                    window.currentTotalPoints = 0;
+                }
+                
                 return data;
             } catch (e) {
                 console.error('Failed to load evaluation criteria:', e);
+                // Ensure criteria are cleared on error
+                window.currentCriteria = {};
+                window.currentTotalPoints = 0;
                 return null;
             }
         }
@@ -1222,45 +1277,13 @@ $positions = getAllPositions();
                     });
                 });
             } else {
-                // Fallback to hardcoded criteria
-                const groupWeights = weights[positionGroup] || weights['NON-TEACHING LEVEL I'];
-                
-                const appEduDegree = document.getElementById('applicant_education_degree').value;
-                const appMastersUnits = parseInt(document.getElementById('applicant_education_masters_units').value) || 0;
-                const appDoctoralUnits = parseInt(document.getElementById('applicant_education_doctoral_units').value) || 0;
-                const appEduLevel = convertEducationToLevel(appEduDegree, appMastersUnits, appDoctoralUnits);
-                
-                const appTrainingLevel = convertTrainingToLevel(parseFloat(document.getElementById('applicant_training').value) || 0);
-                const appExperienceLevel = convertExperienceToLevel(parseFloat(document.getElementById('applicant_experience').value) || 0);
-                const appPerformance = parseFloat(document.getElementById('applicant_performance').value) || 0;
-                const appOA = parseFloat(document.getElementById('applicant_outstanding_accomplishments').value) || 0;
-                const appAOE = parseFloat(document.getElementById('applicant_application_of_education').value) || 0;
-                const appAOLD = parseFloat(document.getElementById('applicant_application_of_ld').value) || 0;
-                const appPotential = parseFloat(document.getElementById('applicant_potential').value) || 0;
-                
-                const baseEduDegree = document.getElementById('baseline_education_degree').value;
-                const baseMastersUnits = parseInt(document.getElementById('baseline_education_masters_units').value) || 0;
-                const baseDoctoralUnits = parseInt(document.getElementById('baseline_education_doctoral_units').value) || 0;
-                const baseEduLevel = convertEducationToLevel(baseEduDegree, baseMastersUnits, baseDoctoralUnits);
-                
-                const baseTrainingLevel = convertTrainingToLevel(parseFloat(document.getElementById('baseline_training').value) || 0);
-                const baseExperienceLevel = convertExperienceToLevel(parseFloat(document.getElementById('baseline_experience').value) || 0);
-                const basePerformance = parseFloat(document.getElementById('baseline_performance').value) || 0;
-                const baseOA = parseFloat(document.getElementById('baseline_outstanding_accomplishments').value) || 0;
-                const baseAOE = parseFloat(document.getElementById('baseline_application_of_education').value) || 0;
-                const baseAOLD = parseFloat(document.getElementById('baseline_application_of_ld').value) || 0;
-                const basePotential = parseFloat(document.getElementById('baseline_potential').value) || 0;
-                
-                criteriaList = [
-                    { name: 'Education', max_points: groupWeights.education, appLevel: appEduLevel, baseLevel: baseEduLevel, scoring: 'increment' },
-                    { name: 'Training', max_points: groupWeights.training, appLevel: appTrainingLevel, baseLevel: baseTrainingLevel, scoring: 'increment' },
-                    { name: 'Experience', max_points: groupWeights.experience, appLevel: appExperienceLevel, baseLevel: baseExperienceLevel, scoring: 'increment' },
-                    { name: 'Performance', max_points: groupWeights.performance, appLevel: appPerformance, baseLevel: basePerformance, scoring: 'weighted' },
-                    { name: 'Outstanding Accomplishments', max_points: groupWeights.outstanding_accomplishments, appLevel: appOA, baseLevel: baseOA, scoring: 'direct_points' },
-                    { name: 'Application of Education', max_points: groupWeights.application_of_education, appLevel: appAOE, baseLevel: baseAOE, scoring: 'weighted' },
-                    { name: 'Application of L&D', max_points: groupWeights.application_of_ld, appLevel: appAOLD, baseLevel: baseAOLD, scoring: 'weighted' },
-                    { name: 'Potential', max_points: groupWeights.potential, appLevel: appPotential, baseLevel: basePotential, scoring: 'weighted' }
-                ];
+                // No fallback allowed - criteria must be loaded from evaluation_criteria.php
+                // Log warning and show empty table
+                console.warn('Warning: Evaluation criteria not loaded for position group: ' + positionGroup);
+                document.getElementById('previewTableBody').innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 20px; color: red;"><strong>Error: Evaluation criteria not available. Please select a valid position.</strong></td></tr>';
+                document.getElementById('totalScore').textContent = '0.00';
+                document.getElementById('livePreview').classList.add('active');
+                return;
             }
             
             let totalScore = 0;
@@ -1345,5 +1368,6 @@ $positions = getAllPositions();
             document.getElementById('livePreview').classList.remove('active');
         }
     </script>
+    <script src="js/form-validation.js"></script>
 </body>
 </html>

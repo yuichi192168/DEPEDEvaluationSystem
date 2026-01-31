@@ -9,17 +9,89 @@
  */
 
 require_once 'HRMPSBEvaluator.php';
+require_once __DIR__ . '/../config/evaluation_criteria.php';
 
 class CARReportGeneratorG2 {
+    
+    private $positionGroup = 'A';
+    private $salaryGrade = null;
+    private $category = null;
+    
+    /**
+     * Set position group
+     */
+    public function setPositionGroup($positionGroup) {
+        $this->positionGroup = $positionGroup;
+    }
+    
+    /**
+     * Set salary grade for position-specific criteria
+     */
+    public function setSalaryGrade($salaryGrade) {
+        $this->salaryGrade = $salaryGrade;
+    }
+    
+    /**
+     * Set category for non-teaching positions
+     */
+    public function setCategory($category) {
+        $this->category = $category;
+    }
+    
+    /**
+     * Get criteria mappings for table headers
+     */
+    private function getCriteriaMappings() {
+        $dbToKey = [
+            'education' => 'a',
+            'training' => 'b',
+            'experience' => 'c',
+            'performance' => 'd',
+            'outstanding_accomplishments' => 'e',
+            'application_of_education' => 'f',
+            'application_of_ld' => 'g',
+            'potential' => 'h'
+        ];
+        
+        $criteria = getEvaluationCriteria($this->positionGroup, $this->salaryGrade, $this->category);
+        if (!$criteria || empty($criteria['criteria'])) {
+            return [];
+        }
+        
+        $mappings = [];
+        foreach ($dbToKey as $dbKey => $key) {
+            if (isset($criteria['criteria'][$key])) {
+                $mappings[] = [
+                    'db_key' => $dbKey,
+                    'key' => $key,
+                    'criteria_name' => $criteria['criteria'][$key]['name'],
+                    'max_points' => $criteria['criteria'][$key]['max_points']
+                ];
+            }
+        }
+        
+        return $mappings;
+    }
     
     /**
      * Generate Annex G-2 Comparative Assessment Results (Consolidated)
      * 
-     * @param array $evaluations Array of evaluation results (each from evaluateApplicant)
+     * @param array $evaluations Array of evaluation results
      * @param array $additionalData Position info, salary grade, item number, signatories, etc.
      * @return string HTML content
      */
     public function generateCAR($evaluations, $additionalData = []) {
+        // Set position group from additional data if available
+        if (isset($additionalData['position_group'])) {
+            $this->positionGroup = $additionalData['position_group'];
+        }
+        if (isset($additionalData['salary_grade'])) {
+            $this->salaryGrade = $additionalData['salary_grade'];
+        }
+        if (isset($additionalData['category'])) {
+            $this->category = $additionalData['category'];
+        }
+        
         // Sort evaluations by total score (descending)
         usort($evaluations, function($a, $b) {
             $scoreA = $a['total_score'];
@@ -287,20 +359,20 @@ class CARReportGeneratorG2 {
         </div>';
         
         // Main CAR Table
+        $criteriaHeaderMap = $this->getCriteriaMappings();
+        
         $html .= '<table class="car-table">
             <thead>
                 <tr>
                     <th class="col-rank">Rank</th>
-                    <th class="col-name">Name of Applicant</th>
-                    <th class="col-score">Education<br>(' . $weights['education'] . ' pts)</th>
-                    <th class="col-score">Training<br>(' . $weights['training'] . ' pts)</th>
-                    <th class="col-score">Experience<br>(' . $weights['experience'] . ' pts)</th>
-                    <th class="col-score">Performance<br>(' . $weights['performance'] . ' pts)</th>
-                    <th class="col-score">Accomplishments<br>(' . $weights['outstanding_accomplishments'] . ' pts)</th>
-                    <th class="col-score">Application of Ed<br>(' . $weights['application_of_education'] . ' pts)</th>
-                    <th class="col-score">Application of L&D<br>(' . $weights['application_of_ld'] . ' pts)</th>
-                    <th class="col-score">Potential<br>(' . $weights['potential'] . ' pts)</th>
-                    <th class="col-total">Total<br>Score</th>
+                    <th class="col-name">Name of Applicant</th>';
+        
+        // Add dynamic criteria headers
+        foreach ($criteriaHeaderMap as $mapping) {
+            $html .= '<th class="col-score">' . htmlspecialchars($mapping['criteria_name']) . '<br>(' . $mapping['max_points'] . ' pts)</th>';
+        }
+        
+        $html .= '<th class="col-total">Total<br>Score</th>
                     <th class="col-remarks">Remarks</th>
                 </tr>
             </thead>
@@ -345,15 +417,8 @@ class CARReportGeneratorG2 {
                 $tieStartRank = $rank;
             }
             
-            // Extract scores for each criterion
-            $educationScore = $evaluation['criteria']['education']['final_score'] ?? 0;
-            $trainingScore = $evaluation['criteria']['training']['final_score'] ?? 0;
-            $experienceScore = $evaluation['criteria']['experience']['final_score'] ?? 0;
-            $performanceScore = $evaluation['criteria']['performance']['final_score'] ?? 0;
-            $accomplishmentsScore = $evaluation['criteria']['outstanding_accomplishments']['final_score'] ?? 0;
-            $applicationOfEdScore = $evaluation['criteria']['application_of_education']['final_score'] ?? 0;
-            $applicationOfLDScore = $evaluation['criteria']['application_of_ld']['final_score'] ?? 0;
-            $potentialScore = $evaluation['criteria']['potential']['final_score'] ?? 0;
+            // Get criteria mappings for this row
+            $rowCriteria = $this->getCriteriaMappings();
             
             // Format scores (remove decimals if whole number)
             $formatScore = function($score) {
@@ -383,16 +448,15 @@ class CARReportGeneratorG2 {
             
             $html .= '<tr class="' . trim($rowClass) . '">
                 <td class="col-rank">' . $displayRank . '</td>
-                <td class="col-name">' . htmlspecialchars($evaluation['applicant_name']) . '</td>
-                <td class="col-score">' . $formatScore($educationScore) . '</td>
-                <td class="col-score">' . $formatScore($trainingScore) . '</td>
-                <td class="col-score">' . $formatScore($experienceScore) . '</td>
-                <td class="col-score">' . $formatScore($performanceScore) . '</td>
-                <td class="col-score">' . $formatScore($accomplishmentsScore) . '</td>
-                <td class="col-score">' . $formatScore($applicationOfEdScore) . '</td>
-                <td class="col-score">' . $formatScore($applicationOfLDScore) . '</td>
-                <td class="col-score">' . $formatScore($potentialScore) . '</td>
-                <td class="col-total">' . $formatScore($currentScore) . '</td>
+                <td class="col-name">' . htmlspecialchars($evaluation['applicant_name']) . '</td>';
+            
+            // Add scores for each criterion dynamically
+            foreach ($rowCriteria as $mapping) {
+                $score = $evaluation['criteria'][$mapping['db_key']]['final_score'] ?? 0;
+                $html .= '<td class="col-score">' . $formatScore($score) . '</td>';
+            }
+            
+            $html .= '<td class="col-total">' . $formatScore($currentScore) . '</td>
                 <td class="col-remarks">' . htmlspecialchars($remarks) . '</td>
             </tr>';
             

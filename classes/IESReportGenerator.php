@@ -7,13 +7,101 @@
  */
 
 require_once 'HRMPSBEvaluator.php';
+require_once __DIR__ . '/../config/evaluation_criteria.php';
 
 class IESReportGenerator {
+    
+    private $positionGroup = null;
+    private $salaryGrade = null;
+    private $category = null;
+    
+    /**
+     * Set position group for position-specific criteria
+     */
+    public function setPositionGroup($positionGroup) {
+        $this->positionGroup = $positionGroup;
+    }
+    
+    /**
+     * Set salary grade for position-specific criteria
+     */
+    public function setSalaryGrade($salaryGrade) {
+        $this->salaryGrade = $salaryGrade;
+    }
+    
+    /**
+     * Set category for non-teaching positions
+     */
+    public function setCategory($category) {
+        $this->category = $category;
+    }
+    
+    /**
+     * Get criteria mappings for position-specific names
+     * Only includes criteria with max_points > 0
+     */
+    private function getCriteriaMappings() {
+        if (!$this->positionGroup) {
+            return [];
+        }
+        
+        $criteria = getEvaluationCriteria($this->positionGroup, $this->salaryGrade, $this->category);
+        if (!$criteria || empty($criteria['criteria'])) {
+            return [];
+        }
+        
+        $mappings = [];
+        $dbToKey = [
+            'education' => 'a',
+            'training' => 'b',
+            'experience' => 'c',
+            'performance' => 'd',
+            'outstanding_accomplishments' => 'e',
+            'application_of_education' => 'f',
+            'application_of_ld' => 'g',
+            'potential' => 'h'
+        ];
+        
+        foreach ($dbToKey as $dbKey => $key) {
+            if (isset($criteria['criteria'][$key])) {
+                $maxPoints = $criteria['criteria'][$key]['max_points'];
+                // Only include criteria with max_points > 0
+                if ($maxPoints > 0) {
+                    $mappings[$dbKey] = [
+                        'name' => $criteria['criteria'][$key]['name'],
+                        'max_points' => $maxPoints
+                    ];
+                }
+            }
+        }
+        
+        return $mappings;
+    }
+    
+    /**
+     * Get the ordered list of valid criteria for the position
+     */
+    private function getValidCriteriaOrder() {
+        $criteriaMapping = $this->getCriteriaMappings();
+        // Return keys in the order they appear in the mapping
+        return array_keys($criteriaMapping);
+    }
     
     /**
      * Generate Annex G Individual Evaluation Sheet
      */
     public function generateIES($evaluation, $additionalData = []) {
+        // Set position group from additional data if available
+        if (isset($additionalData['position_group'])) {
+            $this->positionGroup = $additionalData['position_group'];
+        }
+        if (isset($additionalData['salary_grade'])) {
+            $this->salaryGrade = $additionalData['salary_grade'];
+        }
+        if (isset($additionalData['category'])) {
+            $this->category = $additionalData['category'];
+        }
+        
         $html = $this->generateHTML($evaluation, $additionalData);
         return $html;
     }
@@ -195,9 +283,69 @@ class IESReportGenerator {
         .date-field {
             margin-top: 10px;
         }
+        /* Banner styles */
+        :root {
+            --banner-success-bg: #d4edda;
+            --banner-success-border: #c3e6cb;
+            --banner-success-text: #155724;
+            --banner-success-icon: #28a745;
+        }
+        .banner {
+            margin: 20px 0;
+            border-left: 5px solid #28a745;
+            border-radius: 4px;
+            padding: 12px 16px;
+            background-color: var(--banner-success-bg);
+            color: var(--banner-success-text);
+            animation: slideIn 0.3s ease-in-out, fadeOut 0.3s ease-in-out 4.7s forwards;
+        }
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes fadeOut {
+            from { opacity: 1; transform: translateY(0); }
+            to { opacity: 0; transform: translateY(-20px); }
+        }
+        .banner-content {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .banner-icon {
+            font-size: 18px;
+            font-weight: bold;
+            color: var(--banner-success-icon);
+            flex-shrink: 0;
+        }
+        .banner-text {
+            flex: 1;
+            line-height: 1.5;
+        }
+        .banner-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            padding: 0 4px;
+            opacity: 0.6;
+            transition: opacity 0.2s;
+        }
+        .banner-close:hover {
+            opacity: 1;
+        }
     </style>
 </head>
 <body>';
+        
+        // Add success banner
+        $html .= '<div class="banner" role="status" aria-live="polite">
+            <div class="banner-content">
+                <span class="banner-icon">✓</span>
+                <span class="banner-text"><strong>Evaluation completed successfully!</strong> Individual Evaluation Sheet generated.</span>
+                <button class="banner-close" onclick="this.parentElement.parentElement.style.display=\'none\';" aria-label="Close message">&times;</button>
+            </div>
+        </div>';
         
         // Header with Annex G
         $html .= '<div class="header">
@@ -251,18 +399,19 @@ class IESReportGenerator {
             <tbody>';
         
         $totalScore = 0;
-        $criteriaOrder = [
-            'education',
-            'training',
-            'experience',
-            'performance',
-            'outstanding_accomplishments',
-            'application_of_education',
-            'application_of_ld',
-            'potential'
-        ];
         
-        // Map criterion keys to display names
+        // Get position-specific criterion mappings (only includes criteria with max_points > 0)
+        $criteriaMapping = $this->getCriteriaMappings();
+        $validCriteriaOrder = $this->getValidCriteriaOrder();
+        
+        // DEBUG: Always include debug info as HTML comment for troubleshooting
+        $debugInfo = "positionGroup=" . ($this->positionGroup ?? 'NULL') . "; ";
+        $debugInfo .= "salaryGrade=" . ($this->salaryGrade ?? 'NULL') . "; ";
+        $debugInfo .= "criteriaMapping_count=" . count($criteriaMapping) . "; ";
+        $debugInfo .= "validCriteriaOrder_count=" . count($validCriteriaOrder);
+        $html .= "<!-- IES_DEBUG: $debugInfo -->";
+        
+        // Fallback to generic names if position group not set
         $criterionNames = [
             'education' => 'Education',
             'training' => 'Training',
@@ -274,41 +423,58 @@ class IESReportGenerator {
             'potential' => 'Potential (Written Text, BEI, Work Sample Test)'
         ];
         
-        foreach ($criteriaOrder as $criterion) {
-            if (isset($evaluation['criteria'][$criterion])) {
-                $criteria = $evaluation['criteria'][$criterion];
-                $totalScore += $criteria['final_score'];
-                
-                // Format computation
-                // For increment-based criteria: "6-6=0"
-                // For weighted criteria (increment is null): "(rating/5) × weight"
-                // For Outstanding Accomplishments: "min(points, weight)"
-                if ($criteria['increment'] === null) {
-                    // Check if Outstanding Accomplishments (direct points, not weighted rating)
-                    if ($criterion === 'outstanding_accomplishments') {
-                        $computation = 'min(' . $criteria['applicant_level'] . ', ' . $criteria['weight'] . ')';
-                    } else {
-                        // Weighted computation for Performance, Application, Potential
-                        $computation = '(' . $criteria['applicant_level'] . '/5) × ' . $criteria['weight'];
-                    }
-                } else {
-                    // Increment-based computation for Education, Training, Experience
-                    $computation = $criteria['applicant_level'] . '-' . $criteria['baseline_level'] . '=' . $criteria['increment'];
-                }
-                
-                // Format score (remove decimals if whole number)
-                $score = $criteria['final_score'] == intval($criteria['final_score']) 
-                    ? intval($criteria['final_score']) 
-                    : number_format($criteria['final_score'], 1);
-                
-                $html .= '<tr>
-                    <td class="col-criteria">' . $criterionNames[$criterion] . '</td>
-                    <td class="col-weight">' . $criteria['weight'] . '</td>
-                    <td class="col-details">' . htmlspecialchars($criteria['applicant_qualification']) . '</td>
-                    <td class="col-computation">' . $computation . '</td>
-                    <td class="col-score">' . $score . '</td>
-                </tr>';
+        // Override with position-specific names if available
+        if (!empty($criteriaMapping)) {
+            foreach ($criteriaMapping as $dbKey => $mapping) {
+                $criterionNames[$dbKey] = $mapping['name'];
             }
+        }
+        
+        // Iterate only through valid criteria for this position
+        foreach ($validCriteriaOrder as $criterion) {
+            // Check if criterion exists in evaluation data
+            if (!isset($evaluation['criteria'][$criterion])) {
+                // Criterion exists in config but not in evaluation data
+                // This could happen if evaluation wasn't fully processed
+                // Try to use the criterion name from mapping and show as N/A or skip
+                continue;
+            }
+            
+            $criteria = $evaluation['criteria'][$criterion];
+            $totalScore += $criteria['final_score'];
+            
+            // Get position-specific weight (max_points) - guaranteed to be > 0
+            $displayWeight = $criteriaMapping[$criterion]['max_points'] ?? $criteria['weight'];
+            
+            // Format computation
+            // For increment-based criteria: "6-6=0"
+            // For weighted criteria (increment is null): "(rating/5) × weight"
+            // For Outstanding Accomplishments: "min(points, weight)"
+            if ($criteria['increment'] === null) {
+                // Check if Outstanding Accomplishments (direct points, not weighted rating)
+                if ($criterion === 'outstanding_accomplishments') {
+                    $computation = 'min(' . $criteria['applicant_level'] . ', ' . $displayWeight . ')';
+                } else {
+                    // Weighted computation for Performance, Application, Potential
+                    $computation = '(' . $criteria['applicant_level'] . '/5) × ' . $displayWeight;
+                }
+            } else {
+                // Increment-based computation for Education, Training, Experience
+                $computation = $criteria['applicant_level'] . '-' . $criteria['baseline_level'] . '=' . $criteria['increment'];
+            }
+            
+            // Format score (remove decimals if whole number)
+            $score = $criteria['final_score'] == intval($criteria['final_score']) 
+                ? intval($criteria['final_score']) 
+                : number_format($criteria['final_score'], 1);
+            
+            $html .= '<tr>
+                <td class="col-criteria">' . htmlspecialchars($criterionNames[$criterion]) . '</td>
+                <td class="col-weight">' . $displayWeight . '</td>
+                <td class="col-details">' . htmlspecialchars($criteria['applicant_qualification']) . '</td>
+                <td class="col-computation">' . $computation . '</td>
+                <td class="col-score">' . $score . '</td>
+            </tr>';
         }
         
         // Total Row
@@ -390,28 +556,25 @@ class IESReportGenerator {
             "Criteria", "Weight", "Details", "Computation", "Score");
         $text .= str_repeat("-", 80) . "\n";
         
-        $criteriaOrder = [
-            'education',
-            'training',
-            'experience',
-            'performance',
-            'outstanding_accomplishments',
-            'application_of_education',
-            'application_of_ld',
-            'potential'
-        ];
+        // Get position-specific mappings and valid criteria
+        $criteriaMapping = $this->getCriteriaMappings();
+        $validCriteriaOrder = $this->getValidCriteriaOrder();
         
-        foreach ($criteriaOrder as $criterion) {
+        foreach ($validCriteriaOrder as $criterion) {
             if (isset($evaluation['criteria'][$criterion])) {
                 $criteria = $evaluation['criteria'][$criterion];
+                
+                // Get position-specific weight
+                $displayWeight = $criteriaMapping[$criterion]['max_points'] ?? $criteria['weight'];
+                
                 // Format computation
                 if ($criteria['increment'] === null) {
                     // Check if Outstanding Accomplishments (direct points, not weighted rating)
                     if ($criterion === 'outstanding_accomplishments') {
-                        $computation = "min({$criteria['applicant_level']}, {$criteria['weight']})";
+                        $computation = "min({$criteria['applicant_level']}, {$displayWeight})";
                     } else {
                         // Weighted computation for Performance, Application, Potential
-                        $computation = "({$criteria['applicant_level']}/5) × {$criteria['weight']}";
+                        $computation = "({$criteria['applicant_level']}/5) × {$displayWeight}";
                     }
                 } else {
                     // Increment-based computation for Education, Training, Experience
@@ -419,7 +582,7 @@ class IESReportGenerator {
                 }
                 $text .= sprintf("%-25s %-8s %-20s %-15s %-8.1f\n",
                     $criteria['criterion'],
-                    $criteria['weight'] . '%',
+                    $displayWeight,
                     substr($criteria['applicant_qualification'], 0, 20),
                     $computation,
                     $criteria['final_score']

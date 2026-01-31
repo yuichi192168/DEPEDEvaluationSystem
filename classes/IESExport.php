@@ -5,8 +5,85 @@
  */
 
 require_once __DIR__ . '/IESReportGenerator.php';
+require_once __DIR__ . '/../config/evaluation_criteria.php';
 
 class IESExport {
+    
+    private $positionGroup = null;
+    private $salaryGrade = null;
+    private $category = null;
+    
+    /**
+     * Set position group for position-specific criteria
+     */
+    public function setPositionGroup($positionGroup) {
+        $this->positionGroup = $positionGroup;
+    }
+    
+    /**
+     * Set salary grade for position-specific criteria
+     */
+    public function setSalaryGrade($salaryGrade) {
+        $this->salaryGrade = $salaryGrade;
+    }
+    
+    /**
+     * Set category for non-teaching positions
+     */
+    public function setCategory($category) {
+        $this->category = $category;
+    }
+    
+    /**
+     * Get criteria mappings for position-specific names
+     * Only includes criteria with max_points > 0
+     */
+    private function getCriteriaMappings() {
+        if (!$this->positionGroup) {
+            return [];
+        }
+        
+        $criteria = getEvaluationCriteria($this->positionGroup, $this->salaryGrade, $this->category);
+        if (!$criteria || empty($criteria['criteria'])) {
+            return [];
+        }
+        
+        $mappings = [];
+        $dbToKey = [
+            'education' => 'a',
+            'training' => 'b',
+            'experience' => 'c',
+            'performance' => 'd',
+            'outstanding_accomplishments' => 'e',
+            'application_of_education' => 'f',
+            'application_of_ld' => 'g',
+            'potential' => 'h'
+        ];
+        
+        foreach ($dbToKey as $dbKey => $key) {
+            if (isset($criteria['criteria'][$key])) {
+                $maxPoints = $criteria['criteria'][$key]['max_points'];
+                // Only include criteria with max_points > 0
+                if ($maxPoints > 0) {
+                    $mappings[$dbKey] = [
+                        'name' => $criteria['criteria'][$key]['name'],
+                        'max_points' => $maxPoints
+                    ];
+                }
+            }
+        }
+        
+        return $mappings;
+    }
+    
+    /**
+     * Get the ordered list of valid criteria for the position
+     */
+    private function getValidCriteriaOrder() {
+        $criteriaMapping = $this->getCriteriaMappings();
+        // Return keys in the order they appear in the mapping
+        return array_keys($criteriaMapping);
+    }
     /**
      * Clear any output buffering to avoid corrupting binary downloads (DOCX/PDF/XLSX).
      */
@@ -37,6 +114,17 @@ class IESExport {
      * Export to Word Document (.docx)
      */
     public function exportToWord($evaluation, $additionalData = []) {
+        // Set position context from additional data if not already set
+        if (isset($additionalData['position_group'])) {
+            $this->setPositionGroup($additionalData['position_group']);
+        }
+        if (isset($additionalData['salary_grade'])) {
+            $this->setSalaryGrade($additionalData['salary_grade']);
+        }
+        if (isset($additionalData['category'])) {
+            $this->setCategory($additionalData['category']);
+        }
+        
         $autoloadPath = __DIR__ . '/../vendor/autoload.php';
         if (!file_exists($autoloadPath)) {
             die('PHP libraries not installed. Please run: composer install<br><br>See INSTALLATION.md for details.');
@@ -121,12 +209,12 @@ class IESExport {
         $evalTable->addCell(800)->addText('');
         
         // Data rows
-        $criteriaOrder = [
-            'education', 'training', 'experience', 'performance',
-            'outstanding_accomplishments', 'application_of_education',
-            'application_of_ld', 'potential'
-        ];
+        $validCriteriaOrder = $this->getValidCriteriaOrder();
         
+        // Get position-specific criterion names
+        $criteriaMapping = $this->getCriteriaMappings();
+        
+        // Fallback to generic names
         $criterionNames = [
             'education' => 'Education',
             'training' => 'Training',
@@ -138,17 +226,29 @@ class IESExport {
             'potential' => 'Potential (Written Text, BEI, Work Sample Test)'
         ];
         
-        foreach ($criteriaOrder as $criterion) {
+        // Override with position-specific names if available
+        if (!empty($criteriaMapping)) {
+            foreach ($criteriaMapping as $dbKey => $mapping) {
+                $criterionNames[$dbKey] = $mapping['name'];
+            }
+        }
+        
+        // Iterate only through valid criteria for this position
+        foreach ($validCriteriaOrder as $criterion) {
             if (isset($evaluation['criteria'][$criterion])) {
                 $criteria = $evaluation['criteria'][$criterion];
+                
+                // Get position-specific weight - guaranteed to be > 0
+                $displayWeight = $criteriaMapping[$criterion]['max_points'] ?? $criteria['weight'];
+                
                 // Format computation - handle null increment for weighted criteria
                 if ($criteria['increment'] === null) {
                     // Check if Outstanding Accomplishments (direct points, not weighted rating)
                     if ($criterion === 'outstanding_accomplishments') {
-                        $computation = 'min(' . $criteria['applicant_level'] . ', ' . $criteria['weight'] . ')';
+                        $computation = 'min(' . $criteria['applicant_level'] . ', ' . $displayWeight . ')';
                     } else {
                         // Weighted computation for Performance, Application, Potential
-                        $computation = '(' . $criteria['applicant_level'] . '/5) × ' . $criteria['weight'];
+                        $computation = '(' . $criteria['applicant_level'] . '/5) × ' . $displayWeight;
                     }
                 } else {
                     // Increment-based computation for Education, Training, Experience
@@ -160,7 +260,7 @@ class IESExport {
                 
                 $evalTable->addRow();
                 $evalTable->addCell(1500)->addText($criterionNames[$criterion], ['bold' => true]);
-                $evalTable->addCell(800)->addText($criteria['weight'], [], ['alignment' => \PhpOffice\PhpWord\SimpleType\Jc::CENTER]);
+                $evalTable->addCell(800)->addText($displayWeight, [], ['alignment' => \PhpOffice\PhpWord\SimpleType\Jc::CENTER]);
                 $evalTable->addCell(3500)->addText($criteria['applicant_qualification']);
                 $evalTable->addCell(1500)->addText($computation, ['name' => 'Courier New'], ['alignment' => \PhpOffice\PhpWord\SimpleType\Jc::CENTER]);
                 $evalTable->addCell(800)->addText($score, [], ['alignment' => \PhpOffice\PhpWord\SimpleType\Jc::CENTER]);
@@ -236,6 +336,17 @@ class IESExport {
      * Export to PDF
      */
     public function exportToPDF($evaluation, $additionalData = []) {
+        // Set position context from additional data if not already set
+        if (isset($additionalData['position_group'])) {
+            $this->setPositionGroup($additionalData['position_group']);
+        }
+        if (isset($additionalData['salary_grade'])) {
+            $this->setSalaryGrade($additionalData['salary_grade']);
+        }
+        if (isset($additionalData['category'])) {
+            $this->setCategory($additionalData['category']);
+        }
+        
         $autoloadPath = __DIR__ . '/../vendor/autoload.php';
         if (!file_exists($autoloadPath)) {
             die('PHP libraries not installed. Please run: composer install<br><br>See INSTALLATION.md for details.');
@@ -322,11 +433,7 @@ class IESExport {
         $pdf->Cell(15, 6, 'Score', 1, 1, 'C', true);
         
         // Table data
-        $criteriaOrder = [
-            'education', 'training', 'experience', 'performance',
-            'outstanding_accomplishments', 'application_of_education',
-            'application_of_ld', 'potential'
-        ];
+        $validCriteriaOrder = $this->getValidCriteriaOrder();
         
         $criterionNames = [
             'education' => 'Education',
@@ -339,18 +446,32 @@ class IESExport {
             'potential' => 'Potential (Written Text, BEI, Work Sample Test)'
         ];
         
+        // Get position-specific criteria mappings for PDF
+        $criteriaMapping = $this->getCriteriaMappings();
+        
+        // Override with position-specific names if available
+        if (!empty($criteriaMapping)) {
+            foreach ($criteriaMapping as $dbKey => $mapping) {
+                $criterionNames[$dbKey] = $mapping['name'];
+            }
+        }
+        
         $pdf->SetFont('times', '', 9);
-        foreach ($criteriaOrder as $criterion) {
+        foreach ($validCriteriaOrder as $criterion) {
             if (isset($evaluation['criteria'][$criterion])) {
                 $criteria = $evaluation['criteria'][$criterion];
+                
+                // Get position-specific weight - guaranteed to be > 0
+                $displayWeight = $criteriaMapping[$criterion]['max_points'] ?? $criteria['weight'];
+                
                 // Format computation - handle null increment for weighted criteria
                 if ($criteria['increment'] === null) {
                     // Check if Outstanding Accomplishments (direct points, not weighted rating)
                     if ($criterion === 'outstanding_accomplishments') {
-                        $computation = 'min(' . $criteria['applicant_level'] . ', ' . $criteria['weight'] . ')';
+                        $computation = 'min(' . $criteria['applicant_level'] . ', ' . $displayWeight . ')';
                     } else {
                         // Weighted computation for Performance, Application, Potential
-                        $computation = '(' . $criteria['applicant_level'] . '/5) × ' . $criteria['weight'];
+                        $computation = '(' . $criteria['applicant_level'] . '/5) × ' . $displayWeight;
                     }
                 } else {
                     // Increment-based computation for Education, Training, Experience
@@ -363,7 +484,7 @@ class IESExport {
                 $pdf->SetFont('times', 'B', 9);
                 $pdf->Cell(27, 8, $criterionNames[$criterion], 1, 0, 'L');
                 $pdf->SetFont('times', '', 9);
-                $pdf->Cell(15, 8, $criteria['weight'], 1, 0, 'C');
+                $pdf->Cell(15, 8, $displayWeight, 1, 0, 'C');
                 $pdf->Cell(65, 8, $criteria['applicant_qualification'], 1, 0, 'L');
                 $pdf->SetFont('courier', '', 9);
                 $pdf->Cell(27, 8, $computation, 1, 0, 'C');
@@ -438,6 +559,17 @@ class IESExport {
      * Export to Excel (.xlsx)
      */
     public function exportToExcel($evaluation, $additionalData = []) {
+        // Set position context from additional data if not already set
+        if (isset($additionalData['position_group'])) {
+            $this->setPositionGroup($additionalData['position_group']);
+        }
+        if (isset($additionalData['salary_grade'])) {
+            $this->setSalaryGrade($additionalData['salary_grade']);
+        }
+        if (isset($additionalData['category'])) {
+            $this->setCategory($additionalData['category']);
+        }
+        
         $autoloadPath = __DIR__ . '/../vendor/autoload.php';
         if (!file_exists($autoloadPath)) {
             die('PHP libraries not installed. Please run: composer install<br><br>See INSTALLATION.md for details.');
@@ -514,11 +646,7 @@ class IESExport {
         $row++;
         
         // Table Data
-        $criteriaOrder = [
-            'education', 'training', 'experience', 'performance',
-            'outstanding_accomplishments', 'application_of_education',
-            'application_of_ld', 'potential'
-        ];
+        $validCriteriaOrder = $this->getValidCriteriaOrder();
         
         $criterionNames = [
             'education' => 'Education',
@@ -531,17 +659,31 @@ class IESExport {
             'potential' => 'Potential (Written Text, BEI, Work Sample Test)'
         ];
         
-        foreach ($criteriaOrder as $criterion) {
+        // Get position-specific criteria mappings for Excel
+        $criteriaMapping = $this->getCriteriaMappings();
+        
+        // Override with position-specific names if available
+        if (!empty($criteriaMapping)) {
+            foreach ($criteriaMapping as $dbKey => $mapping) {
+                $criterionNames[$dbKey] = $mapping['name'];
+            }
+        }
+        
+        foreach ($validCriteriaOrder as $criterion) {
             if (isset($evaluation['criteria'][$criterion])) {
                 $criteria = $evaluation['criteria'][$criterion];
+                
+                // Get position-specific weight - guaranteed to be > 0
+                $displayWeight = $criteriaMapping[$criterion]['max_points'] ?? $criteria['weight'];
+                
                 // Format computation - handle null increment for weighted criteria
                 if ($criteria['increment'] === null) {
                     // Check if Outstanding Accomplishments (direct points, not weighted rating)
                     if ($criterion === 'outstanding_accomplishments') {
-                        $computation = 'min(' . $criteria['applicant_level'] . ', ' . $criteria['weight'] . ')';
+                        $computation = 'min(' . $criteria['applicant_level'] . ', ' . $displayWeight . ')';
                     } else {
                         // Weighted computation for Performance, Application, Potential
-                        $computation = '(' . $criteria['applicant_level'] . '/5) × ' . $criteria['weight'];
+                        $computation = '(' . $criteria['applicant_level'] . '/5) × ' . $displayWeight;
                     }
                 } else {
                     // Increment-based computation for Education, Training, Experience
@@ -553,7 +695,7 @@ class IESExport {
                 
                 $sheet->setCellValue('A' . $row, $criterionNames[$criterion]);
                 $sheet->getStyle('A' . $row)->getFont()->setBold(true);
-                $sheet->setCellValue('B' . $row, $criteria['weight']);
+                $sheet->setCellValue('B' . $row, $displayWeight);
                 $sheet->getStyle('B' . $row)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
                 $sheet->setCellValue('C' . $row, $criteria['applicant_qualification']);
                 $sheet->setCellValue('D' . $row, $computation);

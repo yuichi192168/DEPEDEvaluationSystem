@@ -231,18 +231,39 @@ class CARReportGenerator {
         </div>';
         
         // Main CAR Table
+        // Load evaluation criteria to get position-specific criterion names
+        require_once __DIR__ . '/../config/evaluation_criteria.php';
+        $salaryGrade = $additionalData['salary_grade'] ?? null;
+        $positionCriteria = getEvaluationCriteria($positionGroup, $salaryGrade, null);
+        
+        // AUTHORITATIVE SOURCE: evaluation_criteria.php - No fallback allowed
+        if (!$positionCriteria || empty($positionCriteria['criteria'])) {
+            // Criteria must be available - return error
+            $html .= '<div style="color: red; font-weight: bold; padding: 20px; text-align: center;">';
+            $html .= 'ERROR: Evaluation criteria not found for position group: ' . htmlspecialchars($positionGroup) . '<br>';
+            $html .= 'Cannot generate CAR without authoritative criteria definition.';
+            $html .= '</div>';
+            return $html;
+        }
+        
+        // Build criterion names from loaded criteria
+        $criterionNames = [];
+        foreach ($positionCriteria['criteria'] as $key => $criterionDef) {
+            $criterionNames[$key] = $criterionDef['name'] ?? 'Criterion ' . $key;
+        }
+        
         $html .= '<table class="car-table">
             <thead>
                 <tr>
                     <th class="col-rank">Rank</th>
                     <th class="col-name">Name of Applicant</th>
-                    <th class="col-score">Education<br>(' . $weights['education'] . ' pts)</th>
-                    <th class="col-score">Training<br>(' . $weights['training'] . ' pts)</th>
-                    <th class="col-score">Experience<br>(' . $weights['experience'] . ' pts)</th>
-                    <th class="col-score">Performance<br>(' . $weights['performance'] . ' pts)</th>
-                    <th class="col-score">Accomplishments<br>(' . $weights['outstanding_accomplishments'] . ' pts)</th>
-                    <th class="col-score">Application of Ed/L&D<br>(' . ($weights['application_of_education'] + $weights['application_of_ld']) . ' pts)</th>
-                    <th class="col-score">Potential<br>(' . $weights['potential'] . ' pts)</th>
+                    <th class="col-score">' . htmlspecialchars($criterionNames['a'] ?? 'Education') . '<br>(' . $weights['education'] . ' pts)</th>
+                    <th class="col-score">' . htmlspecialchars($criterionNames['b'] ?? 'Training') . '<br>(' . $weights['training'] . ' pts)</th>
+                    <th class="col-score">' . htmlspecialchars($criterionNames['c'] ?? 'Experience') . '<br>(' . $weights['experience'] . ' pts)</th>
+                    <th class="col-score">' . htmlspecialchars($criterionNames['d'] ?? 'Performance') . '<br>(' . $weights['performance'] . ' pts)</th>
+                    <th class="col-score">' . htmlspecialchars($criterionNames['e'] ?? 'Accomplishments') . '<br>(' . $weights['outstanding_accomplishments'] . ' pts)</th>
+                    <th class="col-score">' . htmlspecialchars($criterionNames['f'] ?? 'Application of Education') . ' / ' . htmlspecialchars($criterionNames['g'] ?? 'Application of L&D') . '<br>(' . ($weights['application_of_education'] + $weights['application_of_ld']) . ' pts)</th>
+                    <th class="col-score">' . htmlspecialchars($criterionNames['h'] ?? 'Potential') . '<br>(' . $weights['potential'] . ' pts)</th>
                     <th class="col-total">Total<br>Score</th>
                     <th class="col-remarks">Remarks<br>(Tie-breaking, etc.)</th>
                 </tr>

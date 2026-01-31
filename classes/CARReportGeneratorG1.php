@@ -9,11 +9,14 @@
  */
 
 require_once 'HRMPSBEvaluator.php';
+require_once __DIR__ . '/../config/evaluation_criteria.php';
 
 class CARReportGeneratorG1 {
     
     private $positionGroup = 'A';
     private $evaluator;
+    private $salaryGrade = null;
+    private $category = null;
     
     /**
      * Constructor
@@ -21,6 +24,55 @@ class CARReportGeneratorG1 {
     public function __construct($positionGroup = 'A') {
         $this->positionGroup = $positionGroup;
         $this->evaluator = new HRMPSBEvaluator($positionGroup);
+    }
+    
+    /**
+     * Set salary grade for position-specific criteria
+     */
+    public function setSalaryGrade($salaryGrade) {
+        $this->salaryGrade = $salaryGrade;
+    }
+    
+    /**
+     * Set category for non-teaching positions
+     */
+    public function setCategory($category) {
+        $this->category = $category;
+    }
+    
+    /**
+     * Get criteria mappings for table headers
+     */
+    private function getCriteriaMappings() {
+        $dbToKey = [
+            'education' => 'a',
+            'training' => 'b',
+            'experience' => 'c',
+            'performance' => 'd',
+            'outstanding_accomplishments' => 'e',
+            'application_of_education' => 'f',
+            'application_of_ld' => 'g',
+            'potential' => 'h'
+        ];
+        
+        $criteria = getEvaluationCriteria($this->positionGroup, $this->salaryGrade, $this->category);
+        if (!$criteria || empty($criteria['criteria'])) {
+            return [];
+        }
+        
+        $mappings = [];
+        foreach ($dbToKey as $dbKey => $key) {
+            if (isset($criteria['criteria'][$key])) {
+                $mappings[] = [
+                    'db_key' => $dbKey,
+                    'key' => $key,
+                    'criteria_name' => $criteria['criteria'][$key]['name'],
+                    'max_points' => $criteria['criteria'][$key]['max_points']
+                ];
+            }
+        }
+        
+        return $mappings;
     }
     
     /**
@@ -299,16 +351,20 @@ class CARReportGeneratorG1 {
         <thead>
             <tr>
                 <th style="width: 4%">Rank</th>
-                <th style="width: 16%">Name of Applicant</th>
-                <th style="width: 7%">Education</th>
-                <th style="width: 7%">Training</th>
-                <th style="width: 7%">Experience</th>
-                <th style="width: 7%">Performance</th>
-                <th style="width: 7%">Accomplishments</th>
-                <th style="width: 7%">App. of Ed.</th>
-                <th style="width: 7%">App. of L&D</th>
-                <th style="width: 7%">Potential</th>
-                <th style="width: 8%">TOTAL SCORE</th>
+                <th style="width: 16%">Name of Applicant</th>';
+        
+        // Add dynamic criteria headers
+        $criteriaMap = $this->getCriteriaMappings();
+        foreach ($criteriaMap as $mapping) {
+            // Truncate long names for display
+            $displayName = $mapping['criteria_name'];
+            if (strlen($displayName) > 15) {
+                $displayName = substr($displayName, 0, 12) . '...';
+            }
+            $html .= '<th style="width: 7%">' . htmlspecialchars($displayName) . '</th>';
+        }
+        
+        $html .= '<th style="width: 8%">TOTAL SCORE</th>
                 <th style="width: 12%">Remarks</th>
             </tr>
         </thead>
@@ -328,15 +384,21 @@ class CARReportGeneratorG1 {
             $applicantName = htmlspecialchars($eval['applicant_name'] ?? 'N/A');
             $rank = $eval['rank'] ?? ($index + 1);
             
-            // Extract scores for each criterion
-            $eduScore = $eval['criteria']['education']['final_score'] ?? 0;
-            $traScore = $eval['criteria']['training']['final_score'] ?? 0;
-            $expScore = $eval['criteria']['experience']['final_score'] ?? 0;
-            $perfScore = $eval['criteria']['performance']['final_score'] ?? 0;
-            $oaScore = $eval['criteria']['outstanding_accomplishments']['final_score'] ?? 0;
-            $aoeScore = $eval['criteria']['application_of_education']['final_score'] ?? 0;
-            $aoldScore = $eval['criteria']['application_of_ld']['final_score'] ?? 0;
-            $potScore = $eval['criteria']['potential']['final_score'] ?? 0;
+            // Get criteria mappings for this row
+            $rowCriteria = $this->getCriteriaMappings();
+            
+            // Start row with rank and name
+            $html .= '<tr class="' . $rowClass . '">
+                <td>' . $rank . '</td>
+                <td class="text-left">' . $applicantName . '</td>';
+            
+            // Add scores for each criterion
+            foreach ($rowCriteria as $mapping) {
+                $dbKey = $mapping['db_key'];
+                $score = $eval['criteria'][$dbKey]['final_score'] ?? 0;
+                $html .= '<td>' . number_format($score, 2) . '</td>';
+            }
+            
             $totalScore = $eval['total_score'] ?? 0;
             
             // Determine remarks
@@ -345,18 +407,7 @@ class CARReportGeneratorG1 {
                 $remarks = 'TIED - See tie-breaking protocol';
             }
             
-            $html .= '<tr class="' . $rowClass . '">
-                <td>' . $rank . '</td>
-                <td class="text-left">' . $applicantName . '</td>
-                <td>' . number_format($eduScore, 2) . '</td>
-                <td>' . number_format($traScore, 2) . '</td>
-                <td>' . number_format($expScore, 2) . '</td>
-                <td>' . number_format($perfScore, 2) . '</td>
-                <td>' . number_format($oaScore, 2) . '</td>
-                <td>' . number_format($aoeScore, 2) . '</td>
-                <td>' . number_format($aoldScore, 2) . '</td>
-                <td>' . number_format($potScore, 2) . '</td>
-                <td><strong>' . number_format($totalScore, 2) . '</strong></td>
+            $html .= '<td><strong>' . number_format($totalScore, 2) . '</strong></td>
                 <td class="text-left" style="font-size: 8pt;">' . htmlspecialchars($remarks) . '</td>
             </tr>';
         }

@@ -127,6 +127,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 
                 // Generate CAR G-1
                 $generator = new CARReportGeneratorG1($positionData['position_group']);
+                $generator->setSalaryGrade($positionData['salary_grade']);
+                // Set category if available (for non-teaching positions)
+                if (isset($positionData['category'])) {
+                    $generator->setCategory($positionData['category']);
+                }
                 $carOutput = $generator->generateCAR($evaluations, $additionalData);
                 
                 // Handle output format
