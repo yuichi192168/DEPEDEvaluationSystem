@@ -688,11 +688,28 @@ $positions = getAllPositions();
                 </div>
             </div>
             
-            <!-- Submit Buttons -->
-            <div class="btn-group">
-                <button type="submit" class="btn-primary action-button" disabled>Generate Evaluation Report</button>
+            <!-- Submit Buttons (hidden - actions are available in sticky bar to avoid duplication) -->
+            <div class="btn-group" style="display: none;">
+                <button type="submit" id="generate_report_btn" class="btn-primary action-button" disabled>Generate Evaluation Report</button>
+                <button type="button" id="generate_car_btn" class="btn-primary action-button disabled" disabled>Generate Comparative Assessment</button>
+                <button type="button" id="save_draft_btn" class="btn-secondary">Save Draft</button>
                 <button type="reset" class="btn-secondary" onclick="resetForm()">Reset Form</button>
                 <a href="comparative_assessment_results.php?view=all" class="btn-primary">View All Results</a>
+            </div>
+
+            <!-- Confirmation Modal (reused for both actions) -->
+            <div class="modal-overlay" id="confirmationModal" aria-hidden="true">
+                <div class="modal" role="dialog" aria-modal="true" aria-labelledby="confirmationTitle">
+                    <h3 id="confirmationTitle">Confirm Action</h3>
+                    <div class="modal-body">
+                        <p id="confirmationText">Please confirm this action.</p>
+                        <ul class="checklist" id="confirmationChecklist"></ul>
+                    </div>
+                    <div class="modal-actions">
+                        <button type="button" class="btn-cancel" id="confirmationCancel">Cancel</button>
+                        <button type="button" class="btn-confirm" id="confirmationConfirm">Yes, Continue</button>
+                    </div>
+                </div>
             </div>
         </form>
     </div>
@@ -1368,6 +1385,40 @@ $positions = getAllPositions();
             document.getElementById('livePreview').classList.remove('active');
         }
     </script>
+
+    <!-- Sticky Action Bar (keeps primary actions visible while scrolling) -->
+    <div class="sticky-action-bar" aria-hidden="false">
+        <div class="bar-inner">
+            <button type="button" id="sticky_save_draft" class="btn-secondary">Save Draft</button>
+            <button type="button" id="sticky_generate_report" class="btn-primary action-button disabled" disabled>Generate Report</button>
+            <button type="button" id="sticky_generate_car" class="btn-primary action-button disabled" disabled>Generate CAR</button>
+            <button type="button" id="sticky_reset" class="btn-secondary">Reset Form</button>
+            <button type="button" id="sticky_view_results" class="btn-primary">View All Results</button>
+            <button type="button" id="help_open" class="btn-secondary">Help</button>
+        </div>
+    </div>
+
+    <!-- Help toggle and drawer -->
+    <div id="helpToggle" class="help-toggle" title="Help" role="button" aria-pressed="false">?</div>
+    <aside id="helpDrawer" class="help-drawer" aria-hidden="true">
+        <h3>Form Help</h3>
+        <div class="help-section">
+            <h4>What this form is</h4>
+            <p>This form collects applicant details and qualifications to compute an Individual Evaluation Sheet (IES) and Comparative Assessment scores based on DepEd Order No. 007, s. 2023.</p>
+        </div>
+        <div class="help-section">
+            <h4>How evaluation works</h4>
+            <p>The system compares applicant qualifications against the minimum qualification standards (baseline) and computes points using increment and weighted methods. Results are available as IES (individual) and CAR (comparative assessment).</p>
+        </div>
+        <div class="help-section">
+            <h4>What happens after submission</h4>
+            <p>When you generate the evaluation report the form is submitted to the server for processing and the generated IES will be shown or exported per selected format. You can also save drafts locally before final submission.</p>
+        </div>
+        <div>
+            <button type="button" id="helpClose" class="btn-secondary">Close Help</button>
+        </div>
+    </aside>
+
     <script src="js/form-validation.js"></script>
 </body>
 </html>
