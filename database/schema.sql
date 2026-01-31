@@ -174,3 +174,20 @@ FROM positions
 WHERE position_name = 'Information and Communications Technology'
 LIMIT 1;
 
+
+-- Table: audit_logs
+CREATE TABLE IF NOT EXISTS audit_logs (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    action VARCHAR(100) NOT NULL,
+    object_type VARCHAR(100) DEFAULT NULL,
+    object_id VARCHAR(100) DEFAULT NULL,
+    user_id INT DEFAULT NULL,
+    session_id VARCHAR(128) DEFAULT NULL,
+    ip_address VARCHAR(45) DEFAULT NULL,
+    meta JSON DEFAULT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_action (action),
+    INDEX idx_object_type (object_type),
+    INDEX idx_user_id (user_id),
+    INDEX idx_created_at (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

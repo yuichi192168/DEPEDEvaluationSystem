@@ -893,7 +893,13 @@ if ($viewMode === 'all') {
         function exportToCSV() {
             const table = document.querySelector('.results-table');
             if (!table) {
-                alert('No data to export');
+                // Show banner message instead of alert
+                const b = document.createElement('div');
+                b.className = 'banner banner-warning auto-hide';
+                b.innerHTML = `<div class="banner-content"><span class="banner-icon">⚠</span><span class="banner-text">No data to export</span><button class="banner-close" aria-label="Close">&times;</button></div>`;
+                document.body.insertBefore(b, document.body.firstChild);
+                const closeBtn = b.querySelector('.banner-close'); if (closeBtn) closeBtn.addEventListener('click', () => b.remove());
+                setTimeout(() => { try { b.remove(); } catch(e){} }, 5200);
                 return;
             }
             

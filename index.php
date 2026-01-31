@@ -1381,8 +1381,18 @@ $positions = getAllPositions();
         });
         
         function resetForm() {
+            // Delegate to FormValidator with undo support if available
+            try {
+                if (window.formValidator && typeof window.formValidator.prepareUndoAndReset === 'function') {
+                    window.formValidator.prepareUndoAndReset();
+                    return;
+                }
+            } catch (e) { /* ignore */ }
+
             document.getElementById('baselineInfo').style.display = 'none';
             document.getElementById('livePreview').classList.remove('active');
+            const frm = document.getElementById('evaluationForm');
+            if (frm) frm.reset();
         }
     </script>
 
@@ -1390,11 +1400,21 @@ $positions = getAllPositions();
     <div class="sticky-action-bar" aria-hidden="false">
         <div class="bar-inner">
             <button type="button" id="sticky_save_draft" class="btn-secondary">Save Draft</button>
+            <button type="button" id="sticky_load_drafts" class="btn-secondary">Load Drafts</button>
             <button type="button" id="sticky_generate_report" class="btn-primary action-button disabled" disabled>Generate Report</button>
             <button type="button" id="sticky_generate_car" class="btn-primary action-button disabled" disabled>Generate CAR</button>
             <button type="button" id="sticky_reset" class="btn-secondary">Reset Form</button>
             <button type="button" id="sticky_view_results" class="btn-primary">View All Results</button>
             <button type="button" id="help_open" class="btn-secondary">Help</button>
+        </div>
+    </div>
+
+    <!-- Drafts Modal -->
+    <div id="draftsModal" class="modal" aria-hidden="true" style="display:none;">
+        <div class="modal-inner" role="dialog" aria-modal="true" aria-labelledby="draftsTitle">
+            <h3 id="draftsTitle">Saved Drafts</h3>
+            <div id="draftsList">Loading…</div>
+            <div style="margin-top:12px;text-align:right;"><button id="draftsClose" class="btn-secondary">Close</button></div>
         </div>
     </div>
 
@@ -1420,5 +1440,24 @@ $positions = getAllPositions();
     </aside>
 
     <script src="js/form-validation.js"></script>
+    <script>
+        // Register service worker (if available)
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js').then(reg => {
+                console.info('Service Worker registered:', reg.scope);
+            }).catch(err => console.warn('SW register failed', err));
+        }
+        // If server provided a loaded draft in session, attempt to prompt restore
+        <?php if (isset($_SESSION['loaded_draft']) && !empty($_SESSION['loaded_draft'])): ?>
+        (function(){
+            try {
+                const draft = <?php echo json_encode($_SESSION['loaded_draft']); ?>;
+                // Store to localStorage so FormValidator.restoreDraftFromLocalStorage can pick it up
+                localStorage.setItem('deped_eval_draft', JSON.stringify(draft));
+                // Remove server copy to avoid reusing
+            } catch(e) { console.warn(e); }
+        })();
+        <?php unset($_SESSION['loaded_draft']); endif; ?>
+    </script>
 </body>
 </html>

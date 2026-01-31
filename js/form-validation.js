@@ -82,6 +82,16 @@ class FormValidator {
         document.addEventListener('fieldUpdated', () => {
             this.validateForm();
         });
+
+        // Remote field-level checks (debounced)
+        const appCodeEl = document.getElementById('application_code');
+        if (appCodeEl) {
+            let deb = null;
+            appCodeEl.addEventListener('input', () => {
+                if (deb) clearTimeout(deb);
+                deb = setTimeout(() => this.checkDuplicateApplication(appCodeEl.value), 600);
+            });
+        }
     }
 
     /**
@@ -343,6 +353,8 @@ class FormValidator {
         try {
             localStorage.setItem('deped_eval_draft', JSON.stringify(data));
             console.info('Draft saved locally');
+            // Also save to IndexedDB for offline resilience
+            try { this.idbSaveDraft(data); } catch(e) { console.warn('IDB save failed', e); }
             return true;
         } catch (e) {
             console.warn('Failed to save draft locally', e);
@@ -369,8 +381,129 @@ class FormValidator {
             return true;
         } catch (e) {
             console.warn('Failed to restore draft', e);
-            return false;
+            // Try IndexedDB fallback
+            try { return this.idbRestoreDraft(); } catch (ie) { return false; }
         }
+    }
+
+    /* ------------------- IndexedDB helpers ------------------- */
+    idbOpen() {
+        return new Promise((resolve, reject) => {
+            const req = indexedDB.open('deped_eval_db', 1);
+            req.onupgradeneeded = function(e) {
+                const db = e.target.result;
+                if (!db.objectStoreNames.contains('drafts')) db.createObjectStore('drafts', { keyPath: 'id', autoIncrement: true });
+            };
+            req.onsuccess = function() { resolve(req.result); };
+            req.onerror = function() { reject(req.error); };
+        });
+    }
+
+    async idbSaveDraft(data) {
+        try {
+            const db = await this.idbOpen();
+            const tx = db.transaction('drafts','readwrite');
+            const store = tx.objectStore('drafts');
+            store.put({ data: data, saved_at: new Date().toISOString() });
+            return true;
+        } catch (e) {
+            console.warn('idbSaveDraft error', e); return false;
+        }
+    }
+
+    async idbRestoreDraft() {
+        try {
+            const db = await this.idbOpen();
+            const tx = db.transaction('drafts','readonly');
+            const store = tx.objectStore('drafts');
+            const req = store.openCursor(null, 'prev');
+            return new Promise((resolve) => {
+                req.onsuccess = (ev) => {
+                    const cursor = ev.target.result;
+                    if (cursor && cursor.value && cursor.value.data) {
+                        const data = cursor.value.data;
+                        Object.keys(data).forEach(name => {
+                            if (name === '__saved_at') return;
+                            const el = this.form.elements[name];
+                            if (el) {
+                                try { el.value = data[name]; } catch (e){}
+                                el.dispatchEvent(new Event('input'));
+                                el.dispatchEvent(new Event('change'));
+                            }
+                        });
+                        resolve(true);
+                    } else {
+                        resolve(false);
+                    }
+                };
+                req.onerror = () => resolve(false);
+            });
+        } catch (e) { console.warn('idbRestoreDraft error', e); return false; }
+    }
+
+    /* ------------------- Undo / Reset support ------------------- */
+    prepareUndoAndReset() {
+        if (!this.form) return;
+        // Capture current state
+        const snapshot = {};
+        const elements = this.form.elements;
+        for (let i = 0; i < elements.length; i++) {
+            const el = elements[i];
+            if (!el.name) continue;
+            if (['INPUT','SELECT','TEXTAREA'].includes(el.tagName)) {
+                if (el.type === 'button' || el.type === 'submit' || el.type === 'reset') continue;
+                snapshot[el.name] = el.value;
+            }
+        }
+
+        // Store temporarily
+        this._lastSnapshot = snapshot;
+
+        // Perform actual reset
+        try { this.form.reset(); } catch (e) {}
+        document.getElementById('baselineInfo').style.display = 'none';
+        document.getElementById('livePreview').classList.remove('active');
+
+        // Show undo bar
+        this.showUndoBar();
+    }
+
+    showUndoBar() {
+        let bar = document.getElementById('undoBar');
+        if (!bar) {
+            bar = document.createElement('div');
+            bar.id = 'undoBar';
+            bar.style.position = 'fixed';
+            bar.style.bottom = '86px';
+            bar.style.right = '18px';
+            bar.style.zIndex = 1400;
+            bar.innerHTML = `<div style="background:#fff;padding:10px;border-radius:6px;box-shadow:0 6px 18px rgba(0,0,0,0.12);display:flex;gap:8px;align-items:center;"><span style="font-weight:600;color:#333">Form cleared</span><button id="undoRestoreBtn" class="btn-secondary">Undo</button><button id="undoDismissBtn" class="btn-secondary">Dismiss</button></div>`;
+            document.body.appendChild(bar);
+        }
+
+        const undo = document.getElementById('undoRestoreBtn');
+        const dismiss = document.getElementById('undoDismissBtn');
+        undo.addEventListener('click', () => this.restoreLastSnapshot());
+        dismiss.addEventListener('click', () => { try { bar.remove(); } catch(e){} });
+
+        // Auto-hide after 20s
+        setTimeout(() => { try { bar.remove(); } catch(e){} }, 20000);
+    }
+
+    restoreLastSnapshot() {
+        if (!this._lastSnapshot) return;
+        const snap = this._lastSnapshot;
+        Object.keys(snap).forEach(name => {
+            const el = this.form.elements[name];
+            if (el) {
+                try { el.value = snap[name]; } catch (e) {}
+                el.dispatchEvent(new Event('input'));
+                el.dispatchEvent(new Event('change'));
+            }
+        });
+        try { const bar = document.getElementById('undoBar'); if(bar) bar.remove(); } catch(e){}
+        this._lastSnapshot = null;
+        this.showBanner('success', 'Form restored');
     }
 
     scheduleAutoSave(delay = 1200) {
@@ -453,30 +586,49 @@ class FormValidator {
         if (saveBtn) saveBtn.addEventListener('click', (e) => {
             e.preventDefault();
             const ok = this.saveDraftToLocalStorage();
-            if (ok) alert('Draft saved locally.'); else alert('Failed to save draft locally.');
+            if (ok) {
+                // Try server save as well
+                this.postDraftToServer();
+                this.showBanner('success', 'Draft saved locally');
+            } else {
+                this.showBanner('error', 'Failed to save draft locally');
+            }
         });
 
         // Generate report button (show confirmation checklist first)
         const genBtn = document.getElementById('generate_report_btn');
-        if (genBtn) genBtn.addEventListener('click', (e) => {
+        if (genBtn) genBtn.addEventListener('click', async (e) => {
             // If disabled, do nothing
             if (genBtn.disabled) { e.preventDefault(); return; }
             e.preventDefault();
+            // Perform server-side validation before confirmation
+            const valid = await this.validateFieldsServer();
+            if (!valid) {
+                this.showBanner('error', 'Please fix validation errors before proceeding');
+                return;
+            }
             this.showConfirmationModal('generate the Evaluation Report', () => {
                 // Submit the form
                 this.saveDraftToLocalStorage(); // final local save before submit
+                this.postDraftToServer();
                 this.form.submit();
             });
         });
 
         // Generate CAR button
         const carBtn = document.getElementById('generate_car_btn');
-        if (carBtn) carBtn.addEventListener('click', (e) => {
+        if (carBtn) carBtn.addEventListener('click', async (e) => {
             if (carBtn.disabled) { e.preventDefault(); return; }
             e.preventDefault();
+            const valid = await this.validateFieldsServer();
+            if (!valid) {
+                this.showBanner('error', 'Please fix validation errors before proceeding');
+                return;
+            }
             this.showConfirmationModal('generate the Comparative Assessment (CAR)', () => {
                 // On confirm, save draft and navigate to CAR page
                 this.saveDraftToLocalStorage();
+                this.postDraftToServer();
                 window.location.href = 'comparative_assessment_results.php?generate_from_form=1';
             });
         });
@@ -509,6 +661,124 @@ class FormValidator {
         }
         if (helpOpen) helpOpen.addEventListener('click', () => helpToggle.click());
         if (helpClose) helpClose.addEventListener('click', () => helpToggle.click());
+
+        // Compact sticky bar toggle
+        const stickyBar = document.querySelector('.sticky-action-bar');
+        if (stickyBar) {
+            // Add compact toggle button
+            const inner = stickyBar.querySelector('.bar-inner');
+            if (inner && !inner.querySelector('.compact-toggle')) {
+                const t = document.createElement('button');
+                t.className = 'compact-toggle';
+                t.title = 'Toggle actions';
+                t.innerHTML = '≡';
+                t.addEventListener('click', () => stickyBar.classList.toggle('compact'));
+                inner.insertBefore(t, inner.firstChild);
+            }
+        }
+    }
+
+    /* ------------------- Banner / Toast helpers ------------------- */
+    showBanner(type, message) {
+        // Use existing banner css classes
+        const container = document.createElement('div');
+        container.className = 'banner banner-' + (type === 'error' ? 'error' : (type === 'warning' ? 'warning' : (type === 'processing' ? 'processing' : 'success')) ) + ' auto-hide';
+        container.innerHTML = `<div class="banner-content"><span class="banner-icon">${type === 'error' ? '✕' : (type === 'warning' ? '⚠' : (type === 'processing' ? '⟳' : '✓'))}</span><span class="banner-text">${message}</span><button class="banner-close" aria-label="Close">&times;</button></div>`;
+        document.body.insertBefore(container, document.body.firstChild);
+        const closeBtn = container.querySelector('.banner-close');
+        if (closeBtn) closeBtn.addEventListener('click', () => container.remove());
+        // Auto-remove after 6s
+        setTimeout(() => { try { container.remove(); } catch(e){} }, 6400);
+    }
+
+    /* ------------------- Post draft to server ------------------- */
+    async postDraftToServer() {
+        if (!this.form) return;
+        const data = {};
+        const elements = this.form.elements;
+        for (let i = 0; i < elements.length; i++) {
+            const el = elements[i];
+            if (!el.name) continue;
+            if (['INPUT','SELECT','TEXTAREA'].includes(el.tagName)) {
+                if (el.type === 'button' || el.type === 'submit' || el.type === 'reset') continue;
+                data[el.name] = el.value;
+            }
+        }
+
+        try {
+            const resp = await fetch('api/save_draft.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            const json = await resp.json();
+            if (json && json.success) {
+                this.showBanner('success', 'Draft synced to server');
+            } else {
+                this.showBanner('warning', 'Draft saved locally (server sync failed)');
+            }
+        } catch (e) {
+            this.showBanner('warning', 'Draft saved locally (server unreachable)');
+            try { this.requestBackgroundSync(); } catch(err){}
+        }
+    }
+
+    async checkDuplicateApplication(code) {
+        if (!code || code.trim() === '') return;
+        try {
+            const resp = await fetch(`api/check_duplicate_application.php?application_code=${encodeURIComponent(code)}`);
+            const json = await resp.json();
+            if (json && json.success && json.exists) {
+                this.showFieldError('application_code');
+                const errEl = document.getElementById('application_code_error');
+                if (errEl) errEl.textContent = 'Application code already exists';
+            } else {
+                this.clearFieldError('application_code');
+            }
+        } catch (e) {
+            // ignore remote check failures
+        }
+    }
+
+    async validateFieldsServer() {
+        if (!this.form) return false;
+        const data = {};
+        const elements = this.form.elements;
+        for (let i = 0; i < elements.length; i++) {
+            const el = elements[i];
+            if (!el.name) continue;
+            if (['INPUT','SELECT','TEXTAREA'].includes(el.tagName)) {
+                if (el.type === 'button' || el.type === 'submit' || el.type === 'reset') continue;
+                data[el.name] = el.value;
+            }
+        }
+
+        try {
+            const resp = await fetch('api/validate_fields.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            const json = await resp.json();
+            if (json && json.valid) {
+                return true;
+            }
+            if (json && json.errors) {
+                Object.keys(json.errors).forEach(fieldId => {
+                    const el = document.getElementById(fieldId);
+                    if (el) {
+                        this.showFieldError(fieldId);
+                        const errEl = document.getElementById(fieldId + '_error');
+                        if (errEl) errEl.textContent = json.errors[fieldId];
+                    }
+                });
+            }
+            return false;
+        } catch (e) {
+            // If server validation fails, fallback to client validation
+            console.warn('Server validation failed', e);
+            return this.validateForm();
+        }
     }
 }
 
@@ -528,7 +798,96 @@ document.addEventListener('DOMContentLoaded', () => {
         el.addEventListener('input', () => window.formValidator.scheduleAutoSave(1200));
         el.addEventListener('change', () => window.formValidator.scheduleAutoSave(800));
     });
+
+    // Wire Load Drafts sticky button
+    const stickyLoad = document.getElementById('sticky_load_drafts');
+    if (stickyLoad) stickyLoad.addEventListener('click', () => window.formValidator.openDraftsModal());
+
+    // Register a message listener for modal close actions
+    document.addEventListener('click', (e) => {
+        const tgt = e.target;
+        if (tgt && tgt.id === 'draftsClose') {
+            const m = document.getElementById('draftsModal'); if (m) { m.style.display = 'none'; m.setAttribute('aria-hidden','true'); }
+        }
+    });
+
+    // Ensure background sync is requested when drafts are saved but network failed
+    try { if (!navigator.serviceWorker) { /* noop */ } } catch(e) {}
 });
+
+/* ------------------- Drafts UI & Background Sync helpers (prototype additions) ------------------- */
+
+FormValidator.prototype.openDraftsModal = async function() {
+    const modal = document.getElementById('draftsModal');
+    const listEl = document.getElementById('draftsList');
+    if (!modal || !listEl) return;
+    modal.style.display = 'block';
+    modal.setAttribute('aria-hidden','false');
+    listEl.innerHTML = 'Loading...';
+    try {
+        const resp = await fetch('api/drafts_list.php');
+        const json = await resp.json();
+        if (!json || !json.success) { listEl.innerHTML = '<div>No drafts available</div>'; return; }
+        const items = json.drafts || [];
+        if (items.length === 0) { listEl.innerHTML = '<div>No drafts available</div>'; return; }
+        listEl.innerHTML = '';
+        items.forEach(d => {
+            const row = document.createElement('div');
+            row.className = 'draft-row';
+            const title = d.data && d.data.applicant_name ? (d.data.applicant_name + ' — ' + (d.saved_at || d.created_at || '')) : ('Draft #' + d.id + ' — ' + (d.saved_at || d.created_at || ''));
+            row.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #eee;"><div style="flex:1">${escapeHtml(title)}</div><div style="margin-left:12px"><button class="btn-secondary load-draft-btn" data-id="${d.id}">Load</button></div></div>`;
+            listEl.appendChild(row);
+        });
+        // Attach handlers
+        listEl.querySelectorAll('.load-draft-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const id = parseInt(btn.getAttribute('data-id')) || 0;
+                if (id) this.loadDraftById(id);
+            });
+        });
+    } catch (e) {
+        listEl.innerHTML = '<div>Error loading drafts</div>';
+    }
+};
+
+FormValidator.prototype.loadDraftById = async function(id) {
+    try {
+        const resp = await fetch('api/drafts_load.php?id=' + encodeURIComponent(id));
+        const json = await resp.json();
+        if (!json || !json.success) { this.showBanner('error', 'Failed to load draft'); return; }
+        const data = json.data || {};
+        // Write to localStorage and restore
+        try { localStorage.setItem('deped_eval_draft', JSON.stringify(data)); } catch(e){}
+        const modal = document.getElementById('draftsModal'); if (modal) { modal.style.display = 'none'; modal.setAttribute('aria-hidden','true'); }
+        // Restore directly into form
+        Object.keys(data).forEach(name => {
+            if (name === '__saved_at') return;
+            const el = this.form.elements[name];
+            if (el) { try { el.value = data[name]; } catch(e){} el.dispatchEvent(new Event('input')); el.dispatchEvent(new Event('change')); }
+        });
+        this.showBanner('success', 'Draft loaded');
+    } catch (e) {
+        this.showBanner('error', 'Failed to load draft');
+    }
+};
+
+FormValidator.prototype.requestBackgroundSync = function() {
+    if (!('serviceWorker' in navigator)) return;
+    navigator.serviceWorker.ready.then(reg => {
+        if (reg && reg.sync && typeof reg.sync.register === 'function') {
+            reg.sync.register('sync-drafts').catch(()=>{});
+        } else if (reg && reg.active) {
+            try { reg.active.postMessage({ type: 'registerSync' }); } catch(e){}
+        }
+    }).catch(()=>{});
+};
+
+// Escape helper for safe text insertion
+function escapeHtml(s) {
+    if (!s) return '';
+    return String(s).replace(/[&"'<>]/g, function (m) { return {'&':'&amp;','"':'&quot;','\'':'&#39;','<':'&lt;','>':'&gt;'}[m]; });
+}
+
 
 // Export for use in other modules
 if (typeof module !== 'undefined' && module.exports) {
