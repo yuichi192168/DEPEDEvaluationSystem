@@ -1,3 +1,4 @@
+-- SQLBook: Code
 -- DepEd HRMPSB Evaluation System Database Schema
 -- MySQL/MariaDB Database Structure
 
@@ -191,3 +192,22 @@ CREATE TABLE IF NOT EXISTS audit_logs (
     INDEX idx_user_id (user_id),
     INDEX idx_created_at (created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- SQLBook: Code
+-- Table: user_roles
+CREATE TABLE IF NOT EXISTS user_roles (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    role_name VARCHAR(100) NOT NULL UNIQUE,
+    description TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Example modification: Adding a role_id to the applicants table
+ALTER TABLE applicants
+ADD COLUMN role_id INT,
+ADD FOREIGN KEY (role_id) REFERENCES user_roles(id) ON DELETE SET NULL;
+
+-- Example modification: Adding a status column to evaluations table
+ALTER TABLE evaluations
+ADD COLUMN evaluation_status ENUM('pending', 'approved', 'rejected', 'in_review') DEFAULT 'pending';
