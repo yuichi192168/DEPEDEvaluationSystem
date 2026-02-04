@@ -1,0 +1,213 @@
+/* =====================================================
+   Banner/Alert System Styles
+   ===================================================== */
+
+:root {
+    --banner-success-bg: #d4edda;
+    --banner-success-border: #c3e6cb;
+    --banner-success-text: #155724;
+    --banner-success-icon: #28a745;
+    
+    --banner-error-bg: #f8d7da;
+    --banner-error-border: #f5c6cb;
+    --banner-error-text: #721c24;
+    --banner-error-icon: #dc3545;
+    
+    --banner-warning-bg: #fff3cd;
+    --banner-warning-border: #ffeeba;
+    --banner-warning-text: #856404;
+    --banner-warning-icon: #ffc107;
+    
+    --banner-info-bg: #d1ecf1;
+    --banner-info-border: #bee5eb;
+    --banner-info-text: #0c5460;
+    --banner-info-icon: #17a2b8;
+    
+    --banner-processing-bg: #e7f3ff;
+    --banner-processing-border: #b3d9ff;
+    --banner-processing-text: #004085;
+    --banner-processing-icon: #0056b3;
+}
+
+/* Base banner styles */
+.banner {
+    margin: 20px 0;
+    border-left: 5px solid #ccc;
+    border-radius: 4px;
+    padding: 12px 16px;
+    animation: slideIn 0.3s ease-in-out;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Slide-in animation */
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Fade-out animation for auto-hide */
+@keyframes fadeOut {
+    from {
+        opacity: 1;
+        transform: translateY(0);
+    }
+    to {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+}
+
+.banner.auto-hide {
+    animation: slideIn 0.3s ease-in-out, fadeOut 0.3s ease-in-out 4.7s forwards;
+}
+
+/* Banner content layout */
+.banner-content {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.banner-icon {
+    font-size: 18px;
+    font-weight: bold;
+    flex-shrink: 0;
+}
+
+.banner-text {
+    flex: 1;
+    line-height: 1.5;
+    font-size: 14px;
+}
+
+.banner-close {
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    padding: 0 4px;
+    opacity: 0.6;
+    transition: opacity 0.2s;
+    flex-shrink: 0;
+}
+
+.banner-close:hover {
+    opacity: 1;
+}
+
+/* Success banner */
+.banner-success {
+    background-color: var(--banner-success-bg);
+    border-left-color: var(--banner-success-icon);
+    color: var(--banner-success-text);
+}
+
+.banner-success .banner-icon {
+    color: var(--banner-success-icon);
+}
+
+.banner-success .banner-close {
+    color: var(--banner-success-text);
+}
+
+/* Error banner */
+.banner-error {
+    background-color: var(--banner-error-bg);
+    border-left-color: var(--banner-error-icon);
+    color: var(--banner-error-text);
+}
+
+.banner-error .banner-icon {
+    color: var(--banner-error-icon);
+}
+
+.banner-error .banner-close {
+    color: var(--banner-error-text);
+}
+
+/* Warning banner */
+.banner-warning {
+    background-color: var(--banner-warning-bg);
+    border-left-color: var(--banner-warning-icon);
+    color: var(--banner-warning-text);
+}
+
+.banner-warning .banner-icon {
+    color: var(--banner-warning-icon);
+}
+
+.banner-warning .banner-close {
+    color: var(--banner-warning-text);
+}
+
+/* Info banner */
+.banner-info {
+    background-color: var(--banner-info-bg);
+    border-left-color: var(--banner-info-icon);
+    color: var(--banner-info-text);
+}
+
+.banner-info .banner-icon {
+    color: var(--banner-info-icon);
+}
+
+.banner-info .banner-close {
+    color: var(--banner-info-text);
+}
+
+/* Processing banner */
+.banner-processing {
+    background-color: var(--banner-processing-bg);
+    border-left-color: var(--banner-processing-icon);
+    color: var(--banner-processing-text);
+}
+
+.banner-processing .banner-icon {
+    color: var(--banner-processing-icon);
+}
+
+.banner-processing .banner-close {
+    color: var(--banner-processing-text);
+}
+
+/* Loading spinner animation */
+.loading-spinner {
+    display: inline-block;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Responsive adjustments */
+@media (max-width: 600px) {
+    .banner {
+        margin: 15px 0;
+        padding: 10px 12px;
+    }
+    
+    .banner-content {
+        gap: 8px;
+    }
+    
+    .banner-icon {
+        font-size: 16px;
+    }
+    
+    .banner-text {
+        font-size: 13px;
+    }
+}
