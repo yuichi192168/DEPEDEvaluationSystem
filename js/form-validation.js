@@ -274,6 +274,15 @@ class FormValidator {
     handleFormSubmit(e) {
         if (!this.isValid) {
             e.preventDefault();
+            console.log('Form validation failed - checking required fields:');
+            this.requiredFields.forEach(fieldId => {
+                const field = document.getElementById(fieldId);
+                if (field) {
+                    const value = field.value.trim();
+                    const isValid = this.validateField(fieldId);
+                    console.log(`  ${fieldId}: ${value ? '"' + value + '"' : 'EMPTY'} - ${isValid ? 'VALID' : 'INVALID'}`);
+                }
+            });
             this.showValidationErrors();
             this.scrollToFirstInvalidField();
             return false;
@@ -560,6 +569,10 @@ class FormValidator {
         const confirm = document.getElementById('confirmationConfirm');
 
         const cleanup = () => {
+            // Remove focus from any element to prevent aria-hidden warning
+            if (document.activeElement && document.activeElement !== document.body) {
+                document.activeElement.blur();
+            }
             modal.classList.remove('active');
             modal.setAttribute('aria-hidden', 'true');
             confirm.removeEventListener('click', onClickConfirm);

@@ -14,7 +14,7 @@ function showSuccessBanner($message, $autoHide = true) {
     echo <<<HTML
     <div class="banner banner-success{$autoHideClass}" role="status" aria-live="polite">
         <div class="banner-content">
-            <span class="banner-icon">✓</span>
+            <span class="banner-icon"><i class="fas fa-check-circle"></i></span>
             <span class="banner-text">$message</span>
             <button class="banner-close" onclick="this.parentElement.parentElement.style.display='none';" aria-label="Close message">&times;</button>
         </div>
@@ -28,13 +28,17 @@ function showSuccessBanner($message, $autoHide = true) {
  */
 function showErrorBanner($message) {
     echo <<<HTML
-    <div class="banner banner-error" role="alert" aria-live="assertive">
+    <div class="banner banner-error" role="alert" aria-live="assertive" id="errorBanner">
         <div class="banner-content">
-            <span class="banner-icon">✕</span>
+            <span class="banner-icon"><i class="fas fa-exclamation-circle"></i></span>
             <span class="banner-text">$message</span>
             <button class="banner-close" onclick="this.parentElement.parentElement.style.display='none';" aria-label="Close message">&times;</button>
         </div>
     </div>
+    <script>
+        // Scroll error banner into view
+        document.getElementById('errorBanner').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    </script>
     HTML;
 }
 
@@ -46,7 +50,7 @@ function showWarningBanner($message) {
     echo <<<HTML
     <div class="banner banner-warning" role="status" aria-live="polite">
         <div class="banner-content">
-            <span class="banner-icon">⚠</span>
+            <span class="banner-icon"><i class="fas fa-exclamation-triangle"></i></span>
             <span class="banner-text">$message</span>
             <button class="banner-close" onclick="this.parentElement.parentElement.style.display='none';" aria-label="Close message">&times;</button>
         </div>
@@ -62,7 +66,7 @@ function showInfoBanner($message) {
     echo <<<HTML
     <div class="banner banner-info" role="status" aria-live="polite">
         <div class="banner-content">
-            <span class="banner-icon">ℹ</span>
+            <span class="banner-icon"><i class="fas fa-info-circle"></i></span>
             <span class="banner-text">$message</span>
             <button class="banner-close" onclick="this.parentElement.parentElement.style.display='none';" aria-label="Close message">&times;</button>
         </div>
@@ -78,7 +82,7 @@ function showProcessingBanner($message) {
     echo <<<HTML
     <div class="banner banner-processing" role="status" aria-live="polite">
         <div class="banner-content">
-            <span class="banner-icon loading-spinner">⟳</span>
+            <span class="banner-icon loading-spinner"><i class="fas fa-spinner fa-spin"></i></span>
             <span class="banner-text">$message</span>
         </div>
     </div>

@@ -386,7 +386,7 @@ class ComparativeAssessmentReport {
                       FROM {$this->table} car
                       JOIN applicants a ON car.applicant_id = a.id
                       JOIN positions p ON car.position_id = p.id
-                      WHERE car.position_id = ?
+                      WHERE car.position_id = ? AND a.archive_status = 'active'
                       ORDER BY 
                         car.total_score DESC,
                         car.education_score DESC,
@@ -424,7 +424,7 @@ class ComparativeAssessmentReport {
                       FROM {$this->table} car
                       JOIN applicants a ON car.applicant_id = a.id
                       JOIN positions p ON car.position_id = p.id
-                      WHERE car.id = ?";
+                      WHERE car.id = ? AND a.archive_status = 'active'";
             
             $stmt = $conn->prepare($query);
             $stmt->bind_param('i', $resultId);
@@ -459,7 +459,7 @@ class ComparativeAssessmentReport {
     public function getPositionsWithResults() {
         try {
             $conn = $this->getConnection();
-            // Modified to ONLY show positions that have applicants (result_count > 0)
+            // Modified to ONLY show positions that have ACTIVE applicants (result_count > 0)
             $query = "SELECT DISTINCT 
                         p.id,
                         p.position_name,
@@ -469,6 +469,8 @@ class ComparativeAssessmentReport {
                         COUNT(car.id) as result_count
                       FROM positions p
                       INNER JOIN {$this->table} car ON p.id = car.position_id
+                      INNER JOIN applicants a ON car.applicant_id = a.id
+                      WHERE a.archive_status = 'active'
                       GROUP BY p.id
                       HAVING result_count > 0
                       ORDER BY p.position_name";
@@ -515,6 +517,7 @@ class ComparativeAssessmentReport {
                       FROM {$this->table} car
                       JOIN applicants a ON car.applicant_id = a.id
                       JOIN positions p ON car.position_id = p.id
+                      WHERE a.archive_status = 'active'
                       ORDER BY 
                         p.position_name,
                         car.total_score DESC,

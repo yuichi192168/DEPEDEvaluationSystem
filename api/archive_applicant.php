@@ -1,0 +1,53 @@
+<?php
+/**
+ * API Endpoint: Archive Applicant
+ * POST /api/archive_applicant.php
+ * PROTECTED: Admin authentication required
+ */
+
+session_start();
+require_once(__DIR__ . '/../classes/DBConnection.php');
+require_once(__DIR__ . '/../classes/AuthenticationHelper.php');
+require_once(__DIR__ . '/../classes/ApplicantManager.php');
+
+header('Content-Type: application/json');
+
+$response = ['success' => false, 'message' => 'Invalid request'];
+
+try {
+    $conn = DBConnection::getConnection();
+    
+    // Require admin authentication
+    $auth = new AuthenticationHelper($conn);
+    if (!$auth->isAdmin()) {
+        $response['message'] = 'Unauthorized: Admin access required';
+        http_response_code(403);
+        echo json_encode($response);
+        exit;
+    }
+    
+    $currentUser = $auth->getCurrentUser();
+    
+    // Get POST data
+    $input = json_decode(file_get_contents('php://input'), true);
+    
+    if (empty($input['applicant_id'])) {
+        $response['message'] = 'Missing applicant ID';
+        echo json_encode($response);
+        exit;
+    }
+    
+    $manager = new ApplicantManager($conn);
+    
+    $applicantId = intval($input['applicant_id']);
+    $reason = isset($input['reason']) ? trim($input['reason']) : '';
+    $archivedBy = $currentUser['full_name'] ?? $currentUser['username'];
+    
+    $result = $manager->archiveApplicant($applicantId, $reason, $archivedBy);
+    echo json_encode($result);
+    
+} catch (Exception $e) {
+    $response['message'] = 'Error: ' . $e->getMessage();
+    echo json_encode($response);
+}
+?>

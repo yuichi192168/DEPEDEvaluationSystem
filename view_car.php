@@ -138,6 +138,8 @@ $positionsQuery = "
            COUNT(e.id) as evaluation_count
     FROM positions p
     LEFT JOIN evaluations e ON p.id = e.position_id
+    LEFT JOIN applicants a ON e.applicant_id = a.id
+    WHERE a.archive_status = 'active' OR a.id IS NULL
     GROUP BY p.id
     HAVING evaluation_count > 0
     ORDER BY p.position_name
@@ -155,12 +157,7 @@ while ($row = $positionsResult->fetch_assoc()) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Comparative Assessment Results (CAR) - Annex G-1</title>
-    <!-- Favicon -->
-    <link rel="icon" type="image/x-icon" href="images/favicon.ico">
-    <link rel="icon" type="image/png" sizes="32x32" href="images/favicon-32x32.png">
-    <link rel="icon" type="image/png" sizes="16x16" href="images/favicon-16x16.png">
-    <link rel="apple-touch-icon" href="images/apple-touch-icon.png">
-    <link rel="manifest" href="images/site.webmanifest">
+    <?php require_once(__DIR__ . '/includes/favicon.php'); ?>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;

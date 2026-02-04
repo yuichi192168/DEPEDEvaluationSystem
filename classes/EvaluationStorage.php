@@ -130,7 +130,7 @@ class EvaluationStorage {
             INNER JOIN applicants a ON e.applicant_id = a.id
             LEFT JOIN positions p ON e.position_id = p.id
             LEFT JOIN evaluation_details ed ON e.id = ed.evaluation_id
-            WHERE p.position_name = ? OR e.notes LIKE ?
+            WHERE (p.position_name = ? OR e.notes LIKE ?) AND a.archive_status = 'active'
             GROUP BY e.id
             ORDER BY e.total_score DESC
         ");
@@ -266,7 +266,7 @@ class EvaluationStorage {
             INNER JOIN applicants a ON car.applicant_id = a.id
             INNER JOIN positions p ON car.position_id = p.id
             CROSS JOIN (SELECT @rank := 0, @prev_score := NULL, @rank_increment := 1) init
-            WHERE car.position_id = ?
+            WHERE car.position_id = ? AND a.archive_status = 'active'
             ORDER BY car.total_score DESC
         ";
         

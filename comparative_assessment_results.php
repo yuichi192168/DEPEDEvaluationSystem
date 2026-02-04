@@ -8,10 +8,12 @@ session_start();
 
 require_once 'includes/banners.php';
 require_once 'classes/ComparativeAssessmentReport.php';
+require_once 'classes/DBConnection.php';
 require_once 'config/evaluation_criteria.php';
 require_once 'config/baseline_library.php';
 
 $car = new ComparativeAssessmentReport();
+$conn = DBConnection::getConnection();
 $positionId = $_GET['position_id'] ?? null;
 $viewMode = $_GET['view'] ?? 'position'; // 'position' or 'all'
 
@@ -106,6 +108,76 @@ if ($viewMode === 'all') {
         }
     }
 }
+
+// Load IES data for 'ies' view mode
+$iesData = [];
+if ($viewMode === 'ies') {
+    $query = "
+        SELECT 
+            a.id as applicant_id,
+            a.name,
+            e.position_group as position_name,
+            e.id as evaluation_id,
+            e.total_score,
+            e.evaluation_date,
+            ed.criterion,
+            ed.applicant_qualification,
+            ed.applicant_level,
+            ed.baseline_qualification,
+            ed.baseline_level,
+            ed.weight,
+            ed.increment,
+            ed.final_score
+        FROM applicants a
+        LEFT JOIN evaluations e ON a.id = e.applicant_id
+        LEFT JOIN evaluation_details ed ON e.id = ed.evaluation_id
+        WHERE e.id IS NOT NULL
+        ORDER BY a.name, e.evaluation_date DESC
+    ";
+    
+    $result = $conn->query($query);
+    if ($result) {
+        $currentApplicant = null;
+        while ($row = $result->fetch_assoc()) {
+            $applicantId = $row['applicant_id'];
+            
+            if ($applicantId !== $currentApplicant) {
+                if (!isset($iesData[$applicantId])) {
+                    $iesData[$applicantId] = [
+                        'name' => $row['name'],
+                        'position_name' => $row['position_name'],
+                        'evaluations' => []
+                    ];
+                }
+                $currentApplicant = $applicantId;
+            }
+            
+            $evalId = $row['evaluation_id'];
+            if ($evalId && !isset($iesData[$applicantId]['evaluations'][$evalId])) {
+                $iesData[$applicantId]['evaluations'][$evalId] = [
+                    'evaluation_id' => $evalId,
+                    'position' => $row['position_name'],
+                    'total_score' => $row['total_score'],
+                    'evaluation_date' => $row['evaluation_date'],
+                    'details' => []
+                ];
+            }
+            
+            if ($evalId && $row['criterion']) {
+                $iesData[$applicantId]['evaluations'][$evalId]['details'][] = [
+                    'criterion' => $row['criterion'],
+                    'applicant_qualification' => $row['applicant_qualification'],
+                    'applicant_level' => $row['applicant_level'],
+                    'baseline_qualification' => $row['baseline_qualification'],
+                    'baseline_level' => $row['baseline_level'],
+                    'weight' => $row['weight'],
+                    'increment' => $row['increment'],
+                    'final_score' => $row['final_score']
+                ];
+            }
+        }
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -113,12 +185,7 @@ if ($viewMode === 'all') {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Comparative Assessment Result (CAR) - DepEd HRMPSB</title>
-    <!-- Favicon -->
-    <link rel="icon" type="image/x-icon" href="images/favicon.ico">
-    <link rel="icon" type="image/png" sizes="32x32" href="images/favicon-32x32.png">
-    <link rel="icon" type="image/png" sizes="16x16" href="images/favicon-16x16.png">
-    <link rel="apple-touch-icon" href="images/apple-touch-icon.png">
-    <link rel="manifest" href="images/site.webmanifest">
+    <?php require_once(__DIR__ . '/includes/favicon.php'); ?>
     <style>
         * {
             margin: 0;
@@ -386,19 +453,19 @@ if ($viewMode === 'all') {
         }
         
         .btn-action.print {
-            background: #4CAF50;
+            background: #E04040;
         }
         
         .btn-action.print:hover {
-            background: #45a049;
+            background: #c73030;
         }
         
         .btn-action.export {
-            background: #2196F3;
+            background: #E04040;
         }
         
         .btn-action.export:hover {
-            background: #0b7dda;
+            background: #c73030;
         }
         
         .empty-message {
@@ -462,6 +529,10 @@ if ($viewMode === 'all') {
                style="<?php echo ($viewMode === 'position') ? 'background: #333; font-weight: bold;' : ''; ?>">
                View by Position
             </a>
+            <a href="comparative_assessment_results.php?view=ies" class="nav-btn" 
+               style="<?php echo ($viewMode === 'ies') ? 'background: #333; font-weight: bold;' : ''; ?>">
+               View IES Data
+            </a>
         </div>
         
         <!-- Title Section -->
@@ -473,18 +544,22 @@ if ($viewMode === 'all') {
         <?php if ($viewMode === 'all' && count($groupedResults) > 0): ?>
             <!-- ALL APPLICANTS VIEW -->
             <div style="margin-bottom: 20px;">
-                <div class="action-buttons">
-                    <button class="btn-action" onclick="refreshResults()">Refresh</button>
-                    <button class="btn-action print" onclick="window.print()">Print</button>
-                    <button class="btn-action export" onclick="exportToCSV()">Export CSV</button>
-                </div>
+                <h1 style="color: #333; font-size: 18px; border-bottom: 3px solid #666; padding-bottom: 12px; margin-bottom: 20px;">
+                    All Applicants by Position
+                </h1>
             </div>
             
             <?php foreach ($groupedResults as $posName => $posData): ?>
-                <div style="page-break-inside: avoid; margin-bottom: 30px;">
-                    <h2 style="font-size: 14px; color: #E04040; border-bottom: 2px solid #E04040; padding-bottom: 8px; margin-bottom: 15px;">
-                        Position: <?php echo htmlspecialchars($posName); ?>
-                    </h2>
+                <div style="page-break-inside: avoid; margin-bottom: 35px; background: #fff; border: 1px solid #e0e0e0; border-radius: 6px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
+                    <!-- Position Header -->
+                    <div style="background: #f5f5f5; color: #333; padding: 15px; border-bottom: 2px solid #ddd; border-left: 4px solid #666;">
+                        <h2 style="font-size: 15px; font-weight: bold; margin: 0;">
+                            <?php echo htmlspecialchars($posName); ?>
+                        </h2>
+                        <div style="font-size: 12px; margin-top: 5px; color: #666;">
+                            Total Applicants: <strong><?php echo count($posData['applicants']); ?></strong>
+                        </div>
+                    </div>
                     
                     <?php
                     // Get position group and salary grade for first applicant to determine criteria
@@ -534,32 +609,34 @@ if ($viewMode === 'all') {
                     }
                     ?>
                     
-                    <table class="results-table">
-                        <thead>
-                            <tr>
-                                <th style="width: 5%;">Rank</th>
-                                <th style="width: 20%;">NAME</th>
-                                <th style="width: 10%;">APPLICATION CODE</th>
-                                <?php foreach ($criteriaMap as $mapping): ?>
-                                    <th style="width: 7%;"><?php echo htmlspecialchars($mapping['criteria_name']); ?></th>
-                                <?php endforeach; ?>
-                                <th style="width: 8%;">Total</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php foreach ($posData['applicants'] as $index => $row): ?>
-                                <tr>
-                                    <td><?php echo $row['rank'] ?? ($index + 1); ?></td>
-                                    <td class="name-column"><?php echo htmlspecialchars($row['name']); ?></td>
-                                    <td class="code-column"><?php echo htmlspecialchars($row['application_code'] ?? ''); ?></td>
+                    <div style="overflow-x: auto; padding: 15px;">
+                        <table class="results-table" style="margin: 0;">
+                            <thead>
+                                <tr style="background: #f9f9f9; border-bottom: 2px solid #ddd;">
+                                    <th style="width: 5%; border: 1px solid #e0e0e0; color: #333; background: #f5f5f5;">Rank</th>
+                                    <th style="width: 20%; border: 1px solid #e0e0e0; color: #333; background: #f5f5f5; text-align: left;">Name</th>
+                                    <th style="width: 12%; border: 1px solid #e0e0e0; color: #333; background: #f5f5f5;">Application Code</th>
                                     <?php foreach ($criteriaMap as $mapping): ?>
-                                        <td class="score-column"><?php echo number_format($row[$mapping['db_column']] ?? 0, 2); ?></td>
+                                        <th style="width: 7%; border: 1px solid #e0e0e0; color: #333; background: #f5f5f5;"><?php echo htmlspecialchars($mapping['criteria_name']); ?></th>
                                     <?php endforeach; ?>
-                                    <td class="total-column"><?php echo number_format($row['total_score'] ?? 0, 2); ?></td>
+                                    <th style="width: 8%; border: 1px solid #e0e0e0; color: #333; background: #f5f5f5;">Total Score</th>
                                 </tr>
-                            <?php endforeach; ?>
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($posData['applicants'] as $index => $row): ?>
+                                    <tr style="border-bottom: 1px solid #f0f0f0; transition: background 0.2s;">
+                                        <td style="background: #fafafa; font-weight: 600; color: #666; border: 1px solid #e0e0e0;"><?php echo $row['rank'] ?? ($index + 1); ?></td>
+                                        <td class="name-column" style="text-align: left; font-weight: 500; color: #333; border: 1px solid #e0e0e0;"><?php echo htmlspecialchars($row['name']); ?></td>
+                                        <td class="code-column" style="font-family: 'Courier New', monospace; font-size: 11px; color: #777; border: 1px solid #e0e0e0;"><?php echo htmlspecialchars($row['application_code'] ?? '—'); ?></td>
+                                        <?php foreach ($criteriaMap as $mapping): ?>
+                                            <td class="score-column" style="background: #fafafa; color: #333; border: 1px solid #e0e0e0;"><?php echo number_format($row[$mapping['db_column']] ?? 0, 2); ?></td>
+                                        <?php endforeach; ?>
+                                        <td class="total-column" style="background: #f0f0f0; color: #333; font-weight: bold; font-size: 13px; border: 1px solid #e0e0e0; border-left: 3px solid #666;"><?php echo number_format($row['total_score'] ?? 0, 2); ?></td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             <?php endforeach; ?>
             
@@ -603,17 +680,24 @@ if ($viewMode === 'all') {
                         <?php endforeach; ?>
                     </select>
                 </div>
+                <?php if ($viewMode !== 'all'): ?>
                 <div class="action-buttons">
                     <button class="btn-action" onclick="refreshResults()">Refresh</button>
-                    <button class="btn-action print" onclick="window.print()">Print</button>
-                    <button class="btn-action export" onclick="exportToCSV()">Export CSV</button>
+                    <?php if ($positionId): ?>
+                        <button class="btn-action print" onclick="window.print()">Print</button>
+                        <button class="btn-action export" onclick="exportToCSV()">Export CSV</button>
+                    <?php endif; ?>
                 </div>
+                <?php endif; ?>
             </div>
             
-            <!-- Evaluation Criteria Reference -->
+            <!-- Evaluation Criteria Reference - Collapsible -->
             <div style="margin: 20px 0; padding: 15px; background: #f5f5f5; border-left: 4px solid #E04040; border-radius: 4px;">
-                <h3 style="color: #E04040; margin-bottom: 12px; font-size: 13px;">Evaluation Criteria and Maximum Points</h3>
-                <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; cursor: pointer;" onclick="toggleCriteriaTable()">
+                    <h3 style="color: #E04040; margin: 0; font-size: 13px; flex: 1;">Evaluation Criteria and Maximum Points</h3>
+                    <span id="criteriaToggleIcon" style="color: #E04040; font-size: 18px; font-weight: bold;">+</span>
+                </div>
+                <table id="criteriaTable" style="width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 12px; display: none;">
                     <thead>
                         <tr style="background: #eeeeee;">
                             <th style="padding: 8px; text-align: left; border: 1px solid #ccc;">Criteria</th>
@@ -840,6 +924,115 @@ if ($viewMode === 'all') {
                 </div>
             <?php endif; ?>
             
+        <?php elseif ($viewMode === 'ies' && count($iesData) > 0): ?>
+            <!-- IES DATA VIEW -->
+            <div style="margin-bottom: 20px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; gap: 15px; flex-wrap: wrap; margin-bottom: 15px;">
+                    <h1 style="color: #333; font-size: 18px; border-bottom: 3px solid #666; padding-bottom: 12px; margin: 0; flex: 1;">
+                        Individual Evaluation Sheets (IES)
+                    </h1>
+                </div>
+                <!-- Search Box -->
+                <div style="margin-bottom: 15px;">
+                    <input type="text" id="applicantSearch" placeholder="Search applicant name..." 
+                           style="padding: 10px; width: 100%; max-width: 400px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px;"
+                           onkeyup="filterApplicants()">
+                    <div style="font-size: 12px; color: #666; margin-top: 5px;">
+                        Found: <span id="applicantCount"><?php echo count($iesData); ?></span> applicant(s)
+                    </div>
+                </div>
+            </div>
+            
+            <div id="iesContainer">
+                <?php foreach ($iesData as $applicantId => $applicant): ?>
+                    <div class="applicant-ies-card" data-applicant-name="<?php echo htmlspecialchars(strtolower($applicant['name'])); ?>" 
+                         style="page-break-inside: avoid; margin-bottom: 40px; background: #fff; border: 1px solid #e0e0e0; border-radius: 6px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
+                        <!-- Applicant Header -->
+                        <div style="background: #f5f5f5; color: #333; padding: 15px; border-bottom: 2px solid #ddd; border-left: 4px solid #666; display: flex; justify-content: space-between; align-items: flex-start; gap: 15px;">
+                            <div style="flex: 1;">
+                                <h2 style="font-size: 15px; font-weight: bold; margin: 0;">
+                                    <?php echo htmlspecialchars($applicant['name']); ?>
+                                </h2>
+                                <div style="font-size: 12px; margin-top: 5px; color: #666;">
+                                    Position: <strong><?php echo htmlspecialchars($applicant['position_name'] ?? 'N/A'); ?></strong>
+                                </div>
+                            </div>
+                            <div style="display: flex; gap: 10px;">
+                                <button class="btn-action" onclick="downloadIES('<?php echo htmlspecialchars(str_replace("'", "\\'", $applicant['name'])); ?>', <?php echo $applicantId; ?>)" 
+                                        style="margin: 0; white-space: nowrap; background: #4CAF50;">
+                                    Print IES
+                                </button>
+                                <button class="btn-action" onclick="exportIESToWord('<?php echo htmlspecialchars(str_replace("'", "\\'", $applicant['name'])); ?>', <?php echo $applicantId; ?>)" 
+                                        style="margin: 0; white-space: nowrap; background: #2196F3;">
+                                    Export to Word
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Evaluation Details -->
+                        <div style="padding: 15px;">
+                            <?php foreach ($applicant['evaluations'] as $evalId => $evaluation): ?>
+                                <div style="margin-bottom: 20px; padding-bottom: 20px; border-bottom: 1px solid #e0e0e0;">
+                                    <div style="background: #f9f9f9; padding: 10px; border-radius: 4px; margin-bottom: 12px;">
+                                        <div style="font-size: 12px; color: #666;">
+                                            <strong>Evaluation Date:</strong> <?php echo htmlspecialchars($evaluation['evaluation_date']); ?> | 
+                                            <strong>Total Score:</strong> <span style="font-weight: bold; color: #333;">
+                                                <?php echo number_format($evaluation['total_score'], 2); ?>
+                                            </span>
+                                        </div>
+                                    </div>
+                                    
+                                    <div style="overflow-x: auto;">
+                                        <table class="results-table" style="margin: 0; font-size: 11px;">
+                                            <thead>
+                                                <tr style="background: #f5f5f5; border-bottom: 2px solid #ddd;">
+                                                    <th style="width: 15%; border: 1px solid #e0e0e0; text-align: left; padding: 8px;">Criterion</th>
+                                                    <th style="width: 12%; border: 1px solid #e0e0e0; text-align: center;">Applicant Level</th>
+                                                    <th style="width: 12%; border: 1px solid #e0e0e0; text-align: center;">Baseline Level</th>
+                                                    <th style="width: 8%; border: 1px solid #e0e0e0; text-align: center;">Weight</th>
+                                                    <th style="width: 8%; border: 1px solid #e0e0e0; text-align: center;">Increment</th>
+                                                    <th style="width: 10%; border: 1px solid #e0e0e0; text-align: center;">Final Score</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <?php foreach ($evaluation['details'] as $detail): ?>
+                                                    <tr style="border-bottom: 1px solid #f0f0f0;">
+                                                        <td style="border: 1px solid #e0e0e0; padding: 6px; background: #fafafa;">
+                                                            <?php echo htmlspecialchars($detail['criterion']); ?>
+                                                        </td>
+                                                        <td style="border: 1px solid #e0e0e0; padding: 6px; text-align: center;">
+                                                            <?php echo htmlspecialchars($detail['applicant_level']); ?>
+                                                        </td>
+                                                        <td style="border: 1px solid #e0e0e0; padding: 6px; text-align: center;">
+                                                            <?php echo htmlspecialchars($detail['baseline_level']); ?>
+                                                        </td>
+                                                        <td style="border: 1px solid #e0e0e0; padding: 6px; text-align: center;">
+                                                            <?php echo number_format($detail['weight'] ?? 0, 2); ?>
+                                                        </td>
+                                                        <td style="border: 1px solid #e0e0e0; padding: 6px; text-align: center;">
+                                                            <?php echo number_format($detail['increment'] ?? 0, 2); ?>
+                                                        </td>
+                                                        <td style="border: 1px solid #e0e0e0; padding: 6px; text-align: center; background: #f0f0f0; font-weight: bold;">
+                                                            <?php echo number_format($detail['final_score'] ?? 0, 2); ?>
+                                                        </td>
+                                                    </tr>
+                                                <?php endforeach; ?>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+            
+        <?php elseif ($viewMode === 'ies' && count($iesData) === 0): ?>
+            <?php showWarningBanner("No IES data found. Please complete evaluations first to view Individual Evaluation Sheets."); ?>
+            <div class="empty-message">
+                <p>No evaluation data available. <a href="index.php">Go back to complete evaluations</a></p>
+            </div>
+            
         <?php elseif ($viewMode === 'all' && count($groupedResults) === 0): ?>
             <?php showWarningBanner("No applicants found in the database. Please complete evaluations first to see Comparative Assessment Results."); ?>
             <div class="empty-message">
@@ -925,6 +1118,553 @@ if ($viewMode === 'all') {
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
+        }
+
+        function exportIEStoCSV() {
+            const container = document.getElementById('iesContainer');
+            if (!container) {
+                const b = document.createElement('div');
+                b.className = 'banner banner-warning auto-hide';
+                b.innerHTML = `<div class="banner-content"><span class="banner-icon">⚠</span><span class="banner-text">No IES data to export</span><button class="banner-close" aria-label="Close">&times;</button></div>`;
+                document.body.insertBefore(b, document.body.firstChild);
+                const closeBtn = b.querySelector('.banner-close'); if (closeBtn) closeBtn.addEventListener('click', () => b.remove());
+                setTimeout(() => { try { b.remove(); } catch(e){} }, 5200);
+                return;
+            }
+            
+            let csv = [];
+            csv.push(['Applicant Name', 'Position', 'Criterion', 'Applicant Level', 'Baseline Level', 'Weight', 'Increment', 'Final Score', 'Evaluation Date', 'Total Score'].map(v => `"${v}"`).join(','));
+            
+            const tables = container.querySelectorAll('.results-table');
+            let applicantName = '';
+            let positionName = '';
+            let evaluationDate = '';
+            let totalScore = '';
+            
+            const applicantBlocks = container.querySelectorAll('[style*="margin-bottom: 40px"]');
+            
+            applicantBlocks.forEach((block, blockIdx) => {
+                const nameEl = block.querySelector('h2');
+                const posEl = block.querySelector('[style*="Position:"]');
+                applicantName = nameEl ? nameEl.innerText : '';
+                positionName = posEl ? posEl.innerText.replace('Position: ', '').split('\n')[0] : '';
+                
+                const evalSections = block.querySelectorAll('[style*="margin-bottom: 20px; padding-bottom: 20px"]');
+                evalSections.forEach((evalSection, evalIdx) => {
+                    const dateScoreDiv = evalSection.querySelector('[style*="background: #f9f9f9"]');
+                    if (dateScoreDiv) {
+                        const text = dateScoreDiv.innerText;
+                        const dateMatch = text.match(/Evaluation Date:\s*(\d{4}-\d{2}-\d{2})/);
+                        const scoreMatch = text.match(/Total Score:\s*([\d.]+)/);
+                        evaluationDate = dateMatch ? dateMatch[1] : '';
+                        totalScore = scoreMatch ? scoreMatch[1] : '';
+                    }
+                    
+                    const table = evalSection.querySelector('.results-table');
+                    if (table) {
+                        const rows = table.querySelectorAll('tbody tr');
+                        rows.forEach(row => {
+                            const cols = row.querySelectorAll('td');
+                            if (cols.length > 0) {
+                                const csvRow = [
+                                    applicantName,
+                                    positionName,
+                                    cols[0].innerText,  // Criterion
+                                    cols[1].innerText,  // Applicant Level
+                                    cols[2].innerText,  // Baseline Level
+                                    cols[3].innerText,  // Weight
+                                    cols[4].innerText,  // Increment
+                                    cols[5].innerText,  // Final Score
+                                    evaluationDate,
+                                    totalScore
+                                ];
+                                csv.push(csvRow.map(v => `"${v.replace(/"/g, '""')}"`).join(','));
+                            }
+                        });
+                    }
+                });
+            });
+            
+            const csvContent = csv.join('\n');
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', `IES-${new Date().toISOString().split('T')[0]}.csv`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+        // Toggle evaluation criteria table visibility
+        function toggleCriteriaTable() {
+            const table = document.getElementById('criteriaTable');
+            const icon = document.getElementById('criteriaToggleIcon');
+            
+            if (table.style.display === 'none') {
+                table.style.display = 'table';
+                icon.textContent = '−';
+            } else {
+                table.style.display = 'none';
+                icon.textContent = '+';
+            }
+        }
+
+        // Filter applicants by name
+        function filterApplicants() {
+            const searchInput = document.getElementById('applicantSearch').value.toLowerCase();
+            const applicantCards = document.querySelectorAll('.applicant-ies-card');
+            let visibleCount = 0;
+            
+            applicantCards.forEach(card => {
+                const applicantName = card.getAttribute('data-applicant-name');
+                if (applicantName.includes(searchInput)) {
+                    card.style.display = '';
+                    visibleCount++;
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+            
+            document.getElementById('applicantCount').textContent = visibleCount;
+        }
+
+        // Download individual IES as HTML/PDF with preview
+        function downloadIES(applicantName, applicantId) {
+            const cards = document.querySelectorAll('.applicant-ies-card');
+            let applicantData = null;
+            let tableHtml = '';
+            let totalScore = 0;
+            
+            // Extract applicant data
+            cards.forEach(card => {
+                if (card.getAttribute('data-applicant-name') === applicantName.toLowerCase()) {
+                    const tables = card.querySelectorAll('.results-table');
+                    const positionEl = card.querySelector('[style*="Position:"]');
+                    const position = positionEl ? positionEl.innerText.replace('Position: ', '').split('\n')[0] : '';
+                    
+                    tables.forEach((table) => {
+                        const rows = table.querySelectorAll('tbody tr');
+                        rows.forEach((row) => {
+                            const cells = row.querySelectorAll('td');
+                            if (cells.length >= 6) {
+                                const criterion = cells[0].innerText.trim();
+                                const weight = cells[3].innerText.trim();
+                                const details = cells[1].innerText.trim();
+                                const computation = cells[4].innerText.trim();
+                                const score = cells[5].innerText.trim();
+                                
+                                tableHtml += `
+                                    <tr>
+                                        <td style="border: 1px solid #000; padding: 8px; text-align: left;">${criterion}</td>
+                                        <td style="border: 1px solid #000; padding: 8px; text-align: center; width: 60px;">${weight}</td>
+                                        <td style="border: 1px solid #000; padding: 8px; text-align: left; font-size: 11px;">${details}</td>
+                                        <td style="border: 1px solid #000; padding: 8px; text-align: center; font-size: 11px;">${computation}</td>
+                                        <td style="border: 1px solid #000; padding: 8px; text-align: center; width: 60px;">${score}</td>
+                                    </tr>
+                                `;
+                                totalScore += parseFloat(score) || 0;
+                            }
+                        });
+                    });
+                    
+                    applicantData = { name: applicantName, position: position };
+                }
+            });
+            
+            // Create professional IES HTML
+            const htmlContent = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Individual Evaluation Sheet - ${applicantName}</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Calibri', 'Arial', sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+        }
+        
+        .page {
+            background: white;
+            width: 8.5in;
+            height: 11in;
+            margin: 0 auto 20px;
+            padding: 0.75in;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            position: relative;
+        }
+        
+        .annex {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        
+        .title {
+            text-align: center;
+            margin-bottom: 5px;
+            font-size: 14px;
+            font-weight: bold;
+            letter-spacing: 1px;
+        }
+        
+        .subtitle {
+            text-align: center;
+            font-size: 11px;
+            margin-bottom: 15px;
+            color: #666;
+        }
+        
+        .info-section {
+            margin-bottom: 12px;
+            font-size: 12px;
+            line-height: 1.4;
+        }
+        
+        .info-line {
+            margin-bottom: 3px;
+            display: flex;
+            gap: 30px;
+        }
+        
+        .info-line label {
+            font-weight: bold;
+            min-width: 140px;
+        }
+        
+        .info-line input {
+            border: none;
+            border-bottom: 1px solid #000;
+            flex: 1;
+            padding: 2px 0;
+            font-size: 11px;
+        }
+        
+        .section-title {
+            background: #e0e0e0;
+            padding: 8px;
+            margin-top: 12px;
+            margin-bottom: 0;
+            font-weight: bold;
+            text-align: center;
+            font-size: 12px;
+            border: 1px solid #000;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 0;
+            font-size: 11px;
+        }
+        
+        th {
+            background: #e8e8e8;
+            border: 1px solid #000;
+            padding: 8px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 10px;
+        }
+        
+        td {
+            border: 1px solid #000;
+            padding: 6px;
+            text-align: left;
+        }
+        
+        .total-row {
+            background: #f5f5f5;
+            font-weight: bold;
+        }
+        
+        .total-row td {
+            text-align: center;
+        }
+        
+        .attestation {
+            font-size: 10px;
+            line-height: 1.3;
+            margin-top: 15px;
+            text-align: justify;
+        }
+        
+        .signature-section {
+            margin-top: 25px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+            font-size: 10px;
+        }
+        
+        .sig-block {
+            text-align: center;
+        }
+        
+        .sig-line {
+            border-bottom: 1px solid #000;
+            height: 35px;
+            margin-bottom: 3px;
+        }
+        
+        .sig-label {
+            font-size: 10px;
+            line-height: 1.2;
+        }
+        
+        .attested-block {
+            margin-top: 20px;
+            font-size: 10px;
+        }
+        
+        .controls {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            gap: 10px;
+            z-index: 1000;
+        }
+        
+        button {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            color: white;
+        }
+        
+        .print-button {
+            background: #4CAF50;
+        }
+        
+        .print-button:hover {
+            background: #45a049;
+        }
+        
+        .export-button {
+            background: #2196F3;
+        }
+        
+        .export-button:hover {
+            background: #0b7dda;
+        }
+        
+        @media print {
+            body { background: white; padding: 0; }
+            .page { box-shadow: none; margin: 0; width: 100%; height: 100%; padding: 0.5in; }
+            .controls { display: none; }
+        }
+    </style>
+    <script>
+        function exportToWord() {
+            // Get the HTML content from the current preview window
+            const htmlContent = document.documentElement.outerHTML;
+            const nameField = document.querySelector('input[readonly][value]');
+            const applicantName = nameField ? nameField.value : 'Applicant';
+            
+            // Create form and submit to backend
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = 'export_ies_word.php';
+            form.style.display = 'none';
+            
+            const htmlInput = document.createElement('input');
+            htmlInput.type = 'hidden';
+            htmlInput.name = 'html_content';
+            htmlInput.value = htmlContent;
+            
+            const nameInput = document.createElement('input');
+            nameInput.type = 'hidden';
+            nameInput.name = 'applicant_name';
+            nameInput.value = applicantName;
+            
+            form.appendChild(htmlInput);
+            form.appendChild(nameInput);
+            document.body.appendChild(form);
+            form.submit();
+            document.body.removeChild(form);
+        }
+    </' + 'script>
+</head>
+<body>
+    <div class="controls">
+        <button class="print-button" onclick="window.print()">Print</button>
+        <button class="export-button" onclick="exportToWord()">Export to Word</button>
+    </div>
+    
+    <div class="page">
+        <div class="annex">Annex G</div>
+        
+        <div class="title">INDIVIDUAL EVALUATION SHEET (IES)</div>
+        <div class="subtitle">DepEd Human Resource Management and Professional Selection Board</div>
+        
+        <div class="info-section">
+            <div class="info-line">
+                <label>Name of Applicant:</label>
+                <input type="text" value="${applicantName}" readonly>
+                <label style="margin-left: 20px;">Application Code:</label>
+                <input type="text" style="max-width: 100px;">
+            </div>
+            <div class="info-line">
+                <label>Position Applied for:</label>
+                <input type="text" value="${applicantData?.position || ''}" readonly>
+            </div>
+            <div class="info-line">
+                <label>Schools Division Office:</label>
+                <input type="text" value="City Schools Division of Cabuyao" readonly>
+            </div>
+            <div class="info-line">
+                <label>Contact Number:</label>
+                <input type="text" style="max-width: 200px;">
+                <label style="margin-left: 20px;">Job Group/SG-Level:</label>
+                <input type="text" style="max-width: 150px;">
+            </div>
+        </div>
+        
+        <div class="section-title">Applicant's Actual Qualifications</div>
+        
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 20%;">Criteria</th>
+                    <th style="width: 10%; text-align: center;">Weight Allocation</th>
+                    <th style="width: 30%;">Details of Applicant's Qualifications<br><span style="font-size: 9px;">(Relevant documents submitted; additional requirements, notes or HRMPSB comments)</span></th>
+                    <th style="width: 15%; text-align: center;">Computation</th>
+                    <th style="width: 12%; text-align: center;">Actual Score</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${tableHtml}
+                <tr class="total-row">
+                    <td colspan="2" style="text-align: left;"><strong>TOTAL</strong></td>
+                    <td></td>
+                    <td style="text-align: center;"><strong>100</strong></td>
+                    <td style="text-align: center;"><strong>${totalScore.toFixed(2)}</strong></td>
+                </tr>
+            </tbody>
+        </table>
+        
+        <div class="attestation">
+            <p style="margin-top: 12px; margin-bottom: 8px;">I hereby attest to the conduct of the application code and assessment process in accordance with the applicable guidelines, and knowledge, upon discussion with the Human Resource Merit Promotion and Selection Board (HRMPSB), the results of the comparative assessment and the points given to me based on my qualifications and submitted documentary requirements for the Information and Communications Technology under Contract of Service.</p>
+            
+            <p style="margin-bottom: 8px;">Furthermore, I hereby affix my signature in this Form to attest to the objectives and judicious conduct of the HRMPSB evaluation through Open Ranking System.</p>
+        </div>
+        
+        <div class="signature-section">
+            <div class="sig-block">
+                <div class="sig-line"></div>
+                <div class="sig-label">
+                    <strong>Name and Signature of Applicant</strong><br>
+                    Date: _________________
+                </div>
+            </div>
+            <div class="sig-block">
+                <div class="attested-block">
+                    <p style="margin-bottom: 3px;"><strong>Attested:</strong></p>
+                </div>
+                <div class="sig-line" style="margin-top: 5px;"></div>
+                <div class="sig-label">
+                    <strong>RANDY D. PUNZALAN, CESO VI</strong><br>
+                    HRMPSB Chair
+                </div>
+            </div>
+        </div>
+    </body>
+</html>
+            `;
+            
+            // Open in new window for preview and show success message
+            const previewWindow = window.open('', '_blank');
+            previewWindow.document.write(htmlContent);
+            previewWindow.document.close();
+            
+            const banner = document.createElement('div');
+            banner.className = 'banner banner-success auto-hide';
+            banner.innerHTML = `<div class="banner-content"><span class="banner-icon">✓</span><span class="banner-text">IES for ${applicantName} opened for preview and printing</span><button class="banner-close" aria-label="Close">&times;</button></div>`;
+            document.body.insertBefore(banner, document.body.firstChild);
+            const closeBtn = banner.querySelector('.banner-close');
+            if (closeBtn) closeBtn.addEventListener('click', () => banner.remove());
+            setTimeout(() => { try { banner.remove(); } catch(e){} }, 5200);
+        }
+        
+        // Export IES to Word directly from main page
+        function exportIESToWord(applicantName, applicantId) {
+            const cards = document.querySelectorAll('.applicant-ies-card');
+            let applicantData = null;
+            let tableHtml = '';
+            let totalScore = 0;
+            
+            // Extract applicant data
+            cards.forEach(card => {
+                if (card.getAttribute('data-applicant-name') === applicantName.toLowerCase()) {
+                    const tables = card.querySelectorAll('.results-table');
+                    const positionEl = card.querySelector('[style*="Position:"]');
+                    const position = positionEl ? positionEl.innerText.replace('Position: ', '').split('\n')[0] : '';
+                    
+                    tables.forEach((table) => {
+                        const rows = table.querySelectorAll('tbody tr');
+                        rows.forEach((row) => {
+                            const cells = row.querySelectorAll('td');
+                            if (cells.length >= 6) {
+                                const criterion = cells[0].innerText.trim();
+                                const weight = cells[3].innerText.trim();
+                                const details = cells[1].innerText.trim();
+                                const computation = cells[4].innerText.trim();
+                                const score = cells[5].innerText.trim();
+                                
+                                tableHtml += `<tr><td>${criterion}</td><td>${weight}</td><td>${details}</td><td>${computation}</td><td>${score}</td></tr>`;
+                                totalScore += parseFloat(score) || 0;
+                            }
+                        });
+                    });
+                    
+                    applicantData = { name: applicantName, position: position };
+                }
+            });
+            
+            if (!applicantData) {
+                alert('Could not find applicant data');
+                return;
+            }
+            
+            // Create simplified HTML for Word export
+            const htmlContent = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>IES - ${applicantName}</title></head><body><h1>Individual Evaluation Sheet</h1><p><strong>Name:</strong> ${applicantName}</p><p><strong>Position:</strong> ${applicantData.position}</p><table border="1"><thead><tr><th>Criteria</th><th>Weight</th><th>Details</th><th>Computation</th><th>Score</th></tr></thead><tbody>${tableHtml}<tr><td colspan="2"><strong>TOTAL</strong></td><td></td><td><strong>100</strong></td><td><strong>${totalScore.toFixed(2)}</strong></td></tr></tbody></table></body></html>`;
+            
+            // Create form and submit to backend
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = 'export_ies_word.php';
+            form.style.display = 'none';
+            
+            const htmlInput = document.createElement('input');
+            htmlInput.type = 'hidden';
+            htmlInput.name = 'html_content';
+            htmlInput.value = htmlContent;
+            
+            const nameInput = document.createElement('input');
+            nameInput.type = 'hidden';
+            nameInput.name = 'applicant_name';
+            nameInput.value = applicantName;
+            
+            form.appendChild(htmlInput);
+            form.appendChild(nameInput);
+            document.body.appendChild(form);
+            form.submit();
+            document.body.removeChild(form);
         }
     </script>
 </body>

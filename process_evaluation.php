@@ -24,9 +24,10 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 // Database connection
 $conn = new mysqli(DB_SERVER, DB_USERNAME, DB_PASSWORD, DB_NAME, DB_PORT);
 if ($conn->connect_error) {
-    $_SESSION['banner'] = [
+    $_SESSION['banner_message'] = [
         'type' => 'error',
-        'message' => 'Database connection failed: ' . $conn->connect_error
+        'message' => 'Database connection failed: ' . $conn->connect_error,
+        'auto_hide' => false
     ];
     header('Location: index.php');
     exit;
@@ -77,10 +78,38 @@ $errors = [];
 if (empty($applicantName)) $errors[] = 'Applicant name is required';
 if (empty($positionApplied)) $errors[] = 'Position applied for is required';
 
+// Check for duplicate application code (if provided)
+if (!empty($applicationCode)) {
+    $stmt = $conn->prepare("SELECT id FROM comparative_assessment_results WHERE application_code = ? LIMIT 1");
+    $stmt->bind_param("s", $applicationCode);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    if ($result->num_rows > 0) {
+        $errors[] = "Application Code '{$applicationCode}' already exists. Please use a unique code.";
+    }
+    $stmt->close();
+}
+
+// Check applicant status - prevent evaluating archived applicants
+if (!empty($applicantName)) {
+    $stmt = $conn->prepare("SELECT id, archive_status FROM applicants WHERE name = ? LIMIT 1");
+    $stmt->bind_param("s", $applicantName);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    if ($result->num_rows > 0) {
+        $row = $result->fetch_assoc();
+        if ($row['archive_status'] === 'archived') {
+            $errors[] = "This applicant is archived. Please restore the applicant before processing.";
+        }
+    }
+    $stmt->close();
+}
+
 if (!empty($errors)) {
-    $_SESSION['banner'] = [
+    $_SESSION['banner_message'] = [
         'type' => 'error',
-        'message' => 'Validation errors: ' . implode(', ', $errors)
+        'message' => 'Validation errors: ' . implode(', ', $errors),
+        'auto_hide' => false
     ];
     header('Location: index.php');
     exit;
@@ -241,6 +270,160 @@ try {
     }
     $stmt->close();
     
+    // Save or update applicant qualifications
+    $stmt = $conn->prepare("SELECT id FROM applicant_qualifications WHERE applicant_id = ? LIMIT 1");
+    $stmt->bind_param("i", $applicantId);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    
+    if ($result->num_rows > 0) {
+        // Update existing qualifications
+        $stmt = $conn->prepare("UPDATE applicant_qualifications SET 
+            education_degree = ?,
+            education_masters_units = ?,
+            education_doctoral_units = ?,
+            training_hours = ?,
+            experience_months = ?,
+            performance_rating = ?,
+            outstanding_accomplishments = ?,
+            application_of_education_level = ?,
+            application_of_ld_level = ?,
+            potential_level = ?,
+            updated_at = NOW()
+            WHERE applicant_id = ?");
+        $stmt->bind_param("siidddiiiii", 
+            $applicantEducationDegree,
+            $applicantEducationMastersUnits,
+            $applicantEducationDoctoralUnits,
+            $applicantTraining,
+            $applicantExperience,
+            $applicantPerformance,
+            $applicantOutstandingAccomplishments,
+            $applicantApplicationOfEducation,
+            $applicantApplicationOfLd,
+            $applicantPotential,
+            $applicantId
+        );
+        $stmt->execute();
+    } else {
+        // Insert new qualifications
+        $stmt = $conn->prepare("INSERT INTO applicant_qualifications 
+            (applicant_id, education_degree, education_masters_units, education_doctoral_units,
+            training_hours, experience_months, performance_rating, outstanding_accomplishments,
+            application_of_education_level, application_of_ld_level, potential_level, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())");
+        $stmt->bind_param("isiidddiiii", 
+            $applicantId,
+            $applicantEducationDegree,
+            $applicantEducationMastersUnits,
+            $applicantEducationDoctoralUnits,
+            $applicantTraining,
+            $applicantExperience,
+            $applicantPerformance,
+            $applicantOutstandingAccomplishments,
+            $applicantApplicationOfEducation,
+            $applicantApplicationOfLd,
+            $applicantPotential
+        );
+        $stmt->execute();
+    }
+    $stmt->close();
+    
+    // Save or update evaluation record
+    $evaluationId = null;
+    $stmt = $conn->prepare("SELECT id FROM evaluations WHERE applicant_id = ? ORDER BY created_at DESC LIMIT 1");
+    $stmt->bind_param("i", $applicantId);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    
+    if ($result->num_rows > 0) {
+        // Update existing evaluation
+        $row = $result->fetch_assoc();
+        $evaluationId = $row['id'];
+        
+        $stmt = $conn->prepare("UPDATE evaluations SET 
+            position_id = ?,
+            position_group = ?,
+            total_score = ?,
+            evaluation_date = CURDATE(),
+            notes = ?,
+            status = ?,
+            updated_at = NOW()
+            WHERE id = ?");
+        $posGroup = $applicant['position_group'] ?? 'A';
+        $notes = "Evaluation updated from form";
+        $evaluationStatus = 'pending';
+        $stmt->bind_param("isddssi", 
+            $positionId,
+            $posGroup,
+            $totalScore,
+            $notes,
+            $evaluationStatus,
+            $evaluationId
+        );
+        $stmt->execute();
+    } else {
+        // Insert new evaluation
+        $posGroup = $applicant['position_group'] ?? 'A';
+        $stmt = $conn->prepare("INSERT INTO evaluations 
+            (applicant_id, position_id, position_group, total_score, evaluation_date, notes, status, created_at)
+            VALUES (?, ?, ?, ?, CURDATE(), ?, ?, NOW())");
+        $notes = "Evaluation created from form";
+        $evaluationStatus = 'pending';
+        $stmt->bind_param("iisdss", 
+            $applicantId,
+            $positionId,
+            $posGroup,
+            $totalScore,
+            $notes,
+            $evaluationStatus
+        );
+        $stmt->execute();
+        $evaluationId = $conn->insert_id;
+    }
+    $stmt->close();
+    
+    // Delete old evaluation details if updating
+    if ($evaluationId) {
+        $stmt = $conn->prepare("DELETE FROM evaluation_details WHERE evaluation_id = ?");
+        $stmt->bind_param("i", $evaluationId);
+        $stmt->execute();
+        $stmt->close();
+        
+        // Insert evaluation details (criteria breakdown)
+        $criteria = [
+            ['Education', $applicantEducationDegree, $appEduLevel, $baselineEducationDegree, $baseEduLevel, $educationIncrement, $weights['education'], $educationScore],
+            ['Training', $applicantTraining . ' hours', $appTrainingLevel, $baselineTraining . ' hours', $baseTrainingLevel, $trainingIncrement, $weights['training'], $trainingScore],
+            ['Experience', $applicantExperience . ' months', $appExperienceLevel, $baselineExperience . ' months', $baseExperienceLevel, $experienceIncrement, $weights['experience'], $experienceScore],
+            ['Performance Rating', $applicantPerformance . '/5', 0, 'N/A', 0, 0, $weights['performance'], $performanceScore],
+            ['Outstanding Accomplishments', $applicantOutstandingAccomplishments, 0, 'N/A', 0, 0, $weights['outstanding_accomplishments'], $outstandingAccomplishmentsScore],
+            ['Application of Education', 'Level ' . $applicantApplicationOfEducation, 0, 'N/A', 0, 0, $weights['application_of_education'], $applicationOfEducationScore],
+            ['Application of L&D', 'Level ' . $applicantApplicationOfLd, 0, 'N/A', 0, 0, $weights['application_of_ld'], $applicationOfLdScore],
+            ['Potential', 'Level ' . $applicantPotential, 0, 'N/A', 0, 0, $weights['potential'], $potentialScore]
+        ];
+        
+        $stmt = $conn->prepare("INSERT INTO evaluation_details 
+            (evaluation_id, criterion, applicant_qualification, applicant_level, 
+            baseline_qualification, baseline_level, increment, weight, final_score, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())");
+        
+        foreach ($criteria as $crit) {
+            $stmt->bind_param("issiisiid", 
+                $evaluationId,
+                $crit[0], // criterion (s)
+                $crit[1], // applicant_qualification (s)
+                $crit[2], // applicant_level (i)
+                $crit[3], // baseline_qualification (s)
+                $crit[4], // baseline_level (i)
+                $crit[5], // increment (i)
+                $crit[6], // weight (i)
+                $crit[7]  // final_score (d)
+            );
+            $stmt->execute();
+        }
+        $stmt->close();
+    }
+    
     // Check if CAR entry exists for this position/applicant combination
     $stmt = $conn->prepare("SELECT id FROM comparative_assessment_results WHERE position_id = ? AND applicant_id = ? LIMIT 1");
     $stmt->bind_param("ii", $positionId, $applicantId);
@@ -309,18 +492,27 @@ try {
     // Commit transaction
     $conn->commit();
     
-    $_SESSION['banner'] = [
+    $_SESSION['banner_message'] = [
         'type' => 'success',
-        'message' => "Evaluation saved successfully! Applicant: $applicantName, Total Score: " . number_format($totalScore, 2)
+        'message' => "Evaluation saved successfully! Applicant: $applicantName, Total Score: " . number_format($totalScore, 2),
+        'auto_hide' => true
     ];
+    
+    error_log("=== PROCESS_EVALUATION SUCCESS ===");
+    error_log("Applicant: $applicantName, Total Score: $totalScore");
+    error_log("Redirecting to view_evaluation_report.php");
     
 } catch (Exception $e) {
     // Rollback on error
     $conn->rollback();
     
-    $_SESSION['banner'] = [
+    error_log("=== PROCESS_EVALUATION ERROR ===");
+    error_log("Exception: " . $e->getMessage());
+    
+    $_SESSION['banner_message'] = [
         'type' => 'error',
-        'message' => 'Database error: ' . $e->getMessage()
+        'message' => 'Database error: ' . $e->getMessage(),
+        'auto_hide' => false
     ];
     
     header('Location: index.php');
@@ -351,11 +543,8 @@ $_SESSION['evaluation_data'] = [
 ];
 
 // Redirect based on output format
-if ($outputFormat === 'html') {
-    header('Location: view_evaluation_report.php');
-} else {
-    header('Location: index.php');
-}
+// Always show report, never redirect back to form
+header('Location: view_evaluation_report.php', true, 303); // 303 See Other prevents cache
 exit;
 ?>
 

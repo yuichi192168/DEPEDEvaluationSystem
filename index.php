@@ -994,6 +994,10 @@ $positions = getAllPositions();
 
         // Centralized setter for selected position (single source of truth)
         async function setSelectedPosition(keyOrName) {
+            // Reset warning flags when changing position
+            window.criteriaWarningShown = false;
+            window.criteriaErrorShown = false;
+            
             const selInput = document.getElementById('position_key');
             const appliedInput = document.getElementById('position_applied');
 
@@ -1086,7 +1090,11 @@ $positions = getAllPositions();
             baselineText.textContent = `Education: ${pos.education.degree} (Level ${convertEducationToLevel(pos.education.degree, pos.education.masters_units || 0, pos.education.doctoral_units || 0)}), Training: ${pos.training || 0} hrs (Level ${convertTrainingToLevel(pos.training || 0)}), Experience: ${pos.experience || 0} mos (Level ${convertExperienceToLevel(pos.experience || 0)})`;
 
             updateAllLevels();
-            calculatePreview();
+            
+            // Only calculate preview if criteria loaded successfully
+            if (window.currentCriteria && Object.keys(window.currentCriteria).length > 0) {
+                calculatePreview();
+            }
         }
 
         // Wire select change to centralized setter
@@ -1184,24 +1192,36 @@ $positions = getAllPositions();
             }
             
             try {
-                const url = `api/get_evaluation_criteria.php?position_group=${encodeURIComponent(positionGroup)}&salary_grade=${salaryGrade || ''}`;
+                // Add category parameter for NON-TEACHING positions
+                let category = '';
+                if (positionGroup === 'NON-TEACHING LEVEL I') {
+                    category = '&category=non_general_services'; // Default to non_general_services
+                }
+                
+                const url = `api/get_evaluation_criteria.php?position_group=${encodeURIComponent(positionGroup)}&salary_grade=${salaryGrade || ''}${category}`;
                 const resp = await fetch(url);
                 const data = await resp.json();
                 
                 // Load criteria from authoritative source
-                if (data && data.criteria) {
+                if (data && data.criteria && !data.error) {
                     window.currentCriteria = data.criteria;
                     window.currentTotalPoints = data.total_points || 100;
                 } else {
-                    // No fallback allowed - log error if criteria not found
-                    console.error('No evaluation criteria found for position group:', positionGroup);
+                    // Log error but don't show repeated warnings
+                    if (!window.criteriaWarningShown) {
+                        console.error('No evaluation criteria found for position group:', positionGroup, data.error || '');
+                        window.criteriaWarningShown = true;
+                    }
                     window.currentCriteria = {};
                     window.currentTotalPoints = 0;
                 }
                 
                 return data;
             } catch (e) {
-                console.error('Failed to load evaluation criteria:', e);
+                if (!window.criteriaWarningShown) {
+                    console.error('Failed to load evaluation criteria:', e);
+                    window.criteriaWarningShown = true;
+                }
                 // Ensure criteria are cleared on error
                 window.currentCriteria = {};
                 window.currentTotalPoints = 0;
@@ -1295,8 +1315,11 @@ $positions = getAllPositions();
                 });
             } else {
                 // No fallback allowed - criteria must be loaded from evaluation_criteria.php
-                // Log warning and show empty table
-                console.warn('Warning: Evaluation criteria not loaded for position group: ' + positionGroup);
+                // Log warning only once to avoid console spam
+                if (!window.criteriaErrorShown) {
+                    console.warn('Warning: Evaluation criteria not loaded for position group: ' + positionGroup);
+                    window.criteriaErrorShown = true;
+                }
                 document.getElementById('previewTableBody').innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 20px; color: red;"><strong>Error: Evaluation criteria not available. Please select a valid position.</strong></td></tr>';
                 document.getElementById('totalScore').textContent = '0.00';
                 document.getElementById('livePreview').classList.add('active');
@@ -1443,7 +1466,7 @@ $positions = getAllPositions();
     <script>
         // Register service worker (if available)
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/sw.js').then(reg => {
+            navigator.serviceWorker.register('sw.js').then(reg => {
                 console.info('Service Worker registered:', reg.scope);
             }).catch(err => console.warn('SW register failed', err));
         }

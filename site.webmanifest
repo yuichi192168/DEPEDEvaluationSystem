@@ -1,0 +1,22 @@
+{
+    "name": "DepEd HRMPSB Evaluation System",
+    "short_name": "DepEd HRMPSB",
+    "description": "Human Resource Merit Promotion and Selection Board Evaluation System",
+    "icons": [
+        {
+            "src": "/DEPEDEvaluationSystemV2/images/android-chrome-192x192.png",
+            "sizes": "192x192",
+            "type": "image/png"
+        },
+        {
+            "src": "/DEPEDEvaluationSystemV2/images/android-chrome-512x512.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        }
+    ],
+    "theme_color": "#E04040",
+    "background_color": "#ffffff",
+    "display": "standalone",
+    "start_url": "/DEPEDEvaluationSystemV2/index.php",
+    "scope": "/DEPEDEvaluationSystemV2/"
+}
