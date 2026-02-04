@@ -572,17 +572,32 @@ $totalPages = ceil($totalCount / $itemsPerPage);
             font-weight: 500;
         }
 
-        .badge-group-a {
+        .badge-group-teaching {
             background: #d4edda;
             color: #155724;
         }
 
-        .badge-group-b {
+        .badge-group-non-teaching-level-i {
             background: #d1ecf1;
             color: #0c5460;
         }
 
-        .badge-group-c {
+        .badge-group-non-teaching-level-ii {
+            background: #ffe8a1;
+            color: #7a5b00;
+        }
+
+        .badge-group-related-teaching {
+            background: #e7d9f9;
+            color: #4b1f7a;
+        }
+
+        .badge-group-higher-teaching {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .badge-group-school-administration {
             background: #fff3cd;
             color: #856404;
         }
@@ -701,19 +716,34 @@ $totalPages = ceil($totalCount / $itemsPerPage);
             letter-spacing: 0.5px;
         }
 
-        .badge-group-a {
+        .badge-group-teaching {
             background: #e3f2fd;
             color: #1976d2;
         }
 
-        .badge-group-b {
+        .badge-group-non-teaching-level-i {
+            background: #e0f7fa;
+            color: #006064;
+        }
+
+        .badge-group-non-teaching-level-ii {
             background: #fff3e0;
             color: #f57c00;
         }
 
-        .badge-group-c {
+        .badge-group-related-teaching {
+            background: #ede7f6;
+            color: #5e35b1;
+        }
+
+        .badge-group-higher-teaching {
             background: #f3e5f5;
             color: #7b1fa2;
+        }
+
+        .badge-group-school-administration {
+            background: #fff8e1;
+            color: #8d6e63;
         }
 
         /* Modal Styles */
@@ -1004,16 +1034,28 @@ $totalPages = ceil($totalCount / $itemsPerPage);
                             <div class="stat-value" id="stat-archived"><?php echo $stats['archived_total']; ?></div>
                         </div>
                         <div class="stat-card">
-                            <div class="stat-label">Group A</div>
-                            <div class="stat-value"><?php echo $stats['active_by_group']['A'] ?? 0; ?></div>
+                            <div class="stat-label">Teaching</div>
+                            <div class="stat-value"><?php echo $stats['active_by_group']['TEACHING'] ?? 0; ?></div>
                         </div>
                         <div class="stat-card">
-                            <div class="stat-label">Group B</div>
-                            <div class="stat-value"><?php echo $stats['active_by_group']['B'] ?? 0; ?></div>
+                            <div class="stat-label">Non-Teaching I</div>
+                            <div class="stat-value"><?php echo $stats['active_by_group']['NON-TEACHING LEVEL I'] ?? 0; ?></div>
                         </div>
                         <div class="stat-card">
-                            <div class="stat-label">Group C</div>
-                            <div class="stat-value"><?php echo $stats['active_by_group']['C'] ?? 0; ?></div>
+                            <div class="stat-label">Non-Teaching II</div>
+                            <div class="stat-value"><?php echo $stats['active_by_group']['NON-TEACHING LEVEL II'] ?? 0; ?></div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Related Teaching</div>
+                            <div class="stat-value"><?php echo $stats['active_by_group']['RELATED TEACHING'] ?? 0; ?></div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Higher Teaching</div>
+                            <div class="stat-value"><?php echo $stats['active_by_group']['HIGHER TEACHING'] ?? 0; ?></div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">School Admin</div>
+                            <div class="stat-value"><?php echo $stats['active_by_group']['SCHOOL ADMINISTRATION'] ?? 0; ?></div>
                         </div>
                     </div>
 
@@ -1035,9 +1077,12 @@ $totalPages = ceil($totalCount / $itemsPerPage);
                             <input type="text" id="searchInput" placeholder="Search applicant name..." value="<?php echo htmlspecialchars($searchTerm); ?>">
                             <select id="groupFilter">
                                 <option value="">All Groups</option>
-                                <option value="A">Group A</option>
-                                <option value="B">Group B</option>
-                                <option value="C">Group C</option>
+                                <option value="TEACHING">Teaching</option>
+                                <option value="NON-TEACHING LEVEL I">Non-Teaching Level I</option>
+                                <option value="NON-TEACHING LEVEL II">Non-Teaching Level II</option>
+                                <option value="RELATED TEACHING">Related Teaching</option>
+                                <option value="HIGHER TEACHING">Higher Teaching</option>
+                                <option value="SCHOOL ADMINISTRATION">School Administration</option>
                             </select>
                             <button class="btn btn-primary" onclick="searchApplicants()">
                                 <i class="fas fa-search"></i> Search
@@ -1538,6 +1583,18 @@ $totalPages = ceil($totalCount / $itemsPerPage);
             }
         }
 
+        function slugifyPositionGroup(group) {
+            return (group || '')
+                .toLowerCase()
+                .replace(/[^a-z0-9]+/g, '-')
+                .replace(/(^-|-$)/g, '');
+        }
+
+        function formatPositionGroupLabel(group) {
+            const label = (group || '').trim();
+            return label !== '' ? label : 'Unspecified';
+        }
+
         // View Applicant Details & IES
         function viewDetails(id) {
             console.log('Opening details for applicant ID:', id);
@@ -1570,7 +1627,7 @@ $totalPages = ceil($totalCount / $itemsPerPage);
                             <div class="info-grid">
                                 <div class="info-item">
                                     <strong>Position Group</strong>
-                                    <span class="badge badge-group-${data.applicant.position_group.toLowerCase()}">Group ${data.applicant.position_group}</span>
+                                    <span class="badge badge-group-${slugifyPositionGroup(data.applicant.position_group)}">${formatPositionGroupLabel(data.applicant.position_group)}</span>
                                 </div>
                                 <div class="info-item">
                                     <strong>Position Applied</strong>
@@ -1578,7 +1635,7 @@ $totalPages = ceil($totalCount / $itemsPerPage);
                                 </div>
                                 <div class="info-item">
                                     <strong>Status</strong>
-                                    <span class="badge ${data.applicant.archive_status === 'archived' ? 'badge-archived' : 'badge-group-' + data.applicant.position_group.toLowerCase()}">
+                                    <span class="badge ${data.applicant.archive_status === 'archived' ? 'badge-archived' : 'badge-group-' + slugifyPositionGroup(data.applicant.position_group)}">
                                         ${data.applicant.archive_status === 'archived' ? 'Archived' : 'Active'}
                                     </span>
                                 </div>

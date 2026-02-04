@@ -111,7 +111,7 @@ exit;
             <div class="grid grid-auto">
                 <div>
                     <h4 style="color: var(--admin-primary); margin-bottom: var(--spacing-sm); font-size: var(--font-size-lg);"><i class="fas fa-search" style="margin-right: 8px;"></i>Search & Filter</h4>
-                    <p class="text-secondary" style="font-size: var(--font-size-sm);">Search applicants by name and filter by position group (A, B, C) to quickly find specific candidates.</p>
+                    <p class="text-secondary" style="font-size: var(--font-size-sm);">Search applicants by name and filter by position group (Teaching, Non-Teaching Level I/II, Related Teaching, Higher Teaching, School Administration).</p>
                 </div>
 
                 <div>

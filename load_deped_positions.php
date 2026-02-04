@@ -48,7 +48,7 @@ $createTableSQL = "
 CREATE TABLE IF NOT EXISTS positions (
     id INT AUTO_INCREMENT PRIMARY KEY,
     position_name VARCHAR(255) NOT NULL,
-    position_group ENUM('A', 'B', 'C') NOT NULL,
+    position_group ENUM('TEACHING', 'NON-TEACHING LEVEL I', 'NON-TEACHING LEVEL II', 'RELATED TEACHING', 'HIGHER TEACHING', 'SCHOOL ADMINISTRATION') NOT NULL,
     salary_grade VARCHAR(50),
     item_number VARCHAR(100),
     description TEXT,

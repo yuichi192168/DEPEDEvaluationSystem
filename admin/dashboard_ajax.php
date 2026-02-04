@@ -27,6 +27,17 @@ if (!$auth->isAdmin()) {
 $manager = new ApplicantManager($conn);
 $action = isset($_REQUEST['action']) ? $_REQUEST['action'] : '';
 
+function positionGroupSlug($group) {
+    $group = strtolower(trim((string)$group));
+    $group = preg_replace('/[^a-z0-9]+/', '-', $group);
+    return trim($group, '-');
+}
+
+function positionGroupLabel($group) {
+    $label = trim((string)$group);
+    return $label !== '' ? $label : 'Unspecified';
+}
+
 try {
     switch ($action) {
         case 'load_applicants':
@@ -111,8 +122,8 @@ function loadApplicants() {
                         </td>
                         <td><?php echo htmlspecialchars($applicant['position_name'] ?? 'Not specified'); ?></td>
                         <td>
-                            <span class="badge badge-group-<?php echo strtolower($applicant['position_group']); ?>">
-                                Group <?php echo htmlspecialchars($applicant['position_group']); ?>
+                            <span class="badge badge-group-<?php echo positionGroupSlug($applicant['position_group']); ?>">
+                                <?php echo htmlspecialchars(positionGroupLabel($applicant['position_group'])); ?>
                             </span>
                         </td>
                         <td><?php echo date('M d, Y', strtotime($applicant['created_at'])); ?></td>

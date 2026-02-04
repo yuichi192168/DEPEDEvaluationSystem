@@ -236,9 +236,12 @@ try {
         $positionId = $row['id'];
     } else {
         // Insert new position
-        $posGroup = 'A'; // Default
-        if (strpos($positionGroupName, 'NON-TEACHING LEVEL II') !== false) $posGroup = 'B';
-        else if (strpos($positionGroupName, 'SCHOOL ADMINISTRATION') !== false) $posGroup = 'C';
+        $posGroup = 'NON-TEACHING LEVEL I'; // Default
+        if (strpos($positionGroupName, 'NON-TEACHING LEVEL II') !== false) $posGroup = 'NON-TEACHING LEVEL II';
+        else if (strpos($positionGroupName, 'SCHOOL ADMINISTRATION') !== false) $posGroup = 'SCHOOL ADMINISTRATION';
+        else if (strpos($positionGroupName, 'TEACHING') !== false) $posGroup = 'TEACHING';
+        else if (strpos($positionGroupName, 'RELATED TEACHING') !== false) $posGroup = 'RELATED TEACHING';
+        else if (strpos($positionGroupName, 'HIGHER TEACHING') !== false) $posGroup = 'HIGHER TEACHING';
         
         $stmt = $conn->prepare("INSERT INTO positions (position_name, position_group, description, created_at) VALUES (?, ?, ?, NOW())");
         $description = "Position created from evaluation form";
@@ -259,9 +262,12 @@ try {
         $applicantId = $row['id'];
     } else {
         // Insert new applicant
-        $posGroup = 'A'; // Default
-        if (strpos($positionGroupName, 'NON-TEACHING LEVEL II') !== false) $posGroup = 'B';
-        else if (strpos($positionGroupName, 'SCHOOL ADMINISTRATION') !== false) $posGroup = 'C';
+        $posGroup = 'NON-TEACHING LEVEL I'; // Default
+        if (strpos($positionGroupName, 'NON-TEACHING LEVEL II') !== false) $posGroup = 'NON-TEACHING LEVEL II';
+        else if (strpos($positionGroupName, 'SCHOOL ADMINISTRATION') !== false) $posGroup = 'SCHOOL ADMINISTRATION';
+        else if (strpos($positionGroupName, 'TEACHING') !== false) $posGroup = 'TEACHING';
+        else if (strpos($positionGroupName, 'RELATED TEACHING') !== false) $posGroup = 'RELATED TEACHING';
+        else if (strpos($positionGroupName, 'HIGHER TEACHING') !== false) $posGroup = 'HIGHER TEACHING';
         
         $stmt = $conn->prepare("INSERT INTO applicants (name, position_applied_id, position_group, created_at) VALUES (?, ?, ?, NOW())");
         $stmt->bind_param("sis", $applicantName, $positionId, $posGroup);
@@ -350,7 +356,7 @@ try {
             status = ?,
             updated_at = NOW()
             WHERE id = ?");
-        $posGroup = $applicant['position_group'] ?? 'A';
+        $posGroup = $applicant['position_group'] ?? 'NON-TEACHING LEVEL I';
         $notes = "Evaluation updated from form";
         $evaluationStatus = 'pending';
         $stmt->bind_param("isddssi", 
@@ -364,7 +370,7 @@ try {
         $stmt->execute();
     } else {
         // Insert new evaluation
-        $posGroup = $applicant['position_group'] ?? 'A';
+        $posGroup = $applicant['position_group'] ?? 'NON-TEACHING LEVEL I';
         $stmt = $conn->prepare("INSERT INTO evaluations 
             (applicant_id, position_id, position_group, total_score, evaluation_date, notes, status, created_at)
             VALUES (?, ?, ?, ?, CURDATE(), ?, ?, NOW())");

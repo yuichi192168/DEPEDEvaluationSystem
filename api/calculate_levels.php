@@ -6,7 +6,7 @@ header('Content-Type: application/json');
 
 require_once __DIR__ . '/../classes/HRMPSBEvaluator.php';
 
-$evaluator = new HRMPSBEvaluator($_GET['position_group'] ?? 'A');
+$evaluator = new HRMPSBEvaluator($_GET['position_group'] ?? 'NON-TEACHING LEVEL I');
 
 $result = [];
 

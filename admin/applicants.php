@@ -44,6 +44,17 @@ if ($currentTab === 'active') {
 }
 
 $totalPages = ceil($totalCount / $itemsPerPage);
+
+function positionGroupSlug($group) {
+    $group = strtolower(trim((string)$group));
+    $group = preg_replace('/[^a-z0-9]+/', '-', $group);
+    return trim($group, '-');
+}
+
+function positionGroupLabel($group) {
+    $label = trim((string)$group);
+    return $label !== '' ? $label : 'Unspecified';
+}
 ?>
 
 <!DOCTYPE html>
@@ -397,17 +408,32 @@ $totalPages = ceil($totalCount / $itemsPerPage);
             font-weight: 500;
         }
 
-        .badge-group-a {
+        .badge-group-teaching {
             background: #d4edda;
             color: #155724;
         }
 
-        .badge-group-b {
+        .badge-group-non-teaching-level-i {
             background: #d1ecf1;
             color: #0c5460;
         }
 
-        .badge-group-c {
+        .badge-group-non-teaching-level-ii {
+            background: #ffe8a1;
+            color: #7a5b00;
+        }
+
+        .badge-group-related-teaching {
+            background: #e7d9f9;
+            color: #4b1f7a;
+        }
+
+        .badge-group-higher-teaching {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .badge-group-school-administration {
             background: #fff3cd;
             color: #856404;
         }
@@ -833,16 +859,28 @@ $totalPages = ceil($totalCount / $itemsPerPage);
                 <div class="number"><?php echo $stats['archived_total']; ?></div>
             </div>
             <div class="stat-card">
-                <h3>Group A</h3>
-                <div class="number"><?php echo isset($stats['active_by_group']['A']) ? $stats['active_by_group']['A'] : 0; ?></div>
+                <h3>Teaching</h3>
+                <div class="number"><?php echo isset($stats['active_by_group']['TEACHING']) ? $stats['active_by_group']['TEACHING'] : 0; ?></div>
             </div>
             <div class="stat-card">
-                <h3>Group B</h3>
-                <div class="number"><?php echo isset($stats['active_by_group']['B']) ? $stats['active_by_group']['B'] : 0; ?></div>
+                <h3>Non-Teaching I</h3>
+                <div class="number"><?php echo isset($stats['active_by_group']['NON-TEACHING LEVEL I']) ? $stats['active_by_group']['NON-TEACHING LEVEL I'] : 0; ?></div>
             </div>
             <div class="stat-card">
-                <h3>Group C</h3>
-                <div class="number"><?php echo isset($stats['active_by_group']['C']) ? $stats['active_by_group']['C'] : 0; ?></div>
+                <h3>Non-Teaching II</h3>
+                <div class="number"><?php echo isset($stats['active_by_group']['NON-TEACHING LEVEL II']) ? $stats['active_by_group']['NON-TEACHING LEVEL II'] : 0; ?></div>
+            </div>
+            <div class="stat-card">
+                <h3>Related Teaching</h3>
+                <div class="number"><?php echo isset($stats['active_by_group']['RELATED TEACHING']) ? $stats['active_by_group']['RELATED TEACHING'] : 0; ?></div>
+            </div>
+            <div class="stat-card">
+                <h3>Higher Teaching</h3>
+                <div class="number"><?php echo isset($stats['active_by_group']['HIGHER TEACHING']) ? $stats['active_by_group']['HIGHER TEACHING'] : 0; ?></div>
+            </div>
+            <div class="stat-card">
+                <h3>School Admin</h3>
+                <div class="number"><?php echo isset($stats['active_by_group']['SCHOOL ADMINISTRATION']) ? $stats['active_by_group']['SCHOOL ADMINISTRATION'] : 0; ?></div>
             </div>
         </div>
 
@@ -866,9 +904,12 @@ $totalPages = ceil($totalCount / $itemsPerPage);
                 <div class="searchable-dropdown-wrapper">
                     <select name="group" id="groupFilter" aria-label="Filter by group">
                         <option value="">All Groups</option>
-                        <option value="A" <?php echo $positionGroup === 'A' ? 'selected' : ''; ?>>Group A</option>
-                        <option value="B" <?php echo $positionGroup === 'B' ? 'selected' : ''; ?>>Group B</option>
-                        <option value="C" <?php echo $positionGroup === 'C' ? 'selected' : ''; ?>>Group C</option>
+                        <option value="TEACHING" <?php echo $positionGroup === 'TEACHING' ? 'selected' : ''; ?>>Teaching</option>
+                        <option value="NON-TEACHING LEVEL I" <?php echo $positionGroup === 'NON-TEACHING LEVEL I' ? 'selected' : ''; ?>>Non-Teaching Level I</option>
+                        <option value="NON-TEACHING LEVEL II" <?php echo $positionGroup === 'NON-TEACHING LEVEL II' ? 'selected' : ''; ?>>Non-Teaching Level II</option>
+                        <option value="RELATED TEACHING" <?php echo $positionGroup === 'RELATED TEACHING' ? 'selected' : ''; ?>>Related Teaching</option>
+                        <option value="HIGHER TEACHING" <?php echo $positionGroup === 'HIGHER TEACHING' ? 'selected' : ''; ?>>Higher Teaching</option>
+                        <option value="SCHOOL ADMINISTRATION" <?php echo $positionGroup === 'SCHOOL ADMINISTRATION' ? 'selected' : ''; ?>>School Administration</option>
                     </select>
                 </div>
                 <button type="submit" class="btn btn-secondary"><i class="fas fa-search" style="margin-right: 6px;"></i>Search</button>
@@ -931,8 +972,8 @@ $totalPages = ceil($totalCount / $itemsPerPage);
                                 </td>
                                 <td class="applicant-name"><?php echo htmlspecialchars($applicant['name']); ?></td>
                                 <td>
-                                    <span class="badge badge-group-<?php echo $applicant['position_group']; ?>">
-                                        Group <?php echo htmlspecialchars($applicant['position_group']); ?>
+                                    <span class="badge badge-group-<?php echo positionGroupSlug($applicant['position_group']); ?>">
+                                        <?php echo htmlspecialchars(positionGroupLabel($applicant['position_group'])); ?>
                                     </span>
                                 </td>
                                 <td><?php echo htmlspecialchars($applicant['position_name'] ?? '-'); ?></td>
@@ -1135,6 +1176,18 @@ $totalPages = ceil($totalCount / $itemsPerPage);
             document.querySelectorAll('.applicant-check').forEach(cb => cb.checked = false);
             document.getElementById('selectAll').checked = false;
             updateBulkCount();
+        }
+
+        function slugifyPositionGroup(group) {
+            return (group || '')
+                .toLowerCase()
+                .replace(/[^a-z0-9]+/g, '-')
+                .replace(/(^-|-$)/g, '');
+        }
+
+        function formatPositionGroupLabel(group) {
+            const label = (group || '').trim();
+            return label !== '' ? label : 'Unspecified';
         }
 
         function archiveApplicant(id, name) {
@@ -1380,7 +1433,7 @@ $totalPages = ceil($totalCount / $itemsPerPage);
                             <div class="info-grid">
                                 <div class="info-item">
                                     <strong>Position Group</strong>
-                                    <span class="badge badge-group-${data.applicant.position_group.toLowerCase()}">Group ${data.applicant.position_group}</span>
+                                    <span class="badge badge-group-${slugifyPositionGroup(data.applicant.position_group)}">${formatPositionGroupLabel(data.applicant.position_group)}</span>
                                 </div>
                                 <div class="info-item">
                                     <strong>Position Applied</strong>
@@ -1388,7 +1441,7 @@ $totalPages = ceil($totalCount / $itemsPerPage);
                                 </div>
                                 <div class="info-item">
                                     <strong>Status</strong>
-                                    <span class="badge ${data.applicant.archive_status === 'archived' ? 'badge-archived' : 'badge-group-' + data.applicant.position_group.toLowerCase()}">
+                                    <span class="badge ${data.applicant.archive_status === 'archived' ? 'badge-archived' : 'badge-group-' + slugifyPositionGroup(data.applicant.position_group)}">
                                         ${data.applicant.archive_status === 'archived' ? 'Archived' : 'Active'}
                                     </span>
                                 </div>

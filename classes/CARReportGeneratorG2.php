@@ -123,7 +123,7 @@ class CARReportGeneratorG2 {
      */
     private function generateHTML($evaluations, $additionalData) {
         $positionName = $additionalData['position_name'] ?? 'Position';
-        $positionGroup = $additionalData['position_group'] ?? 'A';
+        $positionGroup = $additionalData['position_group'] ?? 'NON-TEACHING LEVEL I';
         $salaryGrade = $additionalData['salary_grade'] ?? '';
         $itemNumber = $additionalData['item_number'] ?? '';
         $schoolsDivisionOffice = $additionalData['schools_division_office'] ?? '';
