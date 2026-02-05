@@ -1,0 +1,2708 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GWA Calculator - DepEd HRMPSB</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 16px;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+        }
+
+        .container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            max-width: 1400px;
+            width: 100%;
+            padding: 24px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            color: #333;
+            font-size: 28px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+        }
+
+        .header h1 i {
+            color: #667eea;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 14px;
+        }
+
+        /* Banner Notifications */
+        .banner-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+            max-width: 400px;
+        }
+
+        .banner {
+            background: white;
+            border-radius: 8px;
+            padding: 16px 20px;
+            margin-bottom: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideOut {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+        }
+
+        .banner.removing {
+            animation: slideOut 0.3s ease forwards;
+        }
+
+        .banner-icon {
+            font-size: 18px;
+            min-width: 24px;
+            text-align: center;
+        }
+
+        .banner-content {
+            flex: 1;
+        }
+
+        .banner-title {
+            font-weight: 600;
+            font-size: 14px;
+            margin-bottom: 3px;
+        }
+
+        .banner-message {
+            font-size: 12px;
+            opacity: 0.8;
+        }
+
+        .banner-success {
+            border-left: 4px solid #28a745;
+        }
+
+        .banner-success .banner-icon,
+        .banner-success .banner-title {
+            color: #28a745;
+        }
+
+        .banner-error {
+            border-left: 4px solid #dc3545;
+        }
+
+        .banner-error .banner-icon,
+        .banner-error .banner-title {
+            color: #dc3545;
+        }
+
+        .banner-info {
+            border-left: 4px solid #667eea;
+        }
+
+        .banner-info .banner-icon,
+        .banner-info .banner-title {
+            color: #667eea;
+        }
+
+        /* Help & Tutorial */
+        .help-section {
+            background: #e7f0ff;
+            border: 2px solid #d0deff;
+            border-radius: 8px;
+            margin-bottom: 24px;
+        }
+
+        .help-header {
+            padding: 16px 20px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            user-select: none;
+        }
+
+        .help-header:hover {
+            background: #d0deff;
+        }
+
+        .help-title {
+            font-weight: 600;
+            color: #667eea;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .help-toggle {
+            font-size: 18px;
+            transition: transform 0.3s ease;
+        }
+
+        .help-toggle.open {
+            transform: rotate(180deg);
+        }
+
+        .help-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+            padding: 0 20px;
+        }
+
+        .help-content.open {
+            max-height: 1000px;
+            padding: 0 20px 20px 20px;
+        }
+
+        /* Collapsible Notes Section */
+        .notes-section {
+            background: #fff8e7;
+            border: 2px solid #ffecc8;
+            border-radius: 8px;
+            margin-bottom: 24px;
+        }
+
+        .notes-header {
+            padding: 16px 20px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            user-select: none;
+        }
+
+        .notes-header:hover {
+            background: #ffecc8;
+        }
+
+        .notes-title {
+            font-weight: 600;
+            color: #d97706;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .notes-toggle {
+            font-size: 18px;
+            transition: transform 0.3s ease;
+        }
+
+        .notes-toggle.open {
+            transform: rotate(180deg);
+        }
+
+        .notes-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+            padding: 0 20px;
+        }
+
+        .notes-content.open {
+            max-height: 400px;
+            padding: 0 20px 20px 20px;
+        }
+
+        .help-steps {
+            list-style: none;
+        }
+
+        .help-step {
+            margin-bottom: 16px;
+            padding: 12px;
+            background: white;
+            border-radius: 6px;
+            border-left: 4px solid #667eea;
+        }
+
+        .help-step-title {
+            font-weight: 600;
+            color: #333;
+            font-size: 13px;
+            margin-bottom: 6px;
+        }
+
+        .help-step-desc {
+            font-size: 12px;
+            color: #666;
+            line-height: 1.6;
+        }
+
+        /* Stats Dashboard */
+        .stats-dashboard {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 12px;
+            padding: 16px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 6px;
+            margin: 10px 0 12px 0;
+            color: white;
+        }
+
+        .stat-card {
+            background: rgba(255,255,255,0.2);
+            padding: 14px;
+            border-radius: 6px;
+            text-align: center;
+            border: 1px solid rgba(255,255,255,0.3);
+        }
+
+        .stat-label {
+            font-size: 11px;
+            text-transform: uppercase;
+            opacity: 0.9;
+            margin-bottom: 8px;
+            letter-spacing: 0.4px;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        /* Compare Modal */
+        .compare-modal {
+            display: none;
+            position: fixed;
+            z-index: 10000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            overflow: auto;
+        }
+
+        .compare-modal.show {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .compare-modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            width: 90%;
+            max-width: 1200px;
+            max-height: 85vh;
+            overflow-y: auto;
+        }
+
+        .compare-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .compare-modal-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .compare-close {
+            background: none;
+            border: none;
+            font-size: 28px;
+            cursor: pointer;
+            color: #999;
+        }
+
+        .compare-close:hover {
+            color: #333;
+        }
+
+        .compare-selections {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .compare-select {
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 13px;
+        }
+
+        .compare-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        .compare-table th {
+            background: #f8f9fa;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            color: #333;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .compare-table td {
+            padding: 12px;
+            border-bottom: 1px solid #f0f0f0;
+            font-size: 13px;
+        }
+
+        .compare-table tbody tr:hover {
+            background: #f8f9fa;
+        }
+
+        .notes-field {
+            margin-top: 10px;
+        }
+
+        .notes-label {
+            font-size: 12px;
+            font-weight: 600;
+            color: #666;
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+
+        .notes-input {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 13px;
+            font-family: inherit;
+            resize: vertical;
+            min-height: 60px;
+        }
+
+        .notes-input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .notes-display {
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 4px;
+            font-size: 12px;
+            color: #666;
+            border-left: 3px solid #667eea;
+            margin-top: 6px;
+        }
+
+        .grade-shortcuts-hint {
+            font-size: 11px;
+            color: #999;
+            margin-top: 6px;
+            text-align: center;
+        }
+
+        .banner-close {
+            background: none;
+            border: none;
+            font-size: 20px;
+            cursor: pointer;
+            color: #999;
+            padding: 0;
+            margin-left: 8px;
+        }
+
+        .banner-close:hover {
+            color: #333;
+        }
+
+        .formula-section {
+            background: #f8f9fa;
+            border-left: 4px solid #667eea;
+            padding: 16px;
+            margin-bottom: 20px;
+            border-radius: 6px;
+        }
+
+        .formula-section summary {
+            list-style: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            color: #333;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 600;
+        }
+
+        .formula-section summary::-webkit-details-marker {
+            display: none;
+        }
+
+        .formula-section summary .summary-left {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .formula-section .summary-icon {
+            transition: transform 0.2s ease;
+        }
+
+        .formula-section details[open] .summary-icon {
+            transform: rotate(90deg);
+        }
+
+        .formula-section .formula-body {
+            margin-top: 12px;
+        }
+
+        .formula-steps {
+            list-style: none;
+            color: #555;
+            font-size: 13px;
+            line-height: 1.8;
+        }
+
+        .formula-steps li {
+            margin-bottom: 8px;
+            display: flex;
+            gap: 10px;
+        }
+
+        .formula-steps strong {
+            color: #667eea;
+            font-weight: 600;
+            min-width: 150px;
+        }
+
+        .calculator {
+            background: white;
+        }
+
+        .subjects-container {
+            margin-bottom: 12px;
+            display: grid;
+            grid-template-columns: repeat(5, minmax(0, 1fr));
+            gap: 8px;
+        }
+
+        .subject-card {
+            background: #f8f9fa;
+            border: 2px solid #e0e0e0;
+            padding: 10px;
+            border-radius: 6px;
+            transition: all 0.3s ease;
+        }
+
+        .subject-card:hover {
+            border-color: #667eea;
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.1);
+        }
+
+        .subject-card.removing {
+            opacity: 0.5;
+        }
+
+        .subject-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 6px;
+            gap: 6px;
+        }
+
+        .subject-header h4 {
+            color: #333;
+            font-size: 11px;
+            margin: 0;
+        }
+
+        .btn-remove {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 4px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 10px;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+        }
+
+        .btn-remove:hover {
+            background: #c82333;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px;
+            margin-bottom: 0;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-group label {
+            font-size: 10px;
+            font-weight: 600;
+            color: #666;
+            margin-bottom: 2px;
+            text-transform: uppercase;
+            letter-spacing: 0.2px;
+        }
+
+        .form-group input,
+        .form-group select {
+            padding: 4px 6px;
+            border: 2px solid #e0e0e0;
+            border-radius: 4px;
+            font-size: 11px;
+            transition: all 0.3s ease;
+            height: 30px;
+            line-height: 1.2;
+        }
+
+        .input-error {
+            border-color: #dc3545 !important;
+            background: #fff5f5;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .calculated-value {
+            background: #e7f0ff;
+            color: #667eea;
+            font-weight: 600;
+            padding: 4px 6px;
+            border: 2px solid #d0deff;
+            border-radius: 4px;
+            font-size: 11px;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .quick-actions {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 8px;
+            margin: 10px 0 12px 0;
+            background: #f8f9fa;
+            border: 1px solid #e0e0e0;
+            padding: 10px;
+            border-radius: 8px;
+        }
+
+        .action-group {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .action-label {
+            font-size: 10px;
+            font-weight: 600;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+        }
+
+        .small-input {
+            width: 70px;
+            padding: 4px 6px;
+            border: 2px solid #e0e0e0;
+            border-radius: 4px;
+            font-size: 11px;
+            height: 30px;
+        }
+
+        .btn-compact {
+            padding: 6px 10px;
+            font-size: 11px;
+            border-radius: 4px;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-compact.secondary {
+            background: #6c757d;
+        }
+
+        .btn-compact.outline {
+            background: white;
+            border: 1px solid #d0d0d0;
+            color: #333;
+        }
+
+        .btn-compact:hover {
+            filter: brightness(0.95);
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+            flex: 1;
+        }
+
+        .btn-primary:hover {
+            background: #5568d3;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-secondary {
+            background: #e0e0e0;
+            color: #333;
+            flex: 1;
+        }
+
+        .btn-secondary:hover {
+            background: #d0d0d0;
+        }
+
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #218838;
+        }
+
+        .results-section {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 14px;
+            border-radius: 6px;
+            margin-top: 12px;
+            display: none;
+        }
+
+        .results-section.show {
+            display: block;
+            animation: slideDown 0.4s ease;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .result-item {
+            margin-bottom: 10px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .result-item:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+
+        .result-label {
+            font-size: 10px;
+            opacity: 0.9;
+            margin-bottom: 3px;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+        }
+
+        .result-value {
+            font-size: 16px;
+            font-weight: bold;
+        }
+
+        .gwa-score {
+            font-size: 22px;
+            text-align: center;
+            margin: 8px 0;
+        }
+
+        .no-subjects {
+            text-align: center;
+            color: #999;
+            padding: 40px 20px;
+        }
+
+        .no-subjects i {
+            font-size: 48px;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+
+        .no-subjects p {
+            font-size: 14px;
+        }
+
+        .example-section {
+            background: #f0f4ff;
+            border-left: 4px solid #667eea;
+            padding: 15px;
+            margin-top: 20px;
+            border-radius: 6px;
+            font-size: 13px;
+            color: #555;
+            line-height: 1.8;
+        }
+
+        .example-section strong {
+            color: #667eea;
+        }
+
+        .history-section {
+            background: white;
+            border-radius: 8px;
+            padding: 25px;
+            margin-top: 30px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+        }
+
+        .history-section h3 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .history-list {
+            display: grid;
+            gap: 10px;
+        }
+
+        .history-item {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 6px;
+            border-left: 4px solid #667eea;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.3s ease;
+        }
+
+        .history-item:hover {
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2);
+            transform: translateY(-1px);
+        }
+
+        .history-info {
+            flex: 1;
+        }
+
+        .history-gwa {
+            font-size: 18px;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+
+        .history-date {
+            font-size: 12px;
+            color: #999;
+        }
+
+        .history-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn-small {
+            padding: 6px 12px;
+            font-size: 12px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-load {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-load:hover {
+            background: #5568d3;
+        }
+
+        .btn-delete {
+            background: #dc3545;
+            color: white;
+        }
+
+        .btn-delete:hover {
+            background: #c82333;
+        }
+
+        .no-history {
+            text-align: center;
+            color: #999;
+            padding: 30px 20px;
+        }
+
+        .no-history i {
+            font-size: 32px;
+            margin-bottom: 10px;
+            opacity: 0.5;
+        }
+
+        /* Batch Delete & Pinning */
+        .history-item-checkbox {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+
+        .history-item.selected {
+            background: #e7f0ff;
+            border-left-color: #667eea;
+        }
+
+        .batch-delete-bar {
+            background: #fff3cd;
+            border: 2px solid #ffc107;
+            padding: 12px 16px;
+            border-radius: 6px;
+            margin: 10px 0 12px 0;
+            display: none;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .batch-delete-bar.show {
+            display: flex;
+        }
+
+        .batch-delete-info {
+            font-weight: 600;
+            color: #856404;
+            font-size: 13px;
+        }
+
+        .batch-delete-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .pin-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            color: #ddd;
+            padding: 4px 8px;
+            transition: all 0.2s ease;
+        }
+
+        .pin-btn.pinned {
+            color: #ffc107;
+            text-shadow: 0 0 3px rgba(255, 193, 7, 0.5);
+        }
+
+        .pin-btn:hover {
+            color: #ffc107;
+        }
+
+        /* Recent Applicants */
+        .recent-applicants {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 8px;
+            padding: 12px;
+            background: #f0f4ff;
+            border: 2px solid #e0e7ff;
+            border-radius: 6px;
+            margin: 10px 0 12px 0;
+        }
+
+        .recent-applicant-btn {
+            padding: 8px 12px;
+            background: white;
+            border: 1px solid #d0deff;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 600;
+            color: #667eea;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .recent-applicant-btn:hover {
+            background: #e7f0ff;
+            border-color: #667eea;
+            box-shadow: 0 2px 6px rgba(102, 126, 234, 0.2);
+        }
+
+        /* Undo Delete Snackbar */
+        .undo-snackbar {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            background: #333;
+            color: white;
+            padding: 16px 20px;
+            border-radius: 6px;
+            display: none;
+            align-items: center;
+            gap: 12px;
+            z-index: 9998;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            animation: slideUpIn 0.3s ease;
+        }
+
+        .undo-snackbar.show {
+            display: flex;
+        }
+
+        @keyframes slideUpIn {
+            from {
+                transform: translateY(100px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .undo-message {
+            flex: 1;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .undo-btn {
+            padding: 6px 12px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 600;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+        }
+
+        .undo-btn:hover {
+            background: #5568d3;
+        }
+
+        .calculation-name-section {
+            background: #f8f9fa;
+            border: 2px solid #e0e0e0;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .calculation-name-section h4 {
+            color: #333;
+            margin-bottom: 12px;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .calculation-name-section input {
+            width: 100%;
+            padding: 10px 14px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        .calculation-name-section input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        /* Batch Import Floating Button */
+        .btn-batch-icon {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+            transition: all 0.3s ease;
+            z-index: 100;
+        }
+
+        .btn-batch-icon:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-batch-icon:active {
+            transform: scale(0.95);
+        }
+
+        .history-name {
+            font-size: 14px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .history-table-wrapper {
+            overflow-x: auto;
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .history-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 15px;
+        }
+
+        .history-table thead {
+            background: #f8f9fa;
+        }
+
+        .history-table th,
+        .history-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #f0f0f0;
+            font-size: 13px;
+        }
+
+        .history-table th {
+            font-weight: 600;
+            color: #333;
+            border-bottom: 2px solid #e0e0e0;
+            background: #f8f9fa;
+        }
+
+        .history-table tbody tr {
+            transition: background 0.2s ease;
+        }
+
+        .history-table tbody tr:hover {
+            background: #f8f9fa;
+        }
+
+        .history-table tbody tr.selected {
+            background: #e7f0ff;
+        }
+
+        .history-table input[type="checkbox"] {
+            cursor: pointer;
+        }
+
+        .history-gwa-cell {
+            font-weight: 600;
+            color: #667eea;
+            font-size: 15px;
+        }
+
+        .history-table-actions {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        .history-gwa-cell {
+            font-weight: 600;
+            color: #667eea;
+            font-size: 16px;
+        }
+
+        .history-table-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .history-search {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            margin: 10px 0 12px 0;
+        }
+
+        .history-search input {
+            flex: 1;
+            padding: 8px 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 13px;
+        }
+
+        .history-controls {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .history-controls select {
+            padding: 8px 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 13px;
+        }
+
+        @media (max-width: 1024px) {
+            .history-table-wrapper {
+                overflow-x: auto;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .history-table th,
+            .history-table td {
+                padding: 10px 8px;
+                font-size: 12px;
+            }
+
+            .btn-small {
+                padding: 4px 8px;
+                font-size: 11px;
+            }
+
+            .pin-btn {
+                font-size: 14px;
+                padding: 2px 6px;
+            }
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 16px;
+            }
+
+            .header h1 {
+                font-size: 22px;
+            }
+
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+
+            .button-group {
+                flex-direction: column;
+            }
+
+            .results-section {
+                padding: 16px;
+            }
+
+            .gwa-score {
+                font-size: 24px;
+            }
+
+            .history-table th,
+            .history-table td {
+                padding: 8px 6px;
+                font-size: 11px;
+            }
+
+            .btn-small {
+                padding: 3px 6px;
+                font-size: 10px;
+            }
+
+            .pin-btn {
+                font-size: 12px;
+                padding: 2px 4px;
+            }
+        }
+
+        @media (max-width: 1400px) {
+            .subjects-container {
+                grid-template-columns: repeat(4, minmax(0, 1fr));
+            }
+        }
+
+        @media (max-width: 1200px) {
+            .subjects-container {
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+            }
+        }
+
+        @media (max-width: 900px) {
+            .subjects-container {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+        }
+
+        @media (max-width: 640px) {
+            .subjects-container {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Batch Import Floating Button */
+        .btn-batch-icon {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+            transition: all 0.3s ease;
+            z-index: 100;
+        }
+
+        .btn-batch-icon:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-batch-icon:active {
+            transform: scale(0.95);
+        }
+
+        /* Compact Batch Import Modal */
+        .batch-import-modal {
+            display: none;
+            position: fixed;
+            z-index: 9999;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            overflow: auto;
+        }
+
+        .batch-import-modal.show {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .batch-import-content {
+            background: white;
+            padding: 16px;
+            border-radius: 10px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            width: 95%;
+            max-width: 380px;
+            animation: slideDown 0.3s ease;
+        }
+
+        .batch-import-header {
+            font-size: 14px;
+            font-weight: 600;
+            color: #667eea;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .batch-import-info {
+            font-size: 12px;
+            color: #666;
+            margin: 10px 0;
+            line-height: 1.5;
+        }
+
+        .batch-import-textarea {
+            width: 100%;
+            height: 120px;
+            padding: 8px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 12px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            resize: vertical;
+            margin-bottom: 12px;
+            transition: all 0.3s ease;
+            box-sizing: border-box;
+        }
+
+        .batch-import-textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .batch-import-actions {
+            display: flex;
+            gap: 8px;
+            justify-content: flex-end;
+        }
+
+        .btn-batch-import {
+            padding: 8px 16px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 11px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            white-space: nowrap;
+        }
+
+        .btn-batch-import:hover {
+            background: #5568d3;
+        }
+
+        .btn-batch-cancel {
+            padding: 8px 16px;
+            background: #e0e0e0;
+            color: #333;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 11px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            white-space: nowrap;
+        }
+
+        .btn-batch-cancel:hover {
+            background: #d0d0d0;
+        }
+
+        /* Responsive Batch Import */
+        @media (max-width: 900px) {
+            .btn-batch-icon {
+                width: 45px;
+                height: 45px;
+                bottom: 25px;
+                right: 25px;
+                font-size: 18px;
+            }
+
+            .batch-import-content {
+                max-width: 90%;
+            }
+        }
+
+        @media (max-width: 640px) {
+            .btn-batch-icon {
+                width: 48px;
+                height: 48px;
+                bottom: 20px;
+                right: 20px;
+                font-size: 20px;
+            }
+
+            .batch-import-content {
+                width: 95%;
+                max-width: 100%;
+                padding: 14px;
+            }
+
+            .batch-import-textarea {
+                height: 100px;
+                font-size: 12px;
+            }
+
+            .batch-import-header {
+                font-size: 13px;
+            }
+
+            .batch-import-info {
+                font-size: 11px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Banner Container -->
+    <div class="banner-container" id="bannerContainer"></div>
+
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>
+                <i class="fas fa-calculator"></i>
+                GWA Calculator
+            </h1>
+            <p>Step-by-Step Grade Weighted Average Calculation</p>
+        </div>
+
+        <!-- Calculator -->
+        <div class="calculator">
+            <div class="subjects-container" id="subjectsContainer">
+                <!-- Subject cards will be added here dynamically -->
+            </div>
+
+            <div id="noSubjectsMessage" class="no-subjects">
+                <i class="fas fa-inbox"></i>
+                <p>No subjects added yet. Click "Add Subject" to get started.</p>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="quick-actions">
+                <div class="action-group">
+                    <span class="action-label">Bulk Add</span>
+                    <input type="number" id="bulkCount" class="small-input" min="1" max="50" placeholder="Qty" />
+                    <button class="btn-compact" onclick="addBulkSubjects()">
+                        <i class="fas fa-plus"></i> Add
+                    </button>
+                </div>
+                <div class="action-group">
+                    <span class="action-label">Copy Last</span>
+                    <button class="btn-compact secondary" onclick="copyLastSubject()">
+                        <i class="fas fa-clone"></i> Duplicate
+                    </button>
+                </div>
+                <div class="action-group">
+                    <span class="action-label">Quick Units</span>
+                    <button class="btn-compact outline" onclick="applyUnitsTemplate(3)">3</button>
+                    <button class="btn-compact outline" onclick="applyUnitsTemplate(4)">4</button>
+                    <button class="btn-compact outline" onclick="applyUnitsTemplate(5)">5</button>
+                </div>
+            </div>
+
+            <!-- Buttons -->
+            <div class="button-group">
+                <button class="btn btn-success" onclick="addSubject()">
+                    <i class="fas fa-plus"></i> Add Subject
+                </button>
+                <button class="btn btn-primary" onclick="calculateGWA()">
+                    <i class="fas fa-calculator"></i> Calculate GWA
+                </button>
+                <button class="btn btn-secondary" onclick="resetCalculator()">
+                    <i class="fas fa-redo"></i> Reset
+                </button>
+            </div>
+
+            <!-- Example -->
+            <!-- <div class="example-section">
+                <strong>Example:</strong> Subject A: 1.75 × 3 units = 5.25 | Subject B: 2.00 × 3 units = 6.00 | Subject C: 1.50 × 4 units = 6.00<br>
+                Total Units: 10 | Total Weighted: 17.25 | <strong>GWA: 1.725</strong>
+            </div> -->
+        </div>
+
+            <!-- Results Section -->
+        <div class="results-section" id="resultsSection">
+            <div class="result-item">
+                <div class="result-label">Total Weighted Grades</div>
+                <div class="result-value" id="totalWeightedResult">0.00</div>
+            </div>
+            <div class="result-item">
+                <div class="result-label">Total Units</div>
+                <div class="result-value" id="totalUnitsResult">0</div>
+            </div>
+            <div class="result-item">
+                <div class="result-label">GWA (Grade Weighted Average)</div>
+                <div class="gwa-score" id="gwaResult">0.00</div>
+            </div>
+            <button class="btn btn-primary" onclick="saveCalculation()" style="width: 100%; margin-top: 8px; padding: 8px 12px; font-size: 12px;">
+                <i class="fas fa-save"></i> Save as New Record
+            </button>
+        </div>
+
+         <!-- Calculation Name with Auto-suggest -->
+            <div class="calculation-name-section">
+                <h4>
+                    <i class="fas fa-user-graduate"></i>
+                    Applicant Name
+                </h4>
+                <input type="text" id="calculationName" placeholder="Enter applicant name" list="applicantSuggestions" />
+                <datalist id="applicantSuggestions"></datalist>
+            </div>
+
+            <!-- Batch Import Button at Bottom of Applicant Name Section -->
+            <button class="btn-batch-icon" onclick="openBatchImportModal()" title="Batch Import Applicants">
+                <i class="fas fa-users"></i>
+            </button>
+
+            <!-- Notes Field (Collapsible) -->
+            <div class="notes-section">
+                <div class="notes-header" onclick="toggleNotesSection()">
+                    <div class="notes-title">
+                        <i class="fas fa-sticky-note"></i> Internal Notes (Optional)
+                    </div>
+                    <div class="notes-toggle" id="notesToggle"><i class="fas fa-chevron-down"></i></div>
+                </div>
+                <div class="notes-content" id="notesContent">
+                    <textarea id="calculationNotes" placeholder="Add remarks, flags, or notes about this applicant..." class="notes-input"></textarea>
+                </div>
+            </div>
+
+        <!-- History Section -->
+        <div class="history-section">
+            <h3>
+                <i class="fas fa-list-alt"></i>
+                Applicants GWA Records
+            </h3>
+            <div id="statsSection" class="stats-dashboard"></div>
+            <div class="batch-delete-bar" id="batchDeleteBar">
+                <div class="batch-delete-info">
+                    <span id="selectedCount">0</span> selected
+                </div>
+                <div class="batch-delete-actions">
+                    <button class="btn-compact secondary" onclick="clearBatchSelection()">
+                        <i class="fas fa-times"></i> Deselect All
+                    </button>
+                    <button class="btn-compact secondary" onclick="openCompareModal()" id="compareBtn" style="display: none;">
+                        <i class="fas fa-balance-scale"></i> Compare
+                    </button>
+                    <button class="btn-compact" style="background: #dc3545;" onclick="batchDeleteRecords()">
+                        <i class="fas fa-trash"></i> Delete Selected
+                    </button>
+                </div>
+            </div>
+            <div id="recentApplicants" class="recent-applicants"></div>
+            <div class="history-search">
+                <input type="text" id="historySearch" placeholder="Search applicant name..." oninput="setHistorySearch(this.value)" />
+                <div class="history-controls">
+                    <select id="historySort" onchange="setHistorySort(this.value)">
+                        <option value="date_desc">Date (Newest)</option>
+                        <option value="date_asc">Date (Oldest)</option>
+                        <option value="name_asc">Name (A–Z)</option>
+                        <option value="name_desc">Name (Z–A)</option>
+                        <option value="gwa_desc">GWA (High–Low)</option>
+                        <option value="gwa_asc">GWA (Low–High)</option>
+                        <option value="units_desc">Units (High–Low)</option>
+                        <option value="units_asc">Units (Low–High)</option>
+                    </select>
+                </div>
+            </div>
+            <div id="historyList" style="overflow-x: auto;">
+                <div class="no-history">
+                    <i class="fas fa-inbox"></i>
+                    <p>No saved records yet.</p>
+                </div>
+            </div>
+            <button class="btn btn-secondary" onclick="clearAllHistory()" style="width: 100%; margin-top: 15px;">
+                <i class="fas fa-trash"></i> Clear All Records
+            </button>
+
+            <!-- Help & Tutorial Section -->
+            <div class="help-section" style="margin-top: 40px;">
+                <div class="help-header" onclick="toggleHelpSection()">
+                    <div class="help-title">
+                        <i class="fas fa-question-circle"></i>
+                        How to Use
+                    </div>
+                    <div class="help-toggle" id="helpToggle">
+                        <i class="fas fa-chevron-down"></i>
+                    </div>
+                </div>
+                <div class="help-content" id="helpContent">
+                    <ul class="help-steps">
+                        <li class="help-step">
+                            <div class="help-step-title">1. Enter Applicant Name</div>
+                            <div class="help-step-desc">Type the applicant's name in the "Applicant Name" field. The calculator will suggest previously saved names as you type.</div>
+                        </li>
+                        <li class="help-step">
+                            <div class="help-step-title">2. Add Subjects</div>
+                            <div class="help-step-desc">Click "Add Subject" or use Ctrl+Shift+A to add subject cards. For each subject, select a grade (1.00-3.00) and units (1-8).</div>
+                        </li>
+                        <li class="help-step">
+                            <div class="help-step-title">3. Use Grade Shortcuts</div>
+                            <div class="help-step-desc">Press number keys 1-9 to quickly set grades: 1=1.00, 2=1.25, 3=1.50, 4=1.75, 5=2.00, 6=2.25, 7=2.50, 8=2.75, 9=3.00.</div>
+                        </li>
+                        <li class="help-step">
+                            <div class="help-step-title">4. Quick Actions</div>
+                            <div class="help-step-desc">Use Bulk Add for multiple subjects, Copy Last to duplicate the previous subject, or Quick Units buttons to apply the same units to all.</div>
+                        </li>
+                        <li class="help-step">
+                            <div class="help-step-title">5. Calculate & Save</div>
+                            <div class="help-step-desc">Click "Calculate GWA" (Ctrl+Enter) to compute the weighted average. Add optional notes, then click "Save as New Record" to store the calculation.</div>
+                        </li>
+                        <li class="help-step">
+                            <div class="help-step-title">6. Manage Records</div>
+                            <div class="help-step-desc">Pin favorites with the star icon, batch select and delete multiple records, or compare 2-3 applicants side-by-side. View stats for your records.</div>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Formula Section -->
+            <details class="formula-section" style="margin-top: 20px;">
+                <summary>
+                    <span class="summary-left">
+                        <i class="fas fa-list-ol"></i>
+                        Calculation Formula
+                    </span>
+                    <i class="fas fa-chevron-right summary-icon"></i>
+                </summary>
+                <div class="formula-body">
+                    <ul class="formula-steps">
+                        <li><strong>Step 1:</strong> List all subjects with grades, units, and numerical values</li>
+                        <li><strong>Step 2:</strong> Multiply each grade by its unit weight (e.g., 1.50 × 3 units = 4.50)</li>
+                        <li><strong>Step 3:</strong> Sum all weighted grades from all subjects</li>
+                        <li><strong>Step 4:</strong> Add up the total number of units taken</li>
+                        <li><strong>Step 5:</strong> Divide total weighted grades by total units = GWA</li>
+                    </ul>
+                </div>
+            </details>
+        </div>
+    </div>
+
+    <!-- Undo Snackbar -->
+    <div class="undo-snackbar" id="undoSnackbar">
+        <div class="undo-message" id="undoMessage"></div>
+        <button class="undo-btn" id="undoBtn" onclick="restoreDeletedRecord()">UNDO</button>
+    </div>
+
+    <!-- Compare Modal -->
+    <div class="compare-modal" id="compareModal">
+        <div class="compare-modal-content">
+            <div class="compare-modal-header">
+                <h2 class="compare-modal-title">Compare Applicants</h2>
+                <button class="compare-close" onclick="closeCompareModal()">×</button>
+            </div>
+            <div class="compare-selections" id="compareSelections"></div>
+            <div id="compareResults"></div>
+        </div>
+    </div>
+
+    <script>
+        let subjects = [];
+        let subjectCount = 0;
+        let currentResult = null;
+        let historySearchTerm = '';
+        let historySort = 'date_desc';
+        const draftKey = 'gwaDraft';
+        let selectedRecords = new Set();
+        let lastDeletedRecord = null;
+        let undoTimeout = null;
+        let pinnedRecords = new Set();
+        let focusedSubjectId = null;
+
+        function showBanner(type, title, message, timeout = 3000) {
+            const container = document.getElementById('bannerContainer');
+            if (!container) return;
+
+            const iconMap = {
+                success: 'check-circle',
+                error: 'exclamation-circle',
+                info: 'info-circle'
+            };
+
+            const banner = document.createElement('div');
+            banner.className = `banner banner-${type}`;
+            banner.innerHTML = `
+                <div class="banner-icon"><i class="fas fa-${iconMap[type] || 'info-circle'}"></i></div>
+                <div class="banner-content">
+                    <div class="banner-title">${title}</div>
+                    <div class="banner-message">${message}</div>
+                </div>
+                <button class="banner-close" aria-label="Close" onclick="this.parentElement.remove()">&times;</button>
+            `;
+
+            container.appendChild(banner);
+
+            if (timeout > 0) {
+                setTimeout(() => {
+                    if (!banner.isConnected) return;
+                    banner.classList.add('removing');
+                    setTimeout(() => banner.remove(), 300);
+                }, timeout);
+            }
+        }
+
+        function scrollToSubject(id) {
+            const card = document.querySelector(`.subject-card[data-id="${id}"]`);
+            if (!card) return;
+            card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        // Load history on page load
+        window.addEventListener('DOMContentLoaded', function() {
+            loadDraft();
+            renderSubjects();
+            loadPinnedRecords();
+            loadHistory();
+            updateApplicantSuggestions();
+            updateRecentApplicants();
+            updateStatsDisplay();
+            setupShortcuts();
+        });
+
+        function addSubject() {
+            subjectCount++;
+            const id = subjectCount;
+            subjects.push({
+                id: id,
+                name: '',
+                grade: '',
+                units: ''
+            });
+
+            renderSubjects();
+            requestAnimationFrame(() => scrollToSubject(id));
+            showBanner('success', 'Subject Added', 'New subject card created.');
+            saveDraft();
+        }
+
+        function addBulkSubjects() {
+            const count = parseInt(document.getElementById('bulkCount').value, 10);
+            if (isNaN(count) || count <= 0) {
+                showBanner('error', 'Invalid Quantity', 'Enter a valid number to bulk add.');
+                return;
+            }
+
+            const maxAdd = Math.min(count, 50);
+            let lastId = subjectCount;
+            for (let i = 0; i < maxAdd; i++) {
+                subjectCount++;
+                lastId = subjectCount;
+                subjects.push({ id: subjectCount, name: '', grade: '', units: '' });
+            }
+
+            renderSubjects();
+            requestAnimationFrame(() => scrollToSubject(lastId));
+            showBanner('success', 'Bulk Added', `${maxAdd} subjects added.`);
+            saveDraft();
+        }
+
+        function copyLastSubject() {
+            if (subjects.length === 0) {
+                showBanner('error', 'No Subjects', 'Add at least one subject to copy.');
+                return;
+            }
+
+            const last = subjects[subjects.length - 1];
+            subjectCount++;
+            const id = subjectCount;
+            subjects.push({
+                id,
+                name: '',
+                grade: last.grade,
+                units: last.units
+            });
+
+            renderSubjects();
+            requestAnimationFrame(() => scrollToSubject(id));
+            showBanner('success', 'Subject Copied', 'Last subject duplicated.');
+            saveDraft();
+        }
+
+        function applyUnitsTemplate(units) {
+            if (subjects.length === 0) {
+                showBanner('error', 'No Subjects', 'Add subjects before applying units.');
+                return;
+            }
+
+            subjects = subjects.map(s => ({ ...s, units: String(units) }));
+            renderSubjects();
+            showBanner('success', 'Units Applied', `All subjects set to ${units} units.`);
+            saveDraft();
+        }
+
+        function removeSubject(id) {
+            subjects = subjects.filter(s => s.id !== id);
+            renderSubjects();
+            showBanner('success', 'Subject Removed', 'Subject card deleted.');
+            saveDraft();
+        }
+
+        function updateSubject(id, field, value) {
+            const subject = subjects.find(s => s.id === id);
+            if (subject) {
+                subject[field] = value;
+                renderSubjects();
+                saveDraft();
+            }
+        }
+
+        function renderSubjects() {
+            const container = document.getElementById('subjectsContainer');
+            const noMessage = document.getElementById('noSubjectsMessage');
+
+            if (subjects.length === 0) {
+                container.innerHTML = '';
+                noMessage.style.display = 'block';
+                document.getElementById('resultsSection').classList.remove('show');
+                return;
+            }
+
+            noMessage.style.display = 'none';
+
+            container.innerHTML = subjects.map((subject, index) => {
+                const weighted = subject.grade && subject.units 
+                    ? (parseFloat(subject.grade) * parseFloat(subject.units)).toFixed(2)
+                    : '0.00';
+
+                const gradeError = subject.grade ? '' : 'input-error';
+                const unitError = subject.units ? '' : 'input-error';
+
+                return `
+                    <div class="subject-card" data-id="${subject.id}">
+                        <div class="subject-header">
+                            <h4>Subject ${index + 1}</h4>
+                            <button class="btn-remove" onclick="removeSubject(${subject.id})">
+                                <i class="fas fa-trash"></i> Remove
+                            </button>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Grade (Numerical Value)</label>
+                                <select class="${gradeError}" onchange="updateSubject(${subject.id}, 'grade', this.value)">
+                                    <option value="">Select Grade</option>
+                                    <option value="1.00" ${subject.grade === '1.00' ? 'selected' : ''}>1.00</option>
+                                    <option value="1.25" ${subject.grade === '1.25' ? 'selected' : ''}>1.25</option>
+                                    <option value="1.50" ${subject.grade === '1.50' ? 'selected' : ''}>1.50</option>
+                                    <option value="1.75" ${subject.grade === '1.75' ? 'selected' : ''}>1.75</option>
+                                    <option value="2.00" ${subject.grade === '2.00' ? 'selected' : ''}>2.00</option>
+                                    <option value="2.25" ${subject.grade === '2.25' ? 'selected' : ''}>2.25</option>
+                                    <option value="2.50" ${subject.grade === '2.50' ? 'selected' : ''}>2.50</option>
+                                    <option value="2.75" ${subject.grade === '2.75' ? 'selected' : ''}>2.75</option>
+                                    <option value="3.00" ${subject.grade === '3.00' ? 'selected' : ''}>3.00</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Units</label>
+                                <select class="${unitError}" onchange="updateSubject(${subject.id}, 'units', this.value)">
+                                    <option value="">Select Units</option>
+                                    <option value="1" ${subject.units === '1' ? 'selected' : ''}>1 Unit</option>
+                                    <option value="2" ${subject.units === '2' ? 'selected' : ''}>2 Units</option>
+                                    <option value="3" ${subject.units === '3' ? 'selected' : ''}>3 Units</option>
+                                    <option value="4" ${subject.units === '4' ? 'selected' : ''}>4 Units</option>
+                                    <option value="5" ${subject.units === '5' ? 'selected' : ''}>5 Units</option>
+                                    <option value="6" ${subject.units === '6' ? 'selected' : ''}>6 Units</option>
+                                    <option value="7" ${subject.units === '7' ? 'selected' : ''}>7 Units</option>
+                                    <option value="8" ${subject.units === '8' ? 'selected' : ''}>8 Units</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div style="margin-top: 6px;">
+                            <div class="form-group">
+                                <label>Weighted Grade (Calculated)</label>
+                                <div class="calculated-value">${weighted}</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function calculateGWA() {
+            if (subjects.length === 0) {
+                alert('Please add at least one subject before calculating GWA.');
+                return;
+            }
+
+            let totalWeighted = 0;
+            let totalUnits = 0;
+
+            for (const subject of subjects) {
+                const grade = parseFloat(subject.grade);
+                const units = parseFloat(subject.units);
+
+                if (isNaN(grade) || isNaN(units) || grade === '' || units === '') {
+                    alert('Please select Grade and Units for all subjects.');
+                    return;
+                }
+
+                totalWeighted += grade * units;
+                totalUnits += units;
+            }
+
+            const gwa = totalUnits > 0 ? (totalWeighted / totalUnits).toFixed(3) : 0;
+
+            currentResult = {
+                totalWeighted: totalWeighted.toFixed(2),
+                totalUnits: totalUnits,
+                gwa: gwa,
+                subjects: JSON.parse(JSON.stringify(subjects))
+            };
+
+            document.getElementById('totalWeightedResult').textContent = totalWeighted.toFixed(2);
+            document.getElementById('totalUnitsResult').textContent = totalUnits;
+            document.getElementById('gwaResult').textContent = gwa;
+            document.getElementById('resultsSection').classList.add('show');
+
+            // Auto-save the calculation
+            autoSaveCalculation();
+            showBanner('success', 'GWA Calculated', `GWA successfully computed: ${gwa}`);
+        }
+
+        function autoSaveCalculation() {
+            let applicantName = document.getElementById('calculationName').value.trim();
+            
+            if (!applicantName) {
+                applicantName = prompt('Enter applicant name to save this calculation:');
+                if (!applicantName) {
+                    return; // User cancelled
+                }
+                document.getElementById('calculationName').value = applicantName;
+            }
+
+            const history = JSON.parse(localStorage.getItem('gwaHistory')) || [];
+            const normalized = applicantName.toLowerCase();
+            if (history.some(item => (item.applicantName || '').toLowerCase() === normalized)) {
+                showBanner('error', 'Duplicate Name', 'Applicant name already exists. Use a unique name.');
+                return;
+            }
+            const newEntry = {
+                id: Date.now(),
+                applicantName: applicantName,
+                gwa: currentResult.gwa,
+                totalWeighted: currentResult.totalWeighted,
+                totalUnits: currentResult.totalUnits,
+                subjects: currentResult.subjects,
+                timestamp: new Date().toLocaleString(),
+                notes: document.getElementById('calculationNotes').value || ''
+            };
+
+            history.unshift(newEntry);
+            localStorage.setItem('gwaHistory', JSON.stringify(history));
+            loadHistory();
+            updateApplicantSuggestions();
+            updateRecentApplicants();
+            updateStatsDisplay();
+            showBanner('success', 'Auto-Saved', 'Record saved automatically.');
+        }
+
+        function saveCalculation() {
+            if (!currentResult) {
+                alert('Please calculate GWA first before saving.');
+                return;
+            }
+
+            const applicantName = document.getElementById('calculationName').value.trim();
+            if (!applicantName) {
+                alert('Please enter the applicant name.');
+                return;
+            }
+
+            const history = JSON.parse(localStorage.getItem('gwaHistory')) || [];
+            const normalized = applicantName.toLowerCase();
+            if (history.some(item => (item.applicantName || '').toLowerCase() === normalized)) {
+                showBanner('error', 'Duplicate Name', 'Applicant name already exists. Use a unique name.');
+                return;
+            }
+            const newEntry = {
+                id: Date.now(),
+                applicantName: applicantName,
+                gwa: currentResult.gwa,
+                totalWeighted: currentResult.totalWeighted,
+                totalUnits: currentResult.totalUnits,
+                subjects: currentResult.subjects,
+                timestamp: new Date().toLocaleString(),
+                notes: document.getElementById('calculationNotes').value || ''
+            };
+
+            history.unshift(newEntry);
+            localStorage.setItem('gwaHistory', JSON.stringify(history));
+            
+            showBanner('success', 'Record Saved', 'Record saved successfully.');
+            document.getElementById('calculationName').value = '';
+            document.getElementById('calculationNotes').value = '';
+            loadHistory();
+            updateApplicantSuggestions();
+            updateRecentApplicants();
+            updateStatsDisplay();
+        }
+
+        function setHistorySearch(value) {
+            historySearchTerm = (value || '').trim().toLowerCase();
+            loadHistory();
+        }
+
+        function setHistorySort(value) {
+            historySort = value || 'date_desc';
+            loadHistory();
+        }
+
+        function loadHistory() {
+            const history = JSON.parse(localStorage.getItem('gwaHistory')) || [];
+            const historyList = document.getElementById('historyList');
+
+            const filteredHistory = historySearchTerm
+                ? history.filter(item => (item.applicantName || '').toLowerCase().includes(historySearchTerm))
+                : history;
+
+            const sortedHistory = [...filteredHistory].sort((a, b) => {
+                // Pinned records first
+                const aPinned = pinnedRecords.has(a.id) ? 0 : 1;
+                const bPinned = pinnedRecords.has(b.id) ? 0 : 1;
+                if (aPinned !== bPinned) return aPinned - bPinned;
+
+                switch (historySort) {
+                    case 'name_asc':
+                        return (a.applicantName || '').localeCompare(b.applicantName || '');
+                    case 'name_desc':
+                        return (b.applicantName || '').localeCompare(a.applicantName || '');
+                    case 'gwa_asc':
+                        return parseFloat(a.gwa) - parseFloat(b.gwa);
+                    case 'gwa_desc':
+                        return parseFloat(b.gwa) - parseFloat(a.gwa);
+                    case 'units_asc':
+                        return (a.totalUnits || 0) - (b.totalUnits || 0);
+                    case 'units_desc':
+                        return (b.totalUnits || 0) - (a.totalUnits || 0);
+                    case 'date_asc':
+                        return (a.id || 0) - (b.id || 0);
+                    case 'date_desc':
+                    default:
+                        return (b.id || 0) - (a.id || 0);
+                }
+            });
+
+            if (sortedHistory.length === 0) {
+                historyList.innerHTML = `
+                    <div class="no-history">
+                        <i class="fas fa-inbox"></i>
+                        <p>No matching records found.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            const listHTML = `
+                <div style="display: flex; flex-direction: column; gap: 10px;">
+                    ${sortedHistory.map(item => {
+                        const isPinned = pinnedRecords.has(item.id);
+                        const isSelected = selectedRecords.has(item.id);
+                        const notesHtml = item.notes ? `<div class="notes-display"><strong>Notes:</strong> ${item.notes}</div>` : '';
+                        return `
+                            <div class="history-item ${isSelected ? 'selected' : ''}" style="border-left: 4px solid #667eea; padding: 15px; background: #f8f9fa; border-radius: 6px; display: grid; grid-template-columns: 40px 1fr 80px 80px 80px 150px 1fr; gap: 12px; align-items: start;">
+                                <div style="text-align: center; margin-top: 2px;">
+                                    <input type="checkbox" class="history-item-checkbox" data-id="${item.id}" onchange="toggleSelectRecord(${item.id}, this.checked)" ${isSelected ? 'checked' : ''} />
+                                </div>
+                                <div>
+                                    <div style="font-weight: 600; font-size: 14px; color: #333; margin-bottom: 4px;">${item.applicantName}</div>
+                                    ${notesHtml}
+                                </div>
+                                <div style="text-align: center;">
+                                    <div class="history-gwa-cell">${item.gwa}</div>
+                                    <div style="font-size: 11px; color: #999;">GWA</div>
+                                </div>
+                                <div style="text-align: center;">
+                                    <div style="font-weight: 600; font-size: 14px;">${item.totalUnits}</div>
+                                    <div style="font-size: 11px; color: #999;">Units</div>
+                                </div>
+                                <div style="text-align: center;">
+                                    <div style="font-weight: 600; font-size: 14px;">${item.subjects.length}</div>
+                                    <div style="font-size: 11px; color: #999;">Subjects</div>
+                                </div>
+                                <div>
+                                    <div style="font-size: 12px; color: #666;">${item.timestamp}</div>
+                                </div>
+                                <div style="display: flex; gap: 6px; justify-content: flex-end; flex-wrap: wrap;">
+                                    <button class="pin-btn ${isPinned ? 'pinned' : ''}" onclick="togglePinRecord(${item.id})" title="${isPinned ? 'Unpin' : 'Pin'}" style="background: none; border: none; cursor: pointer; font-size: 16px; color: ${isPinned ? '#ffc107' : '#ddd'}; padding: 4px 8px;">
+                                        <i class="fas fa-star"></i>
+                                    </button>
+                                    <button class="btn-small btn-load" onclick="loadCalculation(${item.id})" style="padding: 6px 12px; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">
+                                        <i class="fas fa-redo"></i> Load
+                                    </button>
+                                    <button class="btn-small btn-delete" onclick="deleteCalculation(${item.id})" style="padding: 6px 12px; background: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">
+                                        <i class="fas fa-trash"></i> Delete
+                                    </button>
+                                </div>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            `;
+            
+            historyList.innerHTML = listHTML;
+        }
+
+        function loadCalculation(id) {
+            const history = JSON.parse(localStorage.getItem('gwaHistory')) || [];
+            const entry = history.find(item => item.id === id);
+
+            if (!entry) {
+                alert('Calculation not found.');
+                return;
+            }
+
+            subjects = JSON.parse(JSON.stringify(entry.subjects));
+            subjectCount = Math.max(...subjects.map(s => s.id), 0);
+            
+            currentResult = {
+                totalWeighted: entry.totalWeighted,
+                totalUnits: entry.totalUnits,
+                gwa: entry.gwa,
+                subjects: entry.subjects
+            };
+
+            renderSubjects();
+            document.getElementById('totalWeightedResult').textContent = entry.totalWeighted;
+            document.getElementById('totalUnitsResult').textContent = entry.totalUnits;
+            document.getElementById('gwaResult').textContent = entry.gwa;
+            document.getElementById('resultsSection').classList.add('show');
+            
+            window.scrollTo(0, 0);
+        }
+
+        function deleteCalculation(id) {
+            if (!confirm('Delete this calculation?')) return;
+            performDelete(id);
+        }
+
+        function performDelete(id) {
+            const history = JSON.parse(localStorage.getItem('gwaHistory')) || [];
+            const deleted = history.find(item => item.id === id);
+            if (deleted) {
+                lastDeletedRecord = deleted;
+                clearTimeout(undoTimeout);
+                undoTimeout = setTimeout(() => {
+                    lastDeletedRecord = null;
+                    document.getElementById('undoSnackbar').classList.remove('show');
+                }, 5000);
+                showUndoSnackbar(`${deleted.applicantName} deleted`);
+            }
+
+            const filtered = history.filter(item => item.id !== id);
+            localStorage.setItem('gwaHistory', JSON.stringify(filtered));
+            
+            loadHistory();
+            selectedRecords.delete(id);
+            updateBatchDeleteBar();
+        }
+
+        function showUndoSnackbar(message) {
+            const snackbar = document.getElementById('undoSnackbar');
+            document.getElementById('undoMessage').textContent = message;
+            snackbar.classList.add('show');
+        }
+
+        function restoreDeletedRecord() {
+            if (!lastDeletedRecord) return;
+            const history = JSON.parse(localStorage.getItem('gwaHistory')) || [];
+            history.unshift(lastDeletedRecord);
+            localStorage.setItem('gwaHistory', JSON.stringify(history));
+            lastDeletedRecord = null;
+            clearTimeout(undoTimeout);
+            document.getElementById('undoSnackbar').classList.remove('show');
+            loadHistory();
+            updateApplicantSuggestions();
+            updateRecentApplicants();
+            showBanner('success', 'Restored', 'Record restored successfully.');
+        }
+
+        function clearAllHistory() {
+            if (!confirm('Delete all calculation history? This cannot be undone.')) return;
+
+            localStorage.removeItem('gwaHistory');
+            loadHistory();
+            showBanner('success', 'All Records Cleared', 'All saved records were removed.');
+        }
+
+        function resetCalculator() {
+            subjects = [];
+            subjectCount = 0;
+            currentResult = null;
+            renderSubjects();
+            document.getElementById('resultsSection').classList.remove('show');
+            showBanner('info', 'Reset Complete', 'All inputs have been cleared.');
+            clearDraft();
+        }
+
+        function saveDraft() {
+            const draft = {
+                applicantName: document.getElementById('calculationName').value || '',
+                subjects,
+                subjectCount
+            };
+            localStorage.setItem(draftKey, JSON.stringify(draft));
+        }
+
+        function loadDraft() {
+            const raw = localStorage.getItem(draftKey);
+            if (!raw) return;
+
+            try {
+                const draft = JSON.parse(raw);
+                if (draft && Array.isArray(draft.subjects)) {
+                    subjects = draft.subjects;
+                    subjectCount = draft.subjectCount || subjects.length;
+                    const nameInput = document.getElementById('calculationName');
+                    if (nameInput) nameInput.value = draft.applicantName || '';
+                    if (subjects.length > 0) {
+                        showBanner('info', 'Draft Restored', 'Unfinished inputs were restored.');
+                    }
+                }
+            } catch (e) {
+                console.error('Failed to load draft', e);
+            }
+        }
+
+        function clearDraft() {
+            localStorage.removeItem(draftKey);
+        }
+
+        function setupShortcuts() {
+            document.addEventListener('keydown', (e) => {
+                if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'a') {
+                    e.preventDefault();
+                    addSubject();
+                }
+
+                if (e.ctrlKey && e.key === 'Enter') {
+                    e.preventDefault();
+                    calculateGWA();
+                }
+
+                if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'r') {
+                    e.preventDefault();
+                    resetCalculator();
+                }
+            });
+        }
+
+        /* Batch Delete Functions */
+        function toggleSelectRecord(id, checked) {
+            if (checked) {
+                selectedRecords.add(id);
+            } else {
+                selectedRecords.delete(id);
+            }
+            updateBatchDeleteBar();
+        }
+
+        function toggleSelectAll(checked) {
+            const history = JSON.parse(localStorage.getItem('gwaHistory')) || [];
+            if (checked) {
+                history.forEach(item => selectedRecords.add(item.id));
+            } else {
+                selectedRecords.clear();
+            }
+            loadHistory();
+            updateBatchDeleteBar();
+        }
+
+        function clearBatchSelection() {
+            selectedRecords.clear();
+            loadHistory();
+            updateBatchDeleteBar();
+        }
+
+        function batchDeleteRecords() {
+            if (selectedRecords.size === 0) {
+                showBanner('error', 'No Selection', 'Select records to delete.');
+                return;
+            }
+            if (!confirm(`Delete ${selectedRecords.size} selected records?`)) return;
+
+            const history = JSON.parse(localStorage.getItem('gwaHistory')) || [];
+            const toDelete = Array.from(selectedRecords)[0];
+            lastDeletedRecord = history.find(item => item.id === toDelete);
+            
+            const filtered = history.filter(item => !selectedRecords.has(item.id));
+            localStorage.setItem('gwaHistory', JSON.stringify(filtered));
+            
+            selectedRecords.clear();
+            showUndoSnackbar(`${selectedRecords.size} record(s) deleted`);
+            loadHistory();
+            updateBatchDeleteBar();
+            updateApplicantSuggestions();
+            updateRecentApplicants();
+        }
+
+        function updateBatchDeleteBar() {
+            const bar = document.getElementById('batchDeleteBar');
+            const count = selectedRecords.size;
+            const compareBtn = document.getElementById('compareBtn');
+            
+            if (count > 0) {
+                document.getElementById('selectedCount').textContent = count;
+                bar.classList.add('show');
+                // Show compare button if 2 or more selected
+                if (count >= 2) {
+                    compareBtn.style.display = '';
+                } else {
+                    compareBtn.style.display = 'none';
+                }
+            } else {
+                bar.classList.remove('show');
+                compareBtn.style.display = 'none';
+            }
+        }
+
+        /* Pinning Functions */
+        function savePinnedRecords() {
+            localStorage.setItem('gwaPinnedRecords', JSON.stringify(Array.from(pinnedRecords)));
+        }
+
+        function loadPinnedRecords() {
+            const raw = localStorage.getItem('gwaPinnedRecords');
+            if (raw) {
+                try {
+                    pinnedRecords = new Set(JSON.parse(raw));
+                } catch (e) {
+                    pinnedRecords = new Set();
+                }
+            }
+        }
+
+        function togglePinRecord(id) {
+            if (pinnedRecords.has(id)) {
+                pinnedRecords.delete(id);
+                showBanner('success', 'Unpinned', 'Record unpinned.');
+            } else {
+                pinnedRecords.add(id);
+                showBanner('success', 'Pinned', 'Record pinned to top.');
+            }
+            savePinnedRecords();
+            loadHistory();
+        }
+
+        /* Auto-suggest Functions */
+        function updateApplicantSuggestions() {
+            const history = JSON.parse(localStorage.getItem('gwaHistory')) || [];
+            const datalist = document.getElementById('applicantSuggestions');
+            
+            const uniqueNames = [...new Set(history.map(item => item.applicantName))].sort();
+            datalist.innerHTML = uniqueNames.map(name => `<option value="${name}"></option>`).join('');
+        }
+
+        /* Recent Applicants */
+        function updateRecentApplicants() {
+            const history = JSON.parse(localStorage.getItem('gwaHistory')) || [];
+            const recent = history.slice(0, 5);
+            const container = document.getElementById('recentApplicants');
+            
+            if (recent.length === 0) {
+                container.innerHTML = '';
+                return;
+            }
+            
+            container.innerHTML = recent.map(item => `
+                <button class="recent-applicant-btn" onclick="quickLoadApplicant(${item.id})" title="${item.applicantName}">
+                    <i class="fas fa-history"></i> ${item.applicantName}
+                </button>
+            `).join('');
+        }
+
+        function quickLoadApplicant(id) {
+            loadCalculation(id);
+            window.scrollTo(0, 0);
+        }
+
+        /* Help Tutorial */
+        function toggleHelpSection() {
+            const content = document.getElementById('helpContent');
+            const toggle = document.getElementById('helpToggle');
+            content.classList.toggle('open');
+            toggle.classList.toggle('open');
+        }
+
+        function toggleNotesSection() {
+            const content = document.getElementById('notesContent');
+            const toggle = document.getElementById('notesToggle');
+            content.classList.toggle('open');
+            toggle.classList.toggle('open');
+        }
+
+        /* Keyboard Shortcuts for Grades */
+        const gradeMap = {
+            '1': '1.00', '2': '1.25', '3': '1.50', '4': '1.75', '5': '2.00',
+            '6': '2.25', '7': '2.50', '8': '2.75', '9': '3.00'
+        };
+
+        /* Stats Dashboard */
+        function updateStatsDisplay() {
+            const history = JSON.parse(localStorage.getItem('gwaHistory')) || [];
+            const statsSection = document.getElementById('statsSection');
+            
+            if (history.length === 0) {
+                statsSection.innerHTML = '';
+                return;
+            }
+
+            const gwas = history.map(h => parseFloat(h.gwa));
+            const avg = (gwas.reduce((a, b) => a + b, 0) / gwas.length).toFixed(3);
+            const sorted = [...gwas].sort((a, b) => a - b);
+            const median = sorted.length % 2 ? sorted[Math.floor(sorted.length / 2)] : ((sorted[sorted.length / 2 - 1] + sorted[sorted.length / 2]) / 2).toFixed(3);
+            const min = Math.min(...gwas).toFixed(3);
+            const max = Math.max(...gwas).toFixed(3);
+
+            statsSection.innerHTML = `
+                <div class="stat-card">
+                    <div class="stat-label">Average GWA</div>
+                    <div class="stat-value">${avg}</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Median GWA</div>
+                    <div class="stat-value">${median}</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Lowest GWA</div>
+                    <div class="stat-value">${min}</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Highest GWA</div>
+                    <div class="stat-value">${max}</div>
+                </div>
+            `;
+        }
+
+        /* Compare Applicants */
+        function openCompareModal() {
+            if (selectedRecords.size < 2) {
+                showBanner('error', 'Insufficient Selection', 'Select at least 2 applicants to compare.');
+                return;
+            }
+
+            const history = JSON.parse(localStorage.getItem('gwaHistory')) || [];
+            const selected = Array.from(selectedRecords).slice(0, 3).map(id => history.find(h => h.id === id)).filter(Boolean);
+
+            const modal = document.getElementById('compareModal');
+            const selectionsDiv = document.getElementById('compareSelections');
+            const resultsDiv = document.getElementById('compareResults');
+
+            selectionsDiv.innerHTML = selected.map((app, idx) => `
+                <div style="padding: 12px; background: white; border-radius: 6px; border: 2px solid #667eea;">
+                    <div style="font-weight: 600; color: #667eea; font-size: 13px;">${app.applicantName}</div>
+                    <div style="font-size: 11px; color: #999; margin-top: 4px;">GWA: ${app.gwa}</div>
+                </div>
+            `).join('');
+
+            let tableHTML = `
+                <table class="compare-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 150px;">Subject</th>
+                            ${selected.map(app => `<th style="text-align: center;">${app.applicantName}</th>`).join('')}
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            const maxSubjects = Math.max(...selected.map(app => app.subjects.length));
+            for (let i = 0; i < maxSubjects; i++) {
+                tableHTML += `<tr><td><strong>Subject ${i + 1}</strong></td>`;
+                selected.forEach(app => {
+                    const subj = app.subjects[i];
+                    const gradeDisplay = subj ? `${subj.grade} (${subj.units}u)` : '-';
+                    tableHTML += `<td style="text-align: center;">${gradeDisplay}</td>`;
+                });
+                tableHTML += `</tr>`;
+            }
+
+            tableHTML += `</tbody></table><div style="margin-top: 20px; padding-top: 20px; border-top: 2px solid #e0e0e0;"><strong>Summary:</strong><table class="compare-table" style="margin-top: 10px;"><tr><td><strong>Total Units</strong></td>${selected.map(app => `<td style="text-align: center;">${app.totalUnits}</td>`).join('')}</tr><tr><td><strong>Total Weighted</strong></td>${selected.map(app => `<td style="text-align: center;">${app.totalWeighted}</td>`).join('')}</tr><tr><td><strong>GWA</strong></td>${selected.map(app => `<td style="text-align: center; font-weight: bold; color: #667eea; font-size: 15px;">${app.gwa}</td>`).join('')}</tr></table></div>`;
+
+            resultsDiv.innerHTML = tableHTML;
+            modal.classList.add('show');
+        }
+
+        function closeCompareModal() {
+            document.getElementById('compareModal').classList.remove('show');
+        }
+
+        /* Batch Import Applicants */
+        function openBatchImportModal() {
+            document.getElementById('batchImportModal').classList.add('show');
+            document.getElementById('batchApplicantNames').focus();
+        }
+
+        function closeBatchImportModal() {
+            document.getElementById('batchImportModal').classList.remove('show');
+            document.getElementById('batchApplicantNames').value = '';
+        }
+
+        function processBatchImport() {
+            const input = document.getElementById('batchApplicantNames').value.trim();
+            if (!input) {
+                showBanner('error', 'Empty Input', 'Please enter at least one applicant name.');
+                return;
+            }
+
+            // Parse names (comma or line separated)
+            const names = input
+                .split(/[,\n]/)
+                .map(name => name.trim())
+                .filter(name => name.length > 0);
+
+            if (names.length === 0) {
+                showBanner('error', 'Invalid Input', 'No valid applicant names found.');
+                return;
+            }
+
+            const history = JSON.parse(localStorage.getItem('gwaHistory')) || [];
+            let created = 0;
+            let skipped = 0;
+
+            names.forEach(name => {
+                const normalized = name.toLowerCase();
+                if (history.some(item => (item.applicantName || '').toLowerCase() === normalized)) {
+                    skipped++;
+                    return;
+                }
+
+                // Create empty record with just the applicant name
+                const newEntry = {
+                    id: Date.now() + Math.random(),
+                    applicantName: name,
+                    gwa: '0.00',
+                    totalWeighted: '0.00',
+                    totalUnits: 0,
+                    subjects: [],
+                    timestamp: new Date().toLocaleString(),
+                    notes: ''
+                };
+                history.unshift(newEntry);
+                created++;
+            });
+
+            localStorage.setItem('gwaHistory', JSON.stringify(history));
+            loadHistory();
+            updateApplicantSuggestions();
+            updateRecentApplicants();
+            updateStatsDisplay();
+            closeBatchImportModal();
+
+            let message = `${created} applicant(s) created successfully.`;
+            if (skipped > 0) {
+                message += ` ${skipped} duplicate name(s) skipped.`;
+            }
+            showBanner('success', 'Batch Import Complete', message);
+        }
+
+        /* Keyboard Tab Navigation for Grade/Units */
+        document.addEventListener('change', function(e) {
+            if (e.target.tagName === 'SELECT' && subjects.length > 0) {
+                const card = e.target.closest('.subject-card');
+                if (!card) return;
+
+                const subjectId = parseInt(card.dataset.id);
+                const allSelects = card.querySelectorAll('select');
+                
+                // If grade was just selected, focus on units
+                if (allSelects[0] === e.target && allSelects[0].value) {
+                    setTimeout(() => allSelects[1].focus(), 0);
+                }
+            }
+        }, true);
+    </script>
+
+    <!-- Batch Import Modal -->
+    <div class="batch-import-modal" id="batchImportModal">
+        <div class="batch-import-content">
+            <div class="batch-import-header">
+                <i class="fas fa-users"></i> Batch Import
+            </div>
+            <div class="batch-import-info">
+                Paste names separated by commas or new lines
+            </div>
+            <textarea id="batchApplicantNames" class="batch-import-textarea" placeholder="Aiah Arceta, Mikha Lim, ...&#10;Or one per line..."></textarea>
+            <div class="batch-import-actions">
+                <button class="btn-batch-cancel" onclick="closeBatchImportModal()">Cancel</button>
+                <button class="btn-batch-import" onclick="processBatchImport()">Import</button>
+            </div>
+        </div>

@@ -37,7 +37,7 @@ class ApplicantManager {
         }
         
         if (!empty($positionGroup)) {
-            $query .= " AND a.position_group = ?";
+            $query .= " AND p.position_group = ?";
             $params[] = $positionGroup;
             $types .= 's';
         }
@@ -74,7 +74,7 @@ class ApplicantManager {
         }
         
         if (!empty($positionGroup)) {
-            $query .= " AND a.position_group = ?";
+            $query .= " AND p.position_group = ?";
             $params[] = $positionGroup;
             $types .= 's';
         }
@@ -94,19 +94,19 @@ class ApplicantManager {
      * @return int Count of active applicants
      */
     public function getActiveApplicantsCount($search = '', $positionGroup = '') {
-        $query = "SELECT COUNT(*) as count FROM applicants WHERE archive_status = 'active'";
+        $query = "SELECT COUNT(*) as count FROM applicants a LEFT JOIN positions p ON a.position_applied_id = p.id WHERE a.archive_status = 'active'";
         
         $params = [];
         $types = '';
         
         if (!empty($search)) {
-            $query .= " AND name LIKE ?";
+            $query .= " AND a.name LIKE ?";
             $params[] = '%' . $search . '%';
             $types .= 's';
         }
         
         if (!empty($positionGroup)) {
-            $query .= " AND position_group = ?";
+            $query .= " AND p.position_group = ?";
             $params[] = $positionGroup;
             $types .= 's';
         }
@@ -122,19 +122,19 @@ class ApplicantManager {
      * @return int Count of archived applicants
      */
     public function getArchivedApplicantsCount($search = '', $positionGroup = '') {
-        $query = "SELECT COUNT(*) as count FROM applicants WHERE archive_status = 'archived'";
+        $query = "SELECT COUNT(*) as count FROM applicants a LEFT JOIN positions p ON a.position_applied_id = p.id WHERE a.archive_status = 'archived'";
         
         $params = [];
         $types = '';
         
         if (!empty($search)) {
-            $query .= " AND name LIKE ?";
+            $query .= " AND a.name LIKE ?";
             $params[] = '%' . $search . '%';
             $types .= 's';
         }
         
         if (!empty($positionGroup)) {
-            $query .= " AND position_group = ?";
+            $query .= " AND p.position_group = ?";
             $params[] = $positionGroup;
             $types .= 's';
         }

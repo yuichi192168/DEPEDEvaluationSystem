@@ -19,7 +19,7 @@ if (!$conn) die('Database connection failed');
 
 // Require admin authentication
 $auth = new AuthenticationHelper($conn);
-$auth->requireAdmin('/admin/login');
+$auth->requireAdmin('login.php');
 
 // Redirect to new dashboard
 header('Location: dashboard.php');

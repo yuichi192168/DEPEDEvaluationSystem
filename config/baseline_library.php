@@ -960,6 +960,15 @@ $baselineLibrary = [
         'performance' => 0, 'outstanding_accomplishments' => 0,
         'application_of_education' => 0, 'application_of_ld' => 0, 'potential' => 0
     ],
+    'admin_officer_ii' => [
+        'position_name' => 'Administrative Officer II',
+        'position_group' => 'NON-TEACHING LEVEL II',
+        'salary_grade' => 11,
+        'education' => ['degree' => 'Bachelor', 'masters_units' => 0, 'doctoral_units' => 0],
+        'training' => 16, 'experience' => 24,
+        'performance' => 0, 'outstanding_accomplishments' => 0,
+        'application_of_education' => 0, 'application_of_ld' => 0, 'potential' => 0
+    ],
     'agriculturist_ii' => [
         'position_name' => 'Agriculturist II',
         'position_group' => 'NON-TEACHING LEVEL II',

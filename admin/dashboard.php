@@ -20,7 +20,7 @@ if (!$conn) die('Database connection failed');
 
 // Require admin authentication
 $auth = new AuthenticationHelper($conn);
-$auth->requireAdmin('/admin/login');
+$auth->requireAdmin('login.php');
 
 // Get current user info
 $currentUser = $auth->getCurrentUser();
@@ -989,7 +989,7 @@ $totalPages = ceil($totalCount / $itemsPerPage);
                         <i class="fas fa-user"></i>
                     </div>
                     <div class="user-details">
-                        <div class="user-name"><?php echo htmlspecialchars($currentUser['full_name'] ?? $currentUser['username']); ?></div>
+                        <div class="user-name"><?php echo htmlspecialchars($currentUser ? ($currentUser['full_name'] ?? $currentUser['username'] ?? 'Admin') : 'Admin'); ?></div>
                         <div class="user-role">Administrator</div>
                     </div>
                 </div>

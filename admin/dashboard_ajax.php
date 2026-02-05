@@ -122,8 +122,8 @@ function loadApplicants() {
                         </td>
                         <td><?php echo htmlspecialchars($applicant['position_name'] ?? 'Not specified'); ?></td>
                         <td>
-                            <span class="badge badge-group-<?php echo positionGroupSlug($applicant['position_group']); ?>">
-                                <?php echo htmlspecialchars(positionGroupLabel($applicant['position_group'])); ?>
+                            <span class="badge badge-group-<?php echo positionGroupSlug($applicant['actual_group']); ?>">
+                                <?php echo htmlspecialchars(positionGroupLabel($applicant['actual_group'])); ?>
                             </span>
                         </td>
                         <td><?php echo date('M d, Y', strtotime($applicant['created_at'])); ?></td>
