@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Position Groups Load Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; }
+        .pass { color: green; font-weight: bold; }
+        .fail { color: red; font-weight: bold; }
+        .log { background: #f5f5f5; padding: 10px; margin: 10px 0; border-radius: 4px; max-height: 300px; overflow-y: auto; }
+        select { padding: 5px; margin: 5px 0; }
+    </style>
+</head>
+<body>
+    <h1>Position Groups Loading Test</h1>
+    
+    <div class="test-section">
+        <h2>Test Form</h2>
+        <label for="position_group_select">Select Position Group:</label>
+        <select id="position_group_select">
+            <option value="">-- Select a Position Group --</option>
+        </select>
+        <br>
+        <label for="position_key">Select Position:</label>
+        <select id="position_key">
+            <option value="">-- Select a Position --</option>
+        </select>
+    </div>
+
+    <div class="test-section">
+        <h2>Diagnostic Output</h2>
+        <div class="log" id="diagnosticLog"></div>
+    </div>
+
+    <script>
+        const log = document.getElementById('diagnosticLog');
+        const logMessages = [];
+
+        function addLog(msg) {
+            console.log(msg);
+            logMessages.push(msg);
+            log.innerHTML = logMessages.map(m => `<div>${m}</div>`).join('');
+            log.scrollTop = log.scrollHeight;
+        }
+
+        function populatePositionsForGroup(groupIdx) {
+            addLog(`[populatePositionsForGroup] Called with groupIdx=${groupIdx}`);
+            
+            const psel = document.getElementById('position_key');
+            if (!psel) {
+                addLog(`[populatePositionsForGroup] ERROR: position_key element not found`);
+                return;
+            }
+            
+            if (!window.positionGroups) {
+                addLog(`[populatePositionsForGroup] ERROR: window.positionGroups is not set`);
+                return;
+            }
+            
+            if (!window.positionGroups[groupIdx]) {
+                addLog(`[populatePositionsForGroup] ERROR: No group at index ${groupIdx}`);
+                return;
+            }
+            
+            const selectedGroup = window.positionGroups[groupIdx];
+            addLog(`[populatePositionsForGroup] Selected group: ${selectedGroup.group}`);
+            addLog(`[populatePositionsForGroup] Positions in group: ${selectedGroup.positions ? selectedGroup.positions.length : 0}`);
+            
+            psel.innerHTML = '<option value="">-- Select a Position --</option>';
+            
+            if (selectedGroup && selectedGroup.positions && selectedGroup.positions.length > 0) {
+                selectedGroup.positions.forEach(posName => {
+                    const o = document.createElement('option');
+                    o.value = posName;
+                    o.textContent = posName;
+                    psel.appendChild(o);
+                });
+                addLog(`[populatePositionsForGroup] SUCCESS: ${selectedGroup.positions.length} positions loaded`);
+            } else {
+                addLog(`[populatePositionsForGroup] WARNING: No positions found in selected group`);
+            }
+        }
+
+        async function loadPositionGroups() {
+            addLog('[loadPositionGroups] START');
+            try {
+                addLog('[loadPositionGroups] Fetching from api/get_position_groups.php');
+                const resp = await fetch('api/get_position_groups.php');
+                addLog(`[loadPositionGroups] Response status: ${resp.status}`);
+                
+                if (!resp.ok) throw new Error('API returned ' + resp.status);
+                
+                const groups = await resp.json();
+                addLog(`[loadPositionGroups] Groups received: ${groups.length}`);
+                
+                if (!Array.isArray(groups) || groups.length === 0) {
+                    throw new Error('No position groups returned');
+                }
+                
+                const gsel = document.getElementById('position_group_select');
+                if (!gsel) {
+                    addLog('[loadPositionGroups] ERROR: position_group_select element not found');
+                    return;
+                }
+                
+                gsel.innerHTML = '<option value="">-- Select a Position Group --</option>';
+                groups.forEach((g, idx) => {
+                    addLog(`[loadPositionGroups] Adding group ${idx}: ${g.group} (${g.positions ? g.positions.length : 0} positions)`);
+                    const opt = document.createElement('option');
+                    opt.value = idx;
+                    opt.textContent = g.group;
+                    gsel.appendChild(opt);
+                });
+                
+                window.positionGroups = groups;
+                addLog('[loadPositionGroups] SUCCESS: All groups loaded and stored in window.positionGroups');
+                
+            } catch (e) {
+                addLog(`[loadPositionGroups] ERROR: ${e.message}`);
+            }
+        }
+
+        // Initialize
+        addLog('[INIT] Page loaded, DOM ready state: ' + document.readyState);
+
+        if (document.readyState === 'loading') {
+            addLog('[INIT] DOM still loading, attaching DOMContentLoaded listeners');
+            document.addEventListener('DOMContentLoaded', function setupPositionGroupListener() {
+                addLog('[DOMContentLoaded] Event fired');
+                loadPositionGroups();
+                const gsel = document.getElementById('position_group_select');
+                if (gsel) {
+                    gsel.addEventListener('change', function() {
+                        const groupIdx = parseInt(this.value);
+                        addLog(`[position_group_select change] Event fired, value=${this.value}, groupIdx=${groupIdx}`);
+                        if (!isNaN(groupIdx)) {
+                            populatePositionsForGroup(groupIdx);
+                        }
+                    });
+                    addLog('[DOMContentLoaded] Change listener attached to position_group_select');
+                }
+            });
+        } else {
+            addLog('[INIT] DOM already loaded, executing immediately');
+            loadPositionGroups();
+            const gsel = document.getElementById('position_group_select');
+            if (gsel) {
+                gsel.addEventListener('change', function() {
+                    const groupIdx = parseInt(this.value);
+                    addLog(`[position_group_select change] Event fired, value=${this.value}, groupIdx=${groupIdx}`);
+                    if (!isNaN(groupIdx)) {
+                        populatePositionsForGroup(groupIdx);
+                    }
+                });
+                addLog('[INIT] Change listener attached to position_group_select');
+            }
+        }
+    </script>
+</body>
+</html>

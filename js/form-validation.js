@@ -9,7 +9,6 @@ class FormValidator {
         this.form = document.getElementById(formId);
         this.requiredFields = [
             'applicant_name',
-            'contact_number',
             'position_applied',
             'schools_division_office',
             'job_group_sg_level'
@@ -38,11 +37,6 @@ class FormValidator {
                 validate: (value) => value.trim().length > 0,
                 message: 'Applicant name is required',
                 fieldName: 'Name of Applicant'
-            },
-            contact_number: {
-                validate: (value) => this.validatePhilippineContactNumber(value),
-                message: 'Use format 09XXXXXXXXX or +639XXXXXXXXX',
-                fieldName: 'Contact Number'
             },
             position_applied: {
                 validate: (value) => value.trim().length > 0,

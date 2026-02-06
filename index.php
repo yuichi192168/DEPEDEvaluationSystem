@@ -285,6 +285,8 @@ $positions = getAllPositions();
             <!-- Hidden fields to enable database and CAR saving -->
             <input type="hidden" name="save_to_database" value="1">
             <input type="hidden" name="save_to_car" value="1">
+            <input type="hidden" id="hidden_salary_grade" name="salary_grade" value="0">
+            <input type="hidden" id="hidden_category" name="category" value="">
             
             <!-- Position Information -->
             <div class="form-section">
@@ -350,12 +352,12 @@ $positions = getAllPositions();
                         <span class="helper-text">Name of your schools division</span>
                     </div>
                     <div class="form-group">
-                        <label for="contact_number">Contact Number <span class="required-indicator">*</span></label>
+                        <label for="contact_number">Contact Number</label>
                         <div class="field-wrapper">
-                            <input type="text" id="contact_number" name="contact_number" required>
+                            <input type="text" id="contact_number" name="contact_number">
                             <span class="valid-indicator" id="contact_number_valid_indicator">✓</span>
                         </div>
-                        <span class="helper-text">Use 09XXXXXXXXX or +639XXXXXXXXX format</span>
+                        <span class="helper-text">Use 09XXXXXXXXX or +639XXXXXXXXX format (optional)</span>
                     </div>
                 </div>
                 <div id="baselineInfo" class="baseline-info" style="display: none;">
@@ -517,6 +519,22 @@ $positions = getAllPositions();
                     </div>
                 </div>
                 
+                <!-- EXACT VALUES for Training & Experience -->
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="applicant_training_hours">Training Hours (Exact)</label>
+                        <input type="number" id="applicant_training_hours" name="applicant_training_hours" 
+                               min="0" step="0.5" value="0">
+                        <span class="help-text">Enter exact number of training hours (overwrites dropdown selection)</span>
+                    </div>
+                    <div class="form-group">
+                        <label for="applicant_experience_months">Experience Months (Exact)</label>
+                        <input type="number" id="applicant_experience_months" name="applicant_experience_months" 
+                               min="0" step="0.5" value="0">
+                        <span class="help-text">Enter exact number of months (overwrites dropdown selection)</span>
+                    </div>
+                </div>
+                
                 <div class="form-row">
                     <div class="form-group">
                         <label for="applicant_performance">Performance Rating (Level) *</label>
@@ -537,7 +555,7 @@ $positions = getAllPositions();
                         <label for="applicant_application_of_education">Application of Education (Level) *</label>
                         <input type="number" id="applicant_application_of_education" 
                                name="applicant_application_of_education" min="0" max="5" step="0.5" value="0">
-                        <span class="help-text">Enter rating from 0 to 5 (0=Not Relevant, 5=Highly Relevant). Scored by weighted computation: (rating/5) × weight</span>
+                        <span class="help-text">Enter rating from 0 to 5. Score equals your input directly (no calculation)</span>
                     </div>
                     <div class="form-group">
                         <label for="applicant_application_of_ld">Application of L&amp;D (Level) *</label>
@@ -718,13 +736,75 @@ $positions = getAllPositions();
         // Position baseline data
         const positions = <?php echo json_encode($positions); ?>;
 
-        // Populate Position Group select by calling backend API and wire cascading behavior
+        // Populate position_key dropdown when group is selected
+        function populatePositionsForGroup(groupIdx) {
+            console.log('[populatePositionsForGroup] Called with groupIdx =', groupIdx);
+            
+            const psel = document.getElementById('position_key');
+            if (!psel) {
+                console.error('[populatePositionsForGroup] position_key element not found');
+                return;
+            }
+            
+            if (!window.positionGroups) {
+                console.error('[populatePositionsForGroup] window.positionGroups is not set');
+                return;
+            }
+            
+            if (!window.positionGroups[groupIdx]) {
+                console.error('[populatePositionsForGroup] No group at index', groupIdx);
+                return;
+            }
+            
+            const selectedGroup = window.positionGroups[groupIdx];
+            console.log('[populatePositionsForGroup] Selected group:', selectedGroup.group);
+            console.log('[populatePositionsForGroup] Positions count:', selectedGroup.positions ? selectedGroup.positions.length : 0);
+            
+            psel.innerHTML = '<option value="">-- Select a Position --</option>';
+            
+            if (selectedGroup && selectedGroup.positions && selectedGroup.positions.length > 0) {
+                selectedGroup.positions.forEach(posName => {
+                    // Try to find the key for this position in the baseline library
+                    let foundKey = null;
+                    for (const k in positions) {
+                        if (positions[k] && positions[k].position_name === posName) {
+                            foundKey = k;
+                            break;
+                        }
+                    }
+                    
+                    // Create option element
+                    const o = document.createElement('option');
+                    o.value = foundKey || posName;
+                    o.textContent = posName;
+                    psel.appendChild(o);
+                });
+                console.log('[populatePositionsForGroup] SUCCESS: Populated', selectedGroup.positions.length, 'positions');
+            }
+        }
+
+        // Populate Position Group select by calling backend API
         async function loadPositionGroups() {
+            console.log('[loadPositionGroups] Starting...');
             try {
+                console.log('[loadPositionGroups] Fetching api/get_position_groups.php');
                 const resp = await fetch('api/get_position_groups.php');
+                console.log('[loadPositionGroups] Response status:', resp.status);
+                
+                if (!resp.ok) throw new Error('API returned ' + resp.status);
+                
                 const groups = await resp.json();
+                console.log('[loadPositionGroups] Received', groups.length, 'groups');
+                
+                if (!Array.isArray(groups) || groups.length === 0) {
+                    throw new Error('No position groups returned');
+                }
+                
                 const gsel = document.getElementById('position_group_select');
-                if (!gsel) return;
+                if (!gsel) {
+                    console.error('[loadPositionGroups] position_group_select element not found');
+                    return;
+                }
                 
                 gsel.innerHTML = '<option value="">-- Select a Position Group --</option>';
                 groups.forEach((g, idx) => {
@@ -736,49 +816,97 @@ $positions = getAllPositions();
                 
                 // expose for other handlers
                 window.positionGroups = groups;
+                console.log('[loadPositionGroups] SUCCESS: Groups loaded and stored in window.positionGroups');
                 
-                // When group changes, populate position_key with positions from that group
-                gsel.addEventListener('change', function() {
-                    const groupIdx = parseInt(this.value);
-                    const selectedGroup = groups[groupIdx];
-                    const psel = document.getElementById('position_key');
-                    if (!psel) return;
-                    
-                    // Clear and add custom option
-                    psel.innerHTML = '<option value="custom">-- Custom Position (Manual Entry) --</option>';
-                    
-                    if (selectedGroup && selectedGroup.positions && selectedGroup.positions.length) {
-                        selectedGroup.positions.forEach(posName => {
-                            // Try to find the key for this position in the baseline library
-                            let foundKey = null;
-                            for (const k in positions) {
-                                if (positions[k] && positions[k].position_name === posName) {
-                                    foundKey = k;
-                                    break;
-                                }
-                            }
-                            
-                            // Create option element
-                            const o = document.createElement('option');
-                            o.value = foundKey || posName;
-                            o.textContent = posName;
-                            psel.appendChild(o);
-                        });
-                        
-                        // Auto-select first position in group (skip custom)
-                        if (psel.options.length > 1) {
-                            psel.selectedIndex = 1;
-                            psel.dispatchEvent(new Event('change'));
-                        }
+            } catch (e) {
+                console.error('[loadPositionGroups] ERROR:', e.message);
+                console.warn('Falling back to manual group structure...');
+                
+                // Fallback: Build groups from positions object if API fails
+                const gsel = document.getElementById('position_group_select');
+                if (!gsel || !positions) {
+                    console.error('[loadPositionGroups] Fallback failed: missing gsel or positions');
+                    return;
+                }
+                
+                const fallbackGroups = {};
+                for (const k in positions) {
+                    const pos = positions[k];
+                    const g = pos.position_group || 'Other';
+                    if (!fallbackGroups[g]) fallbackGroups[g] = [];
+                    if (!fallbackGroups[g].includes(pos.position_name)) {
+                        fallbackGroups[g].push(pos.position_name);
+                    }
+                }
+                
+                // Populate from fallback
+                gsel.innerHTML = '<option value="">-- Select a Position Group --</option>';
+                const fallbackArray = [];
+                const groupOrder = ['TEACHING POSITIONS', 'HIGHER TEACHING POSITIONS', 'SCHOOL ADMINISTRATION POSITION', 'RELATED TEACHING POSITION', 'NON-TEACHING LEVEL I', 'NON-TEACHING LEVEL II'];
+                
+                groupOrder.forEach(grp => {
+                    if (fallbackGroups[grp]) {
+                        fallbackArray.push({group: grp, positions: fallbackGroups[grp]});
                     }
                 });
-            } catch (e) {
-                console.error('Failed to load position groups', e);
+                
+                for (const [key, grp] of Object.entries(fallbackGroups)) {
+                    if (!groupOrder.includes(key)) {
+                        fallbackArray.push({group: key, positions: grp});
+                    }
+                }
+                
+                fallbackArray.forEach((g, idx) => {
+                    const opt = document.createElement('option');
+                    opt.value = idx;
+                    opt.textContent = g.group;
+                    gsel.appendChild(opt);
+                });
+                
+                window.positionGroups = fallbackArray;
+                console.log('[loadPositionGroups] Fallback SUCCESS: Loaded', fallbackArray.length, 'groups from positions object');
             }
         }
 
-        // Load groups on startup
-        loadPositionGroups();
+        // Load groups on startup - wait for DOM to be ready
+        console.log('[INIT] document.readyState =', document.readyState);
+        if (document.readyState === 'loading') {
+            console.log('[INIT] DOM still loading, attaching DOMContentLoaded listener');
+            document.addEventListener('DOMContentLoaded', function setupPositionGroupListener() {
+                console.log('[DOMContentLoaded] Fired, setting up position group loader');
+                loadPositionGroups();
+                const gsel = document.getElementById('position_group_select');
+                if (gsel) {
+                    console.log('[DOMContentLoaded] Attaching change listener to position_group_select');
+                    gsel.addEventListener('change', function() {
+                        const groupIdx = parseInt(this.value);
+                        console.log('[position_group_select change] Change event fired, value =', this.value, ', groupIdx =', groupIdx);
+                        if (!isNaN(groupIdx)) {
+                            populatePositionsForGroup(groupIdx);
+                        }
+                    });
+                } else {
+                    console.error('[DOMContentLoaded] position_group_select element not found');
+                }
+            });
+        } else {
+            // DOM is already loaded
+            console.log('[INIT] DOM already loaded, executing immediately');
+            loadPositionGroups();
+            const gsel = document.getElementById('position_group_select');
+            if (gsel) {
+                console.log('[INIT] Attaching change listener to position_group_select');
+                gsel.addEventListener('change', function() {
+                    const groupIdx = parseInt(this.value);
+                    console.log('[position_group_select change] Change event fired, value =', this.value, ', groupIdx =', groupIdx);
+                    if (!isNaN(groupIdx)) {
+                        populatePositionsForGroup(groupIdx);
+                    }
+                });
+            } else {
+                console.error('[INIT] position_group_select element not found');
+            }
+        }
         
         // Level conversion functions (client-side)
         function convertEducationToLevel(degree, mastersUnits, doctoralUnits) {
@@ -1007,6 +1135,8 @@ $positions = getAllPositions();
                 if (selInput) selInput.value = 'custom';
                 if (appliedInput) appliedInput.value = '';
                 document.getElementById('job_group_sg_level').value = '';
+                document.getElementById('hidden_salary_grade').value = 0;
+                document.getElementById('hidden_category').value = '';
                 document.getElementById('baselineInfo').style.display = 'none';
                 updateAllLevels();
                 calculatePreview();
@@ -1032,6 +1162,8 @@ $positions = getAllPositions();
                 window.selectedPositionKey = null;
                 if (appliedInput) appliedInput.value = keyOrName || '';
                 document.getElementById('job_group_sg_level').value = '';
+                document.getElementById('hidden_salary_grade').value = 0;
+                document.getElementById('hidden_category').value = '';
                 document.getElementById('baselineInfo').style.display = 'none';
                 updateAllLevels();
                 calculatePreview();
@@ -1069,6 +1201,8 @@ $positions = getAllPositions();
 
             // Auto-populate Job Group/SG-Level and baseline fields
             document.getElementById('job_group_sg_level').value = 'Group ' + pos.position_group + ' / Salary Grade ' + pos.salary_grade;
+            document.getElementById('hidden_salary_grade').value = pos.salary_grade || 0;
+            document.getElementById('hidden_category').value = pos.category || '';
             document.getElementById('baseline_education_degree').value = pos.education.degree;
             document.getElementById('baseline_education_masters_units').value = pos.education.masters_units || 0;
             document.getElementById('baseline_education_doctoral_units').value = pos.education.doctoral_units || 0;
@@ -1294,7 +1428,7 @@ $positions = getAllPositions();
                     'c': { appLevel: appExperienceLevel, baseLevel: baseExperienceLevel, scoring: 'increment' },
                     'd': { appLevel: appPerformance, baseLevel: basePerformance, scoring: 'weighted' },
                     'e': { appLevel: appOA, baseLevel: baseOA, scoring: 'direct_points' },
-                    'f': { appLevel: appAOE, baseLevel: baseAOE, scoring: 'weighted' },
+                    'f': { appLevel: appAOE, baseLevel: baseAOE, scoring: 'direct_rating' },
                     'g': { appLevel: appAOLD, baseLevel: baseAOLD, scoring: 'weighted' },
                     'h': { appLevel: appPotential, baseLevel: basePotential, scoring: 'weighted' }
                 };
@@ -1344,6 +1478,9 @@ $positions = getAllPositions();
                 } else if (criterion.scoring === 'direct_points') {
                     increment = `min(${criterion.appLevel}, ${criterion.max_points})`;
                     score = Math.min(Math.max(0, parseFloat(criterion.appLevel) || 0), parseFloat(criterion.max_points) || 0);
+                } else if (criterion.scoring === 'direct_rating') {
+                    increment = `${criterion.appLevel}`;
+                    score = parseFloat(criterion.appLevel) || 0;
                 }
 
                 totalScore += score;
@@ -1380,6 +1517,16 @@ $positions = getAllPositions();
             'baseline_training', 'baseline_experience', 'baseline_performance', 'baseline_outstanding_accomplishments',
             'baseline_application_of_education', 'baseline_application_of_ld', 'baseline_potential',
             'position_group_select',
+        // Register input listeners for all form updates (including new exact value fields)
+        const inputsToWatch = [
+            'applicant_name', 'position_applied', 'schools_division_office', 'contact_number',
+            'applicant_education_degree', 'applicant_education_masters_units', 'applicant_education_doctoral_units',
+            'applicant_training_hours', 'applicant_experience_months', // New exact value fields
+            'applicant_performance', 'applicant_outstanding_accomplishments', 'applicant_application_of_education',
+            'applicant_application_of_ld', 'applicant_potential',
+            'baseline_education_degree', 'baseline_education_masters_units', 'baseline_education_doctoral_units',
+            'baseline_training', 'baseline_experience', 'baseline_performance', 'baseline_outstanding_accomplishments',
+            'baseline_application_of_education', 'baseline_application_of_ld', 'baseline_potential',
             'applicant_education_dropdown', 'applicant_training_dropdown', 'applicant_experience_dropdown'
         ];
         
@@ -1387,10 +1534,32 @@ $positions = getAllPositions();
             const element = document.getElementById(id);
             if (element) {
                 element.addEventListener('input', function() {
+                    // If exact hours/months are entered, update the hidden fields
+                    const trainingHours = parseFloat(document.getElementById('applicant_training_hours')?.value || 0);
+                    const experienceMonths = parseFloat(document.getElementById('applicant_experience_months')?.value || 0);
+                    
+                    if (trainingHours > 0) {
+                        document.getElementById('applicant_training').value = trainingHours;
+                    }
+                    if (experienceMonths > 0) {
+                        document.getElementById('applicant_experience').value = experienceMonths;
+                    }
+                    
                     updateAllLevels();
                     calculatePreview();
                 });
                 element.addEventListener('change', function() {
+                    // If exact hours/months are entered, update the hidden fields
+                    const trainingHours = parseFloat(document.getElementById('applicant_training_hours')?.value || 0);
+                    const experienceMonths = parseFloat(document.getElementById('applicant_experience_months')?.value || 0);
+                    
+                    if (trainingHours > 0) {
+                        document.getElementById('applicant_training').value = trainingHours;
+                    }
+                    if (experienceMonths > 0) {
+                        document.getElementById('applicant_experience').value = experienceMonths;
+                    }
+                    
                     updateAllLevels();
                     calculatePreview();
                 });
@@ -1417,6 +1586,20 @@ $positions = getAllPositions();
             const frm = document.getElementById('evaluationForm');
             if (frm) frm.reset();
         }
+        
+        // Before form submission, use exact values if provided
+        document.addEventListener('submit', function(e) {
+            const trainingHours = parseFloat(document.getElementById('applicant_training_hours')?.value || 0);
+            const experienceMonths = parseFloat(document.getElementById('applicant_experience_months')?.value || 0);
+            
+            // If exact values are provided (> 0), use them instead of dropdown calculations
+            if (trainingHours > 0) {
+                document.getElementById('applicant_training').value = trainingHours;
+            }
+            if (experienceMonths > 0) {
+                document.getElementById('applicant_experience').value = experienceMonths;
+            }
+        }, true); // Use capture phase to run before other handlers
     </script>
 
     <!-- Sticky Action Bar (keeps primary actions visible while scrolling) -->

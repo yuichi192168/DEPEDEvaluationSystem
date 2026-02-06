@@ -116,29 +116,27 @@ if (!empty($errors)) {
 }
 
 // Helper functions for level conversion
+// MUST MATCH index.php live preview calculations exactly
 function convertEducationToLevel($degree, $mastersUnits, $doctoralUnits) {
     $level = 0;
     if ($degree === 'Doctorate' || strtolower($degree) === 'phd' || strtolower($degree) === 'ph.d') {
-        $level = 21;
-        if ($doctoralUnits > 0) {
-            $level += min(floor($doctoralUnits / 3), 10);
-        }
+        $level = 31;
     } else if ($degree === 'Master') {
-        $level = 12;
+        $level = 21;  // Changed from 12 to 21 to match live preview
         if ($doctoralUnits > 0) {
             $level += min(floor($doctoralUnits / 3), 9);
         }
     } else if ($degree === 'Bachelor') {
         $level = 6;
         if ($mastersUnits > 0) {
-            $level += min(floor($mastersUnits / 3), 6);
+            $level += min(floor($mastersUnits / 3), 14);  // Changed from 6 to 14 to match live preview
         }
     }
     return $level;
 }
 
 function convertTrainingToLevel($hours) {
-    return $hours < 8 ? 1 : floor($hours / 8) + 1;
+    return floatval($hours) < 8 ? 1 : floor(floatval($hours) / 8) + 1;
 }
 
 function convertExperienceToLevel($months) {
@@ -179,26 +177,39 @@ $baseTrainingLevel = convertTrainingToLevel($baselineTraining);
 $appExperienceLevel = convertExperienceToLevel($applicantExperience);
 $baseExperienceLevel = convertExperienceToLevel($baselineExperience);
 
-// Get position group for weights
-$positionGroupName = '';
-if (!empty($positionKey) && $positionKey !== 'custom') {
-    $positions = getAllPositions();
-    if (isset($positions[$positionKey])) {
-        $positionGroupName = $positions[$positionKey]['position_group'] ?? '';
-    }
-}
+// Get dynamic weights from evaluation criteria based on position group and salary grade
+$salaryGrade = intval($_POST['salary_grade'] ?? 0);
+$category = trim($_POST['category'] ?? '');
+$criteria = getEvaluationCriteria($positionGroup, $salaryGrade, $category);
+$weights = [];
 
-// Default weights (NON-TEACHING LEVEL I)
-$weights = [
-    'education' => 5,
-    'training' => 5,
-    'experience' => 20,
-    'performance' => 20,
-    'outstanding_accomplishments' => 10,
-    'application_of_education' => 10,
-    'application_of_ld' => 10,
-    'potential' => 20
-];
+// Extract max_points from criteria as weights
+if (isset($criteria['criteria']) && is_array($criteria['criteria'])) {
+    $criteriaKeys = ['a' => 'education', 'b' => 'training', 'c' => 'experience', 
+                     'd' => 'performance', 'e' => 'outstanding_accomplishments', 
+                     'f' => 'application_of_education', 'g' => 'application_of_ld', 
+                     'h' => 'potential'];
+    
+    foreach ($criteriaKeys as $letter => $key) {
+        if (isset($criteria['criteria'][$letter])) {
+            $weights[$key] = floatval($criteria['criteria'][$letter]['max_points'] ?? 0);
+        } else {
+            $weights[$key] = 0;
+        }
+    }
+} else {
+    // Fallback to default weights if criteria not found
+    $weights = [
+        'education' => 5,
+        'training' => 5,
+        'experience' => 20,
+        'performance' => 20,
+        'outstanding_accomplishments' => 10,
+        'application_of_education' => 10,
+        'application_of_ld' => 10,
+        'potential' => 20
+    ];
+}
 
 // Calculate scores
 $educationIncrement = calculateIncrement($appEduLevel, $baseEduLevel);
@@ -210,7 +221,7 @@ $trainingScore = convertIncrementToPoints($trainingIncrement, $weights['training
 $experienceScore = convertIncrementToPoints($experienceIncrement, $weights['experience']);
 $performanceScore = convertRatingToWeightedPoints($applicantPerformance, $weights['performance']);
 $outstandingAccomplishmentsScore = min($applicantOutstandingAccomplishments, $weights['outstanding_accomplishments']);
-$applicationOfEducationScore = convertRatingToWeightedPoints($applicantApplicationOfEducation, $weights['application_of_education']);
+$applicationOfEducationScore = floatval($applicantApplicationOfEducation); // Use value directly
 $applicationOfLdScore = convertRatingToWeightedPoints($applicantApplicationOfLd, $weights['application_of_ld']);
 $potentialScore = convertRatingToWeightedPoints($applicantPotential, $weights['potential']);
 

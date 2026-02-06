@@ -240,32 +240,23 @@ class EvaluationStorage {
      * Get comparative assessment results for a position with ranking
      */
     public function getComparativeAssessmentResults($positionId) {
+        // Retrieve draft data to recalculate scores with current formulas
         $query = "
             SELECT 
                 car.id,
                 car.position_id,
                 car.applicant_id,
                 car.application_code,
-                car.education_score,
-                car.training_score,
-                car.experience_score,
-                car.performance_score,
-                car.outstanding_accomplishments_score,
-                car.application_of_education_score,
-                car.application_of_ld_score,
-                car.potential_score,
                 car.total_score,
                 car.remarks,
                 a.name as applicant_name,
                 p.position_name,
                 p.position_group,
-                @rank := IF(@prev_score = car.total_score, @rank, @rank + @rank_increment) as rank,
-                @rank_increment := IF(@prev_score = car.total_score, 0, 1) as rank_increment,
-                @prev_score := car.total_score as prev_score
+                d.data as draft_data
             FROM comparative_assessment_results car
             INNER JOIN applicants a ON car.applicant_id = a.id
             INNER JOIN positions p ON car.position_id = p.id
-            CROSS JOIN (SELECT @rank := 0, @prev_score := NULL, @rank_increment := 1) init
+            LEFT JOIN drafts d ON car.application_code = d.application_code COLLATE utf8mb4_unicode_ci
             WHERE car.position_id = ? AND a.archive_status = 'active'
             ORDER BY car.total_score DESC
         ";
@@ -276,24 +267,127 @@ class EvaluationStorage {
         
         $result = $stmt->get_result();
         $results = [];
+        $rank = 1;
+        $previousScore = null;
+        
+        require_once __DIR__ . '/../config/baseline_library.php';
+        require_once __DIR__ . '/../classes/HRMPSBEvaluator.php';
         
         while ($row = $result->fetch_assoc()) {
+            $draftData = [];
+            $totalScore = floatval($row['total_score']);
+            $scores = [
+                'education_score' => 0,
+                'training_score' => 0,
+                'experience_score' => 0,
+                'performance_score' => 0,
+                'outstanding_accomplishments_score' => 0,
+                'application_of_education_score' => 0,
+                'application_of_ld_score' => 0,
+                'potential_score' => 0
+            ];
+            
+            // Parse draft data if available
+            if (!empty($row['draft_data'])) {
+                $draftData = json_decode($row['draft_data'], true) ?: [];
+            }
+            
+            // Recalculate scores from applicant data if draft data available
+            if (!empty($draftData)) {
+                try {
+                    // Initialize evaluator
+                    $evaluator = new HRMPSBEvaluator('NON-TEACHING LEVEL II'); // Default, will be overridden
+                    
+                    // Get position group if available
+                    $posGroup = $row['position_group'] ?? 'NON-TEACHING LEVEL II';
+                    $evaluator = new HRMPSBEvaluator($posGroup);
+                    
+                    // Get baseline using position_key from draft
+                    $allPos = getAllPositions();
+                    $positionKey = $draftData['position_key'] ?? 'custom';
+                    $baseline = getBaselineForPosition($positionKey);
+                    
+                    // Build applicant data from draft
+                    $appData = [
+                        'name' => $row['applicant_name'],
+                        'position' => $row['position_name'],
+                        'education' => [
+                            'degree' => $draftData['applicant_education_degree'] ?? 'None',
+                            'masters_units' => intval($draftData['applicant_education_masters_units'] ?? 0),
+                            'doctoral_units' => intval($draftData['applicant_education_doctoral_units'] ?? 0)
+                        ],
+                        'training' => floatval($draftData['applicant_training'] ?? 0),
+                        'experience' => floatval($draftData['applicant_experience'] ?? 0),
+                        'performance' => floatval($draftData['applicant_performance'] ?? 0),
+                        'outstanding_accomplishments' => floatval($draftData['applicant_outstanding_accomplishments'] ?? 0),
+                        'application_of_education' => floatval($draftData['applicant_application_of_education'] ?? 0),
+                        'application_of_ld' => floatval($draftData['applicant_application_of_ld'] ?? 0),
+                        'potential' => floatval($draftData['applicant_potential'] ?? 0)
+                    ];
+                    
+                    // Build baseline from database
+                    $baseData = [
+                        'name' => 'Baseline',
+                        'position' => $row['position_name'],
+                        'education' => [
+                            'degree' => $baseline['education']['degree'] ?? 'None',
+                            'masters_units' => intval($baseline['education']['masters_units'] ?? 0),
+                            'doctoral_units' => intval($baseline['education']['doctoral_units'] ?? 0)
+                        ],
+                        'training' => floatval($baseline['training'] ?? 0),
+                        'experience' => floatval($baseline['experience'] ?? 0),
+                        'performance' => floatval($baseline['performance'] ?? 0),
+                        'outstanding_accomplishments' => floatval($baseline['outstanding_accomplishments'] ?? 0),
+                        'application_of_education' => floatval($baseline['application_of_education'] ?? 0),
+                        'application_of_ld' => floatval($baseline['application_of_ld'] ?? 0),
+                        'potential' => floatval($baseline['potential'] ?? 0)
+                    ];
+                    
+                    // Perform evaluation with current formulas
+                    $evaluation = $evaluator->evaluateApplicant($appData, $baseData);
+                    
+                    // Extract recalculated scores
+                    if (isset($evaluation['criteria'])) {
+                        $scores['education_score'] = floatval($evaluation['criteria']['education']['final_score'] ?? 0);
+                        $scores['training_score'] = floatval($evaluation['criteria']['training']['final_score'] ?? 0);
+                        $scores['experience_score'] = floatval($evaluation['criteria']['experience']['final_score'] ?? 0);
+                        $scores['performance_score'] = floatval($evaluation['criteria']['performance']['final_score'] ?? 0);
+                        $scores['outstanding_accomplishments_score'] = floatval($evaluation['criteria']['outstanding_accomplishments']['final_score'] ?? 0);
+                        $scores['application_of_education_score'] = floatval($evaluation['criteria']['application_of_education']['final_score'] ?? 0);
+                        $scores['application_of_ld_score'] = floatval($evaluation['criteria']['application_of_ld']['final_score'] ?? 0);
+                        $scores['potential_score'] = floatval($evaluation['criteria']['potential']['final_score'] ?? 0);
+                        
+                        // Recalculate total score with current formulas
+                        $totalScore = array_sum($scores);
+                    }
+                } catch (Exception $e) {
+                    // If recalculation fails, fall back to database values
+                    error_log("Score recalculation failed for applicant {$row['applicant_name']}: {$e->getMessage()}");
+                }
+            }
+            
+            // Apply ranking logic
+            if ($previousScore === null || $previousScore != $totalScore) {
+                $rank = count($results) + 1;
+                $previousScore = $totalScore;
+            }
+            
             $results[] = [
                 'id' => $row['id'],
                 'applicant_name' => $row['applicant_name'],
                 'application_code' => $row['application_code'],
                 'position_applied' => $row['position_name'],
                 'position_group' => $row['position_group'],
-                'education_score' => floatval($row['education_score']),
-                'training_score' => floatval($row['training_score']),
-                'experience_score' => floatval($row['experience_score']),
-                'performance_score' => floatval($row['performance_score']),
-                'outstanding_accomplishments_score' => floatval($row['outstanding_accomplishments_score']),
-                'application_of_education_score' => floatval($row['application_of_education_score']),
-                'application_of_ld_score' => floatval($row['application_of_ld_score']),
-                'potential_score' => floatval($row['potential_score']),
-                'total_score' => floatval($row['total_score']),
-                'rank' => intval($row['rank']),
+                'education_score' => $scores['education_score'],
+                'training_score' => $scores['training_score'],
+                'experience_score' => $scores['experience_score'],
+                'performance_score' => $scores['performance_score'],
+                'outstanding_accomplishments_score' => $scores['outstanding_accomplishments_score'],
+                'application_of_education_score' => $scores['application_of_education_score'],
+                'application_of_ld_score' => $scores['application_of_ld_score'],
+                'potential_score' => $scores['potential_score'],
+                'total_score' => $totalScore,
+                'rank' => $rank,
                 'remarks' => $row['remarks']
             ];
         }

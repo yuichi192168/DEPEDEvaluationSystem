@@ -1,0 +1,19 @@
+﻿-- Experience calculation check:
+-- Live preview: 12.00
+-- Generated (database): 16.00
+
+-- For applicant with 93 months experience:
+-- appLevel = floor(93/6) + 1 = 16
+
+-- If database shows 16.00 with weight=20:
+-- increment needed: 8 (for 8*2=16)
+-- So: 16 - baseLevel = 8  baseLevel = 8
+-- baseLevel 8 = (8-1)*6 = 42 months OLD baseline
+
+-- If live preview shows 12.00 with weight=15:
+-- increment needed: 8 (for 8*1.5=12)  
+-- So: 16 - baseLevel = 8  baseLevel = 8
+-- baseLevel 8 = 42 months (STILL using old baseline!)
+
+-- This means the baseline auto-load is still loading 42 months for experience
+-- even though we changed it to 0 in baseline_library.php

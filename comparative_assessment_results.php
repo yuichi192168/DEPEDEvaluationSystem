@@ -92,6 +92,114 @@ function getCriteriaMappings($positionGroup, $salaryGrade = null, $category = nu
     return $mappings;
 }
 
+/**
+ * Recalculate scores from draft data using current live preview formulas
+ */
+function recalculateScoresFromDraftData(&$row) {
+    global $conn;
+    
+    // Only recalculate if we have an application code
+    if (empty($row['application_code'])) {
+        return $row;
+    }
+    
+    try {
+        // Fetch draft data for this applicant
+        $stmt = $conn->prepare("SELECT data FROM drafts WHERE application_code = ? LIMIT 1");
+        $stmt->bind_param("s", $row['application_code']);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        
+        if ($result->num_rows === 0) {
+            return $row; // No draft data, use database values
+        }
+        
+        $draft = $result->fetch_assoc();
+        $draftData = json_decode($draft['data'], true) ?: [];
+        
+        if (empty($draftData)) {
+            return $row; // Empty draft, use database values
+        }
+        
+        require_once __DIR__ . '/classes/HRMPSBEvaluator.php';
+        
+        // Determine position group
+        $posGroup = $row['position_group'] ?? 'NON-TEACHING LEVEL II';
+        $evaluator = new HRMPSBEvaluator($posGroup);
+        
+        // Get baseline using position_key from draft, or fall back to position_name lookup
+        $positionKey = $draftData['position_key'] ?? 'custom';
+        $baseline = getBaselineForPosition($positionKey);
+        
+        // Build applicant data from draft
+        $appData = [
+            'name' => $row['name'],
+            'position' => $row['position_name'],
+            'education' => [
+                'degree' => $draftData['applicant_education_degree'] ?? 'None',
+                'masters_units' => intval($draftData['applicant_education_masters_units'] ?? 0),
+                'doctoral_units' => intval($draftData['applicant_education_doctoral_units'] ?? 0)
+            ],
+            'training' => floatval($draftData['applicant_training'] ?? 0),
+            'experience' => floatval($draftData['applicant_experience'] ?? 0),
+            'performance' => floatval($draftData['applicant_performance'] ?? 0),
+            'outstanding_accomplishments' => floatval($draftData['applicant_outstanding_accomplishments'] ?? 0),
+            'application_of_education' => floatval($draftData['applicant_application_of_education'] ?? 0),
+            'application_of_ld' => floatval($draftData['applicant_application_of_ld'] ?? 0),
+            'potential' => floatval($draftData['applicant_potential'] ?? 0)
+        ];
+        
+        // Build baseline
+        $baseData = [
+            'name' => 'Baseline',
+            'position' => $row['position_name'],
+            'education' => [
+                'degree' => $baseline['education']['degree'] ?? 'None',
+                'masters_units' => intval($baseline['education']['masters_units'] ?? 0),
+                'doctoral_units' => intval($baseline['education']['doctoral_units'] ?? 0)
+            ],
+            'training' => floatval($baseline['training'] ?? 0),
+            'experience' => floatval($baseline['experience'] ?? 0),
+            'performance' => floatval($baseline['performance'] ?? 0),
+            'outstanding_accomplishments' => floatval($baseline['outstanding_accomplishments'] ?? 0),
+            'application_of_education' => floatval($baseline['application_of_education'] ?? 0),
+            'application_of_ld' => floatval($baseline['application_of_ld'] ?? 0),
+            'potential' => floatval($baseline['potential'] ?? 0)
+        ];
+        
+        // Recalculate using current formulas
+        $evaluation = $evaluator->evaluateApplicant($appData, $baseData);
+        
+        if (isset($evaluation['criteria'])) {
+            $row['education_score'] = floatval($evaluation['criteria']['education']['final_score'] ?? 0);
+            $row['training_score'] = floatval($evaluation['criteria']['training']['final_score'] ?? 0);
+            $row['experience_score'] = floatval($evaluation['criteria']['experience']['final_score'] ?? 0);
+            $row['performance_score'] = floatval($evaluation['criteria']['performance']['final_score'] ?? 0);
+            $row['outstanding_accomplishments_score'] = floatval($evaluation['criteria']['outstanding_accomplishments']['final_score'] ?? 0);
+            $row['application_of_education_score'] = floatval($evaluation['criteria']['application_of_education']['final_score'] ?? 0);
+            $row['application_of_ld_score'] = floatval($evaluation['criteria']['application_of_ld']['final_score'] ?? 0);
+            $row['potential_score'] = floatval($evaluation['criteria']['potential']['final_score'] ?? 0);
+            
+            // Recalculate total
+            $row['total_score'] = array_sum([
+                $row['education_score'],
+                $row['training_score'],
+                $row['experience_score'],
+                $row['performance_score'],
+                $row['outstanding_accomplishments_score'],
+                $row['application_of_education_score'],
+                $row['application_of_ld_score'],
+                $row['potential_score']
+            ]);
+        }
+    } catch (Exception $e) {
+        // If recalculation fails, just use database values
+        error_log("Score recalculation failed for " . ($row['application_code'] ?? 'unknown') . ": " . $e->getMessage());
+    }
+    
+    return $row;
+}
+
 // Get positions with results
 $positionsResult = $car->getPositionsWithResults();
 $positions = [];
@@ -116,6 +224,9 @@ if ($viewMode === 'all') {
     if ($allResult) {
         $currentPosition = null;
         while ($row = $allResult->fetch_assoc()) {
+            // Recalculate scores from draft data (live preview formulas)
+            $row = recalculateScoresFromDraftData($row);
+            
             $pos = $row['position_name'];
             if ($pos !== $currentPosition) {
                 if (!isset($groupedResults[$pos])) {
@@ -128,6 +239,13 @@ if ($viewMode === 'all') {
             }
             $groupedResults[$pos]['applicants'][] = $row;
         }
+        
+        // Re-sort each position's applicants by recalculated total_score
+        foreach ($groupedResults as $pos => &$posData) {
+            usort($posData['applicants'], function($a, $b) {
+                return $b['total_score'] <=> $a['total_score'];
+            });
+        }
     }
 } else if ($positionId) {
     // Display specific position
@@ -137,6 +255,9 @@ if ($viewMode === 'all') {
     if ($result) {
         $firstRow = true;
         while ($row = $result->fetch_assoc()) {
+            // Recalculate scores from draft data (live preview formulas)
+            $row = recalculateScoresFromDraftData($row);
+            
             if ($firstRow) {
                 $positionDetails = [
                     'id' => $row['id'] ?? $positionId,
@@ -148,6 +269,11 @@ if ($viewMode === 'all') {
             }
             $results[] = $row;
         }
+        
+        // Re-sort results by recalculated total_score
+        usort($results, function($a, $b) {
+            return $b['total_score'] <=> $a['total_score'];
+        });
     }
 }
 
@@ -247,9 +373,9 @@ if (count($positions) > 0) {
     // $cacheBuster = '?v=' . (file_exists(__DIR__ . '/images/favicon.ico') ? filemtime(__DIR__ . '/images/favicon.ico') : time());
     // ?>
     <link rel="apple-touch-icon" sizes="180x180" href="<?php echo $baseUrl; ?>images/apple-touch-icon.png<?php echo $cacheBuster; ?>">
-    <link rel="icon" type="image/png" sizes="32x32" href="<?php echo $baseUrl; ?>images/favicon-32x32.png<?php echo $cacheBuster; ?>">
-    <link rel="icon" type="image/png" sizes="16x16" href="<?php echo $baseUrl; ?>images/favicon-16x16.png<?php echo $cacheBuster; ?>">
-    <link rel="icon" type="image/x-icon" href="<?php echo $baseUrl; ?>images/favicon.ico<?php echo $cacheBuster; ?>">
+    <link rel="icon" type="images/png" sizes="32x32" href="<?php echo $baseUrl; ?>images/favicon-32x32.png<?php echo $cacheBuster; ?>">
+    <link rel="icon" type="images/png" sizes="16x16" href="<?php echo $baseUrl; ?>images/favicon-16x16.png<?php echo $cacheBuster; ?>">
+    <link rel="icon" type="images/x-icon" href="<?php echo $baseUrl; ?>images/favicon.ico<?php echo $cacheBuster; ?>">
     <link rel="manifest" href="<?php echo $baseUrl; ?>images/site.webmanifest<?php echo $cacheBuster; ?>">
     <style>
         * {

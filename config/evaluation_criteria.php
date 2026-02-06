@@ -83,7 +83,7 @@ $evaluationCriteria = [
                 'c' => ['name' => 'Experience', 'max_points' => 10, 'description' => 'Years of relevant experience'],
                 'd' => ['name' => 'Performance', 'max_points' => 20, 'description' => 'Performance rating/appraisal'],
                 'e' => ['name' => 'Outstanding Accomplishments', 'max_points' => 5, 'description' => 'Notable achievements and contributions'],
-                'f' => ['name' => 'Application of Education', 'max_points' => 15, 'description' => 'Applied knowledge in role'],
+                'f' => ['name' => 'Application of Education', 'max_points' => 10, 'description' => 'Applied knowledge in role'],
                 'g' => ['name' => 'Application of L&D', 'max_points' => 10, 'description' => 'Application of learning and development'],
                 'h' => ['name' => 'Potential', 'max_points' => 20, 'description' => 'Written test, BEI, work sample test'],
             ],

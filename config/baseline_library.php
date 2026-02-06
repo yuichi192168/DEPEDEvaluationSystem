@@ -965,7 +965,7 @@ $baselineLibrary = [
         'position_group' => 'NON-TEACHING LEVEL II',
         'salary_grade' => 11,
         'education' => ['degree' => 'Bachelor', 'masters_units' => 0, 'doctoral_units' => 0],
-        'training' => 16, 'experience' => 24,
+        'training' => 0, 'experience' => 0,
         'performance' => 0, 'outstanding_accomplishments' => 0,
         'application_of_education' => 0, 'application_of_ld' => 0, 'potential' => 0
     ],

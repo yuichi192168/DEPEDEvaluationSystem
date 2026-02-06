@@ -435,14 +435,15 @@ class HRMPSBEvaluator {
     
     /**
      * Evaluate Application of Education
+     * Uses the actual score value directly (no capping, no weighting)
      */
     private function evaluateApplicationOfEducation($applicantLevel, $baselineLevel) {
         $weight = $this->weights['application_of_education'];
-        $points = $this->convertRatingToWeightedPoints($applicantLevel, $weight, 5);
+        $points = floatval($applicantLevel); // Use value as-is
 
         return [
             'criterion' => 'Application of Education',
-            'applicant_qualification' => 'Rating ' . $applicantLevel . ' / 5',
+            'applicant_qualification' => 'Score ' . $applicantLevel,
             'applicant_level' => floatval($applicantLevel),
             'baseline_qualification' => $baselineLevel,
             'baseline_level' => floatval($baselineLevel),
