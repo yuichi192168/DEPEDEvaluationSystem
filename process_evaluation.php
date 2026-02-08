@@ -14,6 +14,7 @@ require_once 'initialize.php';
 require_once 'config/baseline_library.php';
 require_once 'config/evaluation_criteria.php';
 require_once 'includes/banners.php';
+require_once 'classes/AssessmentProcessor.php';
 
 // Check if form was submitted
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -118,20 +119,21 @@ if (!empty($errors)) {
 // Helper functions for level conversion
 function convertEducationToLevel($degree, $mastersUnits, $doctoralUnits) {
     $level = 0;
-    if ($degree === 'Doctorate' || strtolower($degree) === 'phd' || strtolower($degree) === 'ph.d') {
-        $level = 21;
-        if ($doctoralUnits > 0) {
-            $level += min(floor($doctoralUnits / 3), 10);
-        }
-    } else if ($degree === 'Master') {
-        $level = 12;
+    $deg = strtolower(trim($degree));
+    if ($deg === 'doctorate' || $deg === 'phd' || $deg === 'ph.d') {
+        $level = 31;
         if ($doctoralUnits > 0) {
             $level += min(floor($doctoralUnits / 3), 9);
         }
-    } else if ($degree === 'Bachelor') {
+    } else if ($deg === 'master') {
+        $level = 21;
+        if ($doctoralUnits > 0) {
+            $level += min(floor($doctoralUnits / 3), 9);
+        }
+    } else if ($deg === 'bachelor') {
         $level = 6;
         if ($mastersUnits > 0) {
-            $level += min(floor($mastersUnits / 3), 6);
+            $level += min(floor($mastersUnits / 3), 14);
         }
     }
     return $level;
@@ -181,15 +183,43 @@ $baseExperienceLevel = convertExperienceToLevel($baselineExperience);
 
 // Get position group for weights
 $positionGroupName = '';
+$salaryGrade = null;
 if (!empty($positionKey) && $positionKey !== 'custom') {
     $positions = getAllPositions();
     if (isset($positions[$positionKey])) {
         $positionGroupName = $positions[$positionKey]['position_group'] ?? '';
+        $salaryGrade = $positions[$positionKey]['salary_grade'] ?? null;
     }
 }
 
+if ($salaryGrade === null && !empty($jobGroupSgLevel)) {
+    if (preg_match('/Salary\s*Grade\s*(\d+)/i', $jobGroupSgLevel, $matches)) {
+        $salaryGrade = intval($matches[1]);
+    }
+}
+
+if (empty($positionGroupName) && $positionGroup !== '') {
+    if (is_numeric($positionGroup)) {
+        $groups = AssessmentProcessor::getPositionGroups();
+        $groupNames = array_keys($groups);
+        $groupIndex = intval($positionGroup);
+        if (isset($groupNames[$groupIndex])) {
+            $positionGroupName = $groupNames[$groupIndex];
+        }
+    } else {
+        $positionGroupName = $positionGroup;
+    }
+}
+
+$category = null;
+if ($positionGroupName === 'NON-TEACHING LEVEL I') {
+    $category = 'non_general_services';
+}
+
+$criteriaConfig = getEvaluationCriteria($positionGroupName, $salaryGrade, $category);
+
 // Default weights (NON-TEACHING LEVEL I)
-$weights = [
+$defaultWeights = [
     'education' => 5,
     'training' => 5,
     'experience' => 20,
@@ -199,6 +229,21 @@ $weights = [
     'application_of_ld' => 10,
     'potential' => 20
 ];
+
+$weights = $defaultWeights;
+if (!empty($criteriaConfig) && isset($criteriaConfig['criteria']) && is_array($criteriaConfig['criteria'])) {
+    $criteria = $criteriaConfig['criteria'];
+    $weights = [
+        'education' => $criteria['a']['max_points'] ?? $defaultWeights['education'],
+        'training' => $criteria['b']['max_points'] ?? $defaultWeights['training'],
+        'experience' => $criteria['c']['max_points'] ?? $defaultWeights['experience'],
+        'performance' => $criteria['d']['max_points'] ?? $defaultWeights['performance'],
+        'outstanding_accomplishments' => $criteria['e']['max_points'] ?? $defaultWeights['outstanding_accomplishments'],
+        'application_of_education' => $criteria['f']['max_points'] ?? $defaultWeights['application_of_education'],
+        'application_of_ld' => $criteria['g']['max_points'] ?? $defaultWeights['application_of_ld'],
+        'potential' => $criteria['h']['max_points'] ?? $defaultWeights['potential']
+    ];
+}
 
 // Calculate scores
 $educationIncrement = calculateIncrement($appEduLevel, $baseEduLevel);
@@ -210,7 +255,7 @@ $trainingScore = convertIncrementToPoints($trainingIncrement, $weights['training
 $experienceScore = convertIncrementToPoints($experienceIncrement, $weights['experience']);
 $performanceScore = convertRatingToWeightedPoints($applicantPerformance, $weights['performance']);
 $outstandingAccomplishmentsScore = min($applicantOutstandingAccomplishments, $weights['outstanding_accomplishments']);
-$applicationOfEducationScore = convertRatingToWeightedPoints($applicantApplicationOfEducation, $weights['application_of_education']);
+$applicationOfEducationScore = min(max(0, $applicantApplicationOfEducation), $weights['application_of_education']);
 $applicationOfLdScore = convertRatingToWeightedPoints($applicantApplicationOfLd, $weights['application_of_ld']);
 $potentialScore = convertRatingToWeightedPoints($applicantPotential, $weights['potential']);
 

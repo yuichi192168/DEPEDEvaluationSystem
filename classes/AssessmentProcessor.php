@@ -374,8 +374,8 @@ class AssessmentProcessor
         // scale outstanding_total (max 15) into weight cap
         $outstanding = round(($outstanding_total / 15) * $weights['outstanding'], 2);
 
-        // application of education & L&D: expect 0-10 scale
-        $app_edu = round((floatval($applicant['application_of_education'] ?? 0) / 10) * $weights['application_of_education'], 2);
+        // application of education: raw points capped by criterion max
+        $app_edu = min(max(0, floatval($applicant['application_of_education'] ?? 0)), $weights['application_of_education']);
         $app_ld = round((floatval($applicant['application_of_ld'] ?? 0) / 10) * $weights['application_of_ld'], 2);
 
         // potential: combine written exam (0-100) and BEI (0-5) normalized to weight
@@ -407,7 +407,7 @@ class AssessmentProcessor
         }
 
         $outstanding = round((min(10, floatval($applicant['outstanding_points'] ?? 0))/10) * $weights['outstanding'],2);
-        $app_edu = round((floatval($applicant['application_of_education'] ?? 0)/10) * $weights['application_of_education'],2);
+        $app_edu = min(max(0, floatval($applicant['application_of_education'] ?? 0)), $weights['application_of_education']);
         $app_ld = round((floatval($applicant['application_of_ld'] ?? 0)/10) * $weights['application_of_ld'],2);
         $potential = round((floatval($applicant['written_exam'] ?? 0)/100) * $weights['potential'],2);
 
@@ -423,7 +423,7 @@ class AssessmentProcessor
 
         $performance = round((floatval($applicant['performance_rating'] ?? 0)/5) * $weights['performance'],2);
         $outstanding = round((min(10,floatval($applicant['outstanding_points'] ?? 0))/10) * $weights['outstanding'],2);
-        $app_edu = round((floatval($applicant['application_of_education'] ?? 0)/10) * $weights['application_of_education'],2);
+        $app_edu = min(max(0, floatval($applicant['application_of_education'] ?? 0)), $weights['application_of_education']);
         $app_ld = round((floatval($applicant['application_of_ld'] ?? 0)/10) * $weights['application_of_ld'],2);
         $potential = round((floatval($applicant['potential_score'] ?? 0)/100) * $weights['potential'],2);
 

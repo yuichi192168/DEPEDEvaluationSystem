@@ -537,7 +537,7 @@ $positions = getAllPositions();
                         <label for="applicant_application_of_education">Application of Education (Level) *</label>
                         <input type="number" id="applicant_application_of_education" 
                                name="applicant_application_of_education" min="0" max="5" step="0.5" value="0">
-                        <span class="help-text">Enter rating from 0 to 5 (0=Not Relevant, 5=Highly Relevant). Scored by weighted computation: (rating/5) × weight</span>
+                           <span class="help-text">Enter rating from 0 to 5 (0=Not Relevant, 5=Highly Relevant). Final score equals the rating, capped by the criterion max points.</span>
                     </div>
                     <div class="form-group">
                         <label for="applicant_application_of_ld">Application of L&amp;D (Level) *</label>
@@ -1294,7 +1294,7 @@ $positions = getAllPositions();
                     'c': { appLevel: appExperienceLevel, baseLevel: baseExperienceLevel, scoring: 'increment' },
                     'd': { appLevel: appPerformance, baseLevel: basePerformance, scoring: 'weighted' },
                     'e': { appLevel: appOA, baseLevel: baseOA, scoring: 'direct_points' },
-                    'f': { appLevel: appAOE, baseLevel: baseAOE, scoring: 'weighted' },
+                    'f': { appLevel: appAOE, baseLevel: baseAOE, scoring: 'direct_points' },
                     'g': { appLevel: appAOLD, baseLevel: baseAOLD, scoring: 'weighted' },
                     'h': { appLevel: appPotential, baseLevel: basePotential, scoring: 'weighted' }
                 };

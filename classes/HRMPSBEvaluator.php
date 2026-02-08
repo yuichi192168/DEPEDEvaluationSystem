@@ -438,7 +438,7 @@ class HRMPSBEvaluator {
      */
     private function evaluateApplicationOfEducation($applicantLevel, $baselineLevel) {
         $weight = $this->weights['application_of_education'];
-        $points = $this->convertRatingToWeightedPoints($applicantLevel, $weight, 5);
+        $points = min(max(0, floatval($applicantLevel)), $weight);
 
         return [
             'criterion' => 'Application of Education',
