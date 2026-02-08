@@ -8,6 +8,7 @@
 class ApplicantManager {
     
     private $conn;
+    private $positionGroupsSynced = false;
     
     public function __construct($mysqli_connection) {
         $this->conn = $mysqli_connection;
@@ -22,6 +23,7 @@ class ApplicantManager {
      * @return array Array of applicants
      */
     public function getActiveApplicants($search = '', $positionGroup = '', $limit = 50, $offset = 0) {
+        $this->ensurePositionGroupsSynced();
         $query = "SELECT a.*, p.position_name, p.position_group as actual_group
                   FROM applicants a
                   LEFT JOIN positions p ON a.position_applied_id = p.id
@@ -59,6 +61,7 @@ class ApplicantManager {
      * @return array Array of archived applicants
      */
     public function getArchivedApplicants($search = '', $positionGroup = '', $limit = 50, $offset = 0) {
+        $this->ensurePositionGroupsSynced();
         $query = "SELECT a.*, p.position_name, p.position_group as actual_group
                   FROM applicants a
                   LEFT JOIN positions p ON a.position_applied_id = p.id
@@ -94,6 +97,7 @@ class ApplicantManager {
      * @return int Count of active applicants
      */
     public function getActiveApplicantsCount($search = '', $positionGroup = '') {
+        $this->ensurePositionGroupsSynced();
         $query = "SELECT COUNT(*) as count FROM applicants a LEFT JOIN positions p ON a.position_applied_id = p.id WHERE a.archive_status = 'active'";
         
         $params = [];
@@ -122,6 +126,7 @@ class ApplicantManager {
      * @return int Count of archived applicants
      */
     public function getArchivedApplicantsCount($search = '', $positionGroup = '') {
+        $this->ensurePositionGroupsSynced();
         $query = "SELECT COUNT(*) as count FROM applicants a LEFT JOIN positions p ON a.position_applied_id = p.id WHERE a.archive_status = 'archived'";
         
         $params = [];
@@ -248,6 +253,7 @@ class ApplicantManager {
      * @return array Applicant details
      */
     public function getApplicantDetails($applicantId) {
+        $this->ensurePositionGroupsSynced();
         $query = "SELECT a.*, p.position_name 
                   FROM applicants a
                   LEFT JOIN positions p ON a.position_applied_id = p.id
@@ -278,6 +284,7 @@ class ApplicantManager {
      * @return array Search results
      */
     public function searchApplicants($search, $status = 'all', $limit = 100) {
+        $this->ensurePositionGroupsSynced();
         $query = "SELECT a.*, p.position_name FROM applicants a
                   LEFT JOIN positions p ON a.position_applied_id = p.id
                   WHERE a.name LIKE ?";
@@ -303,6 +310,7 @@ class ApplicantManager {
      * @return array Statistics
      */
     public function getStatistics() {
+        $this->ensurePositionGroupsSynced();
         $stats = [];
         
         // Total active applicants
@@ -390,6 +398,77 @@ class ApplicantManager {
         
         $stmt->close();
         return true;
+    }
+
+    private function normalizeGroupName($group) {
+        $normalized = strtoupper(trim((string)$group));
+        if ($normalized === '') {
+            return '';
+        }
+
+        $map = [
+            'TEACHING POSITIONS' => 'TEACHING',
+            'HIGHER TEACHING POSITIONS' => 'HIGHER TEACHING',
+            'RELATED TEACHING POSITION' => 'RELATED TEACHING',
+            'SCHOOL ADMINISTRATION POSITION' => 'SCHOOL ADMINISTRATION'
+        ];
+
+        return $map[$normalized] ?? $normalized;
+    }
+
+    private function ensurePositionGroupsSynced() {
+        if ($this->positionGroupsSynced) {
+            return;
+        }
+
+        $this->positionGroupsSynced = true;
+
+        if (!function_exists('getAllPositions')) {
+            require_once __DIR__ . '/../config/baseline_library.php';
+        }
+
+        $baselinePositions = getAllPositions();
+        if (!is_array($baselinePositions)) {
+            require_once __DIR__ . '/../config/baseline_library.php';
+            $baselinePositions = getAllPositions();
+        }
+
+        if (!is_array($baselinePositions)) {
+            return;
+        }
+        $nameToGroup = [];
+
+        foreach ($baselinePositions as $position) {
+            $name = trim((string)($position['position_name'] ?? ''));
+            $group = $this->normalizeGroupName($position['position_group'] ?? '');
+            if ($name !== '' && $group !== '') {
+                $nameToGroup[strtolower($name)] = $group;
+            }
+        }
+
+        if (empty($nameToGroup)) {
+            return;
+        }
+
+        $rows = $this->executeQuery("SELECT id, position_name, position_group FROM positions", '', []);
+        $updates = [];
+
+        foreach ($rows as $row) {
+            $nameKey = strtolower(trim((string)($row['position_name'] ?? '')));
+            if ($nameKey === '' || !isset($nameToGroup[$nameKey])) {
+                continue;
+            }
+
+            $desiredGroup = $nameToGroup[$nameKey];
+            if ($desiredGroup !== '' && $desiredGroup !== $row['position_group']) {
+                $updates[(int)$row['id']] = $desiredGroup;
+            }
+        }
+
+        foreach ($updates as $positionId => $desiredGroup) {
+            $this->executeUpdate("UPDATE positions SET position_group = ? WHERE id = ?", 'si', [$desiredGroup, $positionId]);
+            $this->executeUpdate("UPDATE applicants SET position_group = ? WHERE position_applied_id = ?", 'si', [$desiredGroup, $positionId]);
+        }
     }
 }
 ?>

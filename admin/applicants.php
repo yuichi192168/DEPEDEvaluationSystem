@@ -972,8 +972,9 @@ function positionGroupLabel($group) {
                                 </td>
                                 <td class="applicant-name"><?php echo htmlspecialchars($applicant['name']); ?></td>
                                 <td>
-                                    <span class="badge badge-group-<?php echo positionGroupSlug($applicant['position_group']); ?>">
-                                        <?php echo htmlspecialchars(positionGroupLabel($applicant['position_group'])); ?>
+                                    <?php $displayGroup = $applicant['actual_group'] ?? $applicant['position_group']; ?>
+                                    <span class="badge badge-group-<?php echo positionGroupSlug($displayGroup); ?>">
+                                        <?php echo htmlspecialchars(positionGroupLabel($displayGroup)); ?>
                                     </span>
                                 </td>
                                 <td><?php echo htmlspecialchars($applicant['position_name'] ?? '-'); ?></td>

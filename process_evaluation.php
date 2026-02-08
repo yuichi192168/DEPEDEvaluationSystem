@@ -284,9 +284,9 @@ try {
         $posGroup = 'NON-TEACHING LEVEL I'; // Default
         if (strpos($positionGroupName, 'NON-TEACHING LEVEL II') !== false) $posGroup = 'NON-TEACHING LEVEL II';
         else if (strpos($positionGroupName, 'SCHOOL ADMINISTRATION') !== false) $posGroup = 'SCHOOL ADMINISTRATION';
-        else if (strpos($positionGroupName, 'TEACHING') !== false) $posGroup = 'TEACHING';
-        else if (strpos($positionGroupName, 'RELATED TEACHING') !== false) $posGroup = 'RELATED TEACHING';
         else if (strpos($positionGroupName, 'HIGHER TEACHING') !== false) $posGroup = 'HIGHER TEACHING';
+        else if (strpos($positionGroupName, 'RELATED TEACHING') !== false) $posGroup = 'RELATED TEACHING';
+        else if (strpos($positionGroupName, 'TEACHING') !== false) $posGroup = 'TEACHING';
         
         $stmt = $conn->prepare("INSERT INTO positions (position_name, position_group, description, created_at) VALUES (?, ?, ?, NOW())");
         $description = "Position created from evaluation form";
@@ -310,9 +310,9 @@ try {
         $posGroup = 'NON-TEACHING LEVEL I'; // Default
         if (strpos($positionGroupName, 'NON-TEACHING LEVEL II') !== false) $posGroup = 'NON-TEACHING LEVEL II';
         else if (strpos($positionGroupName, 'SCHOOL ADMINISTRATION') !== false) $posGroup = 'SCHOOL ADMINISTRATION';
-        else if (strpos($positionGroupName, 'TEACHING') !== false) $posGroup = 'TEACHING';
-        else if (strpos($positionGroupName, 'RELATED TEACHING') !== false) $posGroup = 'RELATED TEACHING';
         else if (strpos($positionGroupName, 'HIGHER TEACHING') !== false) $posGroup = 'HIGHER TEACHING';
+        else if (strpos($positionGroupName, 'RELATED TEACHING') !== false) $posGroup = 'RELATED TEACHING';
+        else if (strpos($positionGroupName, 'TEACHING') !== false) $posGroup = 'TEACHING';
         
         $stmt = $conn->prepare("INSERT INTO applicants (name, position_applied_id, position_group, created_at) VALUES (?, ?, ?, NOW())");
         $stmt->bind_param("sis", $applicantName, $positionId, $posGroup);
