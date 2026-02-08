@@ -416,6 +416,17 @@ class ApplicantManager {
         return $map[$normalized] ?? $normalized;
     }
 
+    private function normalizePositionName($name) {
+        $normalized = strtolower(trim((string)$name));
+        if ($normalized === '') {
+            return '';
+        }
+
+        $normalized = preg_replace('/[^a-z0-9\s]+/', '', $normalized);
+        $normalized = preg_replace('/\s+/', ' ', $normalized);
+        return $normalized;
+    }
+
     private function ensurePositionGroupsSynced() {
         if ($this->positionGroupsSynced) {
             return;
@@ -439,10 +450,10 @@ class ApplicantManager {
         $nameToGroup = [];
 
         foreach ($baselinePositions as $position) {
-            $name = trim((string)($position['position_name'] ?? ''));
+            $name = $this->normalizePositionName($position['position_name'] ?? '');
             $group = $this->normalizeGroupName($position['position_group'] ?? '');
             if ($name !== '' && $group !== '') {
-                $nameToGroup[strtolower($name)] = $group;
+                $nameToGroup[$name] = $group;
             }
         }
 
@@ -454,7 +465,7 @@ class ApplicantManager {
         $updates = [];
 
         foreach ($rows as $row) {
-            $nameKey = strtolower(trim((string)($row['position_name'] ?? '')));
+            $nameKey = $this->normalizePositionName($row['position_name'] ?? '');
             if ($nameKey === '' || !isset($nameToGroup[$nameKey])) {
                 continue;
             }
