@@ -218,7 +218,7 @@ function loadApplicants() {
 function loadDrafts() {
     global $conn;
     
-    $sql = "SELECT id, session_id, application_code, created_at, updated_at, data 
+        $sql = "SELECT id, session_id, application_code, created_at, updated_at, data 
             FROM drafts 
             ORDER BY updated_at DESC 
             LIMIT 200";
@@ -232,7 +232,7 @@ function loadDrafts() {
                 <tr>
                     <th>Draft ID</th>
                     <th>Session</th>
-                    <th>Application Code</th>
+                    <th>Applicant Name</th>
                     <th>Last Updated</th>
                     <th>Actions</th>
                 </tr>
@@ -246,7 +246,19 @@ function loadDrafts() {
                                 <?php echo htmlspecialchars(substr($row['session_id'], 0, 20)); ?>...
                             </code>
                         </td>
-                        <td><?php echo htmlspecialchars($row['application_code']); ?></td>
+                        <td>
+                            <?php
+                                $applicantName = '';
+                                if (!empty($row['data'])) {
+                                    $decoded = json_decode($row['data'], true);
+                                    if (is_array($decoded) && !empty($decoded['applicant_name'])) {
+                                        $applicantName = $decoded['applicant_name'];
+                                    }
+                                }
+                                $displayName = $applicantName ?: ($row['application_code'] ?: 'Unknown');
+                                echo htmlspecialchars($displayName);
+                            ?>
+                        </td>
                         <td><?php echo date('M d, Y H:i', strtotime($row['updated_at'])); ?></td>
                         <td>
                             <div class="actions">

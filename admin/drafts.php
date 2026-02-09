@@ -70,7 +70,7 @@ $res = $conn->query($sql);
                         <tr>
                             <th>Draft ID</th>
                             <th>Session</th>
-                            <th>Application Code</th>
+                            <th>Applicant Name</th>
                             <th>Last Updated</th>
                             <th>Actions</th>
                         </tr>
@@ -80,7 +80,19 @@ $res = $conn->query($sql);
                             <tr>
                                 <td><strong>#<?php echo $row['id']; ?></strong></td>
                                 <td><code style="background: var(--bg-tertiary); padding: 4px 8px; border-radius: 4px; font-size: var(--font-size-xs);"><?php echo htmlspecialchars(substr($row['session_id'], 0, 20)); ?>...</code></td>
-                                <td><?php echo htmlspecialchars($row['application_code']); ?></td>
+                                <td>
+                                    <?php
+                                        $applicantName = '';
+                                        if (!empty($row['data'])) {
+                                            $decoded = json_decode($row['data'], true);
+                                            if (is_array($decoded) && !empty($decoded['applicant_name'])) {
+                                                $applicantName = $decoded['applicant_name'];
+                                            }
+                                        }
+                                        $displayName = $applicantName ?: ($row['application_code'] ?: 'Unknown');
+                                        echo htmlspecialchars($displayName);
+                                    ?>
+                                </td>
                                 <td><?php echo date('M d, Y H:i', strtotime($row['updated_at'])); ?></td>
                                 <td>
                                     <div class="d-flex gap-sm">

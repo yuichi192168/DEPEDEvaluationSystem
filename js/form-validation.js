@@ -847,7 +847,9 @@ FormValidator.prototype.openDraftsModal = async function() {
         items.forEach(d => {
             const row = document.createElement('div');
             row.className = 'draft-row';
-            const title = d.data && d.data.applicant_name ? (d.data.applicant_name + ' — ' + (d.saved_at || d.created_at || '')) : ('Draft #' + d.id + ' — ' + (d.saved_at || d.created_at || ''));
+            const name = d.applicant_name || d.application_code || ('Draft #' + d.id);
+            const stamp = d.saved_at || d.created_at || '';
+            const title = stamp ? (name + ' — ' + stamp) : name;
             row.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #eee;"><div style="flex:1">${escapeHtml(title)}</div><div style="margin-left:12px"><button class="btn-secondary load-draft-btn" data-id="${d.id}">Load</button></div></div>`;
             listEl.appendChild(row);
         });

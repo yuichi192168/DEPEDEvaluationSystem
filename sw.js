@@ -1,5 +1,5 @@
 // Workbox-enabled Service Worker with dynamic precaching and background sync
-const CACHE_NAME = 'deped-eval-v1';
+const CACHE_NAME = 'deped-eval-v2';
 
 // Try to import Workbox from CDN (graceful fallback to manual manifest caching)
 try {
