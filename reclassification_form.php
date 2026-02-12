@@ -162,6 +162,18 @@ $performanceRules = [
     ],
 ];
 
+$salaryGradesByPosition = [
+    "Teacher II" => 12,
+    "Teacher III" => 13,
+    "Teacher IV" => 14,
+    "Teacher V" => 15,
+    "Teacher VI" => 16,
+    "Teacher VII" => 17,
+    "Master Teacher I" => 18,
+    "Master Teacher II" => 19,
+    "Master Teacher III" => 20,
+];
+
 $ppstIndicators = [
     [
         "domain" => "Domain 1. Content Knowledge and Pedagogy",
@@ -336,6 +348,12 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && $positionApplied !== "") {
         }
     }
 }
+
+$actionFrom = $currentPosition;
+$actionTo = $positionApplied;
+$actionFromSg = $salaryGradesByPosition[$currentPosition] ?? "";
+$actionToSg = $salaryGradesByPosition[$positionApplied] ?? "";
+$actionRemarks = $result ? ($result["passed"] ? "QUALIFIED" : "NOT QUALIFIED") : "";
 
 if ($_SERVER["REQUEST_METHOD"] === "POST" && $positionApplied !== "" && $errorMessage === null) {
     $rules = $performanceRules[$positionApplied] ?? null;
@@ -1126,12 +1144,24 @@ function format_performance_requirements(array $rules): string
             </thead>
             <tbody>
             <tr>
-                <td>&nbsp;</td>
-                <td>&nbsp;</td>
-                <td>&nbsp;</td>
-                <td>&nbsp;</td>
-                <td>&nbsp;</td>
-                <td>&nbsp;</td>
+                <td>
+                    <input type="text" id="action_from_pos" class="line-input" value="<?php echo htmlspecialchars($actionFrom); ?>" readonly>
+                </td>
+                <td>
+                    <input type="text" id="action_from_sg" class="line-input" value="<?php echo htmlspecialchars($actionFromSg !== "" ? "SG " . $actionFromSg : ""); ?>" readonly>
+                </td>
+                <td>
+                    <input type="text" id="action_to_pos" class="line-input" value="<?php echo htmlspecialchars($actionTo); ?>" readonly>
+                </td>
+                <td>
+                    <input type="text" id="action_to_sg" class="line-input" value="<?php echo htmlspecialchars($actionToSg !== "" ? "SG " . $actionToSg : ""); ?>" readonly>
+                </td>
+                <td>
+                    <input type="text" id="action_date" class="line-input" value="">
+                </td>
+                <td>
+                    <input type="text" id="action_remarks" class="line-input" value="<?php echo htmlspecialchars($actionRemarks); ?>" readonly>
+                </td>
             </tr>
             </tbody>
         </table>
@@ -1171,12 +1201,24 @@ function format_performance_requirements(array $rules): string
             </thead>
             <tbody>
             <tr>
-                <td>&nbsp;</td>
-                <td>&nbsp;</td>
-                <td>&nbsp;</td>
-                <td>&nbsp;</td>
-                <td>&nbsp;</td>
-                <td>&nbsp;</td>
+                <td>
+                    <input type="text" id="region_from_pos" class="line-input" value="<?php echo htmlspecialchars($actionFrom); ?>" readonly>
+                </td>
+                <td>
+                    <input type="text" id="region_from_sg" class="line-input" value="<?php echo htmlspecialchars($actionFromSg !== "" ? "SG " . $actionFromSg : ""); ?>" readonly>
+                </td>
+                <td>
+                    <input type="text" id="region_to_pos" class="line-input" value="<?php echo htmlspecialchars($actionTo); ?>" readonly>
+                </td>
+                <td>
+                    <input type="text" id="region_to_sg" class="line-input" value="<?php echo htmlspecialchars($actionToSg !== "" ? "SG " . $actionToSg : ""); ?>" readonly>
+                </td>
+                <td>
+                    <input type="text" id="region_date" class="line-input" value="">
+                </td>
+                <td>
+                    <input type="text" id="region_remarks" class="line-input" value="<?php echo htmlspecialchars($actionRemarks); ?>" readonly>
+                </td>
             </tr>
             </tbody>
         </table>
@@ -1204,6 +1246,7 @@ function format_performance_requirements(array $rules): string
 
 <script>
     const performanceRules = <?php echo json_encode($performanceRules, JSON_UNESCAPED_SLASHES); ?>;
+    const salaryGrades = <?php echo json_encode($salaryGradesByPosition, JSON_UNESCAPED_SLASHES); ?>;
     const qsByPosition = <?php echo json_encode($qsByPosition, JSON_UNESCAPED_SLASHES); ?>;
     const form1Order = <?php echo json_encode($form1Order, JSON_UNESCAPED_SLASHES); ?>;
     const form2Order = <?php echo json_encode($form2Order, JSON_UNESCAPED_SLASHES); ?>;
@@ -1307,6 +1350,36 @@ function format_performance_requirements(array $rules): string
         positionSelect.setCustomValidity("");
     };
 
+    const formatSg = (value) => (value ? `SG ${value}` : "");
+
+    const updateActionTables = () => {
+        const currentPos = currentSelect.value || "";
+        const appliedPos = positionSelect.value || "";
+        const fromSg = salaryGrades[currentPos] || "";
+        const toSg = salaryGrades[appliedPos] || "";
+        const remark = appliedPos ? (getPerformanceResult() === "PASSED" ? "QUALIFIED" : "NOT QUALIFIED") : "";
+
+        const fields = [
+            { id: "action_from_pos", value: currentPos },
+            { id: "action_from_sg", value: formatSg(fromSg) },
+            { id: "action_to_pos", value: appliedPos },
+            { id: "action_to_sg", value: formatSg(toSg) },
+            { id: "action_remarks", value: remark },
+            { id: "region_from_pos", value: currentPos },
+            { id: "region_from_sg", value: formatSg(fromSg) },
+            { id: "region_to_pos", value: appliedPos },
+            { id: "region_to_sg", value: formatSg(toSg) },
+            { id: "region_remarks", value: remark },
+        ];
+
+        fields.forEach((field) => {
+            const input = document.getElementById(field.id);
+            if (input) {
+                input.value = field.value;
+            }
+        });
+    };
+
     const vsInputs = [
         document.getElementById("coi_vs"),
         document.getElementById("ncoi_vs"),
@@ -1380,6 +1453,7 @@ function format_performance_requirements(array $rules): string
         document.getElementById("ppst_total_o").value = counts.coi_o + counts.ncoi_o;
         document.getElementById("ppst_total_vs").value = counts.coi_vs + counts.ncoi_vs;
         updateTotals();
+        updateActionTables();
     };
 
     const applicantsKey = "rftpApplicants";
@@ -1649,7 +1723,10 @@ function format_performance_requirements(array $rules): string
     };
 
     [...vsInputs, ...oInputs].forEach((input) => {
-        input.addEventListener("input", updateTotals);
+        input.addEventListener("input", () => {
+            updateTotals();
+            updateActionTables();
+        });
     });
     const enforcePpstSingleSelection = (changed) => {
         if (!changed.checked) {
@@ -1753,10 +1830,17 @@ function format_performance_requirements(array $rules): string
         updateAppliedOptions();
         updatePerformanceTable();
         updateQsFields();
+        updateActionTables();
         saveDraft();
     });
-    currentSelect.addEventListener("change", updateAppliedOptions);
-    positionSelect.addEventListener("change", updateQsFields);
+    currentSelect.addEventListener("change", () => {
+        updateAppliedOptions();
+        updateActionTables();
+    });
+    positionSelect.addEventListener("change", () => {
+        updateQsFields();
+        updateActionTables();
+    });
     applicantsSearch.addEventListener("input", filterApplicants);
     autofillLastButton.addEventListener("click", autofillLastApplicant);
     clearFormButton.addEventListener("click", () => {
@@ -1782,6 +1866,7 @@ function format_performance_requirements(array $rules): string
     updateTotals();
     updateEvaluationDate();
     restoreDraft();
+    updateActionTables();
     updateFormScope();
     updatePositionOptions();
     updateAppliedOptions();
@@ -1789,6 +1874,7 @@ function format_performance_requirements(array $rules): string
     updateQsFields();
     updatePerformanceFromPpst();
     updateTotals();
+    updateActionTables();
     renderApplicants();
     const banners = Array.from(document.querySelectorAll(".banner"));
     if (banners.length) {
