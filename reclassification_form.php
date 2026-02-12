@@ -1059,7 +1059,7 @@ function format_performance_requirements(array $rules): string
         <button type="button" class="button-secondary" id="autofill-last">Autofill Last Applicant</button>
         <button type="button" class="button-secondary" id="clear-form">Clear Form</button>
         <button type="button" class="button-secondary" id="print-form">Print</button>
-        <button type="button" class="button-secondary" id="export-csv">Export CSV</button>
+        <button type="button" class="button-secondary" id="export-excel">Export Excel</button>
     </div>
 </form>
 
@@ -1244,6 +1244,7 @@ function format_performance_requirements(array $rules): string
     </div>
 <?php endif; ?>
 
+<script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
 <script>
     const performanceRules = <?php echo json_encode($performanceRules, JSON_UNESCAPED_SLASHES); ?>;
     const salaryGrades = <?php echo json_encode($salaryGradesByPosition, JSON_UNESCAPED_SLASHES); ?>;
@@ -1591,7 +1592,7 @@ function format_performance_requirements(array $rules): string
     const autofillLastButton = document.getElementById("autofill-last");
     const clearFormButton = document.getElementById("clear-form");
     const printButton = document.getElementById("print-form");
-    const exportButton = document.getElementById("export-csv");
+    const exportButton = document.getElementById("export-excel");
     const applicantsSearch = document.getElementById("applicants-search");
 
     const clearValidationHints = () => {
@@ -1657,60 +1658,369 @@ function format_performance_requirements(array $rules): string
         saveDraft();
     };
 
-    const exportCsv = () => {
-        const applicants = loadApplicants();
-        if (!applicants.length) {
+    const buildTitleTable = (title, columnCount) => {
+        const table = document.createElement("table");
+        const row = document.createElement("tr");
+        const cell = document.createElement("th");
+        cell.colSpan = columnCount;
+        cell.textContent = title;
+        row.appendChild(cell);
+        const thead = document.createElement("thead");
+        thead.appendChild(row);
+        table.appendChild(thead);
+        return table;
+    };
+
+    const getTableColumnCount = (table) => {
+        const firstRow = table.querySelector("tr");
+        if (!firstRow) {
+            return 1;
+        }
+        return Array.from(firstRow.children).reduce((total, cell) => {
+            const span = parseInt(cell.getAttribute("colspan"), 10);
+            return total + (Number.isNaN(span) ? 1 : span);
+        }, 0);
+    };
+
+    const buildPerformanceDataTable = () => {
+        const table = document.createElement("table");
+        const tbody = document.createElement("tbody");
+        const fields = [
+            { label: "Proficient COIs - Very Satisfactory", id: "coi_vs" },
+            { label: "Proficient NCOIs - Very Satisfactory", id: "ncoi_vs" },
+            { label: "Proficient COIs - Outstanding", id: "coi_o" },
+            { label: "Proficient NCOIs - Outstanding", id: "ncoi_o" },
+            { label: "Total Very Satisfactory Indicators", id: "total_vs" },
+            { label: "Total Outstanding Indicators", id: "total_o" },
+        ];
+        fields.forEach((field) => {
+            const row = document.createElement("tr");
+            const labelCell = document.createElement("th");
+            labelCell.textContent = field.label;
+            const valueCell = document.createElement("td");
+            const input = document.getElementById(field.id);
+            valueCell.textContent = input ? input.value : "";
+            row.appendChild(labelCell);
+            row.appendChild(valueCell);
+            tbody.appendChild(row);
+        });
+        table.appendChild(tbody);
+        return table;
+    };
+
+    const buildHeaderTable = () => {
+        const table = document.createElement("table");
+        const tbody = document.createElement("tbody");
+        const metaRow = document.createElement("tr");
+        const leftCell = document.createElement("td");
+        const rightCell = document.createElement("td");
+        leftCell.textContent = document.querySelector(".page-meta span")?.textContent || "";
+        rightCell.textContent = document.getElementById("form-scope")?.textContent || "";
+        metaRow.appendChild(leftCell);
+        metaRow.appendChild(rightCell);
+        tbody.appendChild(metaRow);
+        table.appendChild(tbody);
+        return table;
+    };
+
+    const buildCellMeta = (table) => {
+        const meta = new Map();
+        const grid = [];
+        const rows = Array.from(table.rows);
+        rows.forEach((row, r) => {
+            grid[r] = grid[r] || [];
+            let c = 0;
+            Array.from(row.cells).forEach((cell) => {
+                while (grid[r][c]) {
+                    c += 1;
+                }
+                const rowSpan = cell.rowSpan || 1;
+                const colSpan = cell.colSpan || 1;
+                for (let rr = 0; rr < rowSpan; rr += 1) {
+                    for (let cc = 0; cc < colSpan; cc += 1) {
+                        grid[r + rr] = grid[r + rr] || [];
+                        grid[r + rr][c + cc] = true;
+                    }
+                }
+                meta.set(`${r},${c}`, {
+                    isHeader: cell.tagName === "TH" || row.parentElement?.tagName === "THEAD",
+                    align: cell.getAttribute("align") || (cell.tagName === "TH" ? "center" : "left"),
+                });
+                c += colSpan;
+            });
+        });
+        return meta;
+    };
+
+    const applyCellStyle = (cell, meta) => {
+        const base = {
+            font: { name: "Times New Roman", sz: 12 },
+            alignment: { horizontal: meta.align, vertical: "center", wrapText: true },
+            border: {
+                top: { style: "thin", color: { rgb: "000000" } },
+                bottom: { style: "thin", color: { rgb: "000000" } },
+                left: { style: "thin", color: { rgb: "000000" } },
+                right: { style: "thin", color: { rgb: "000000" } },
+            },
+        };
+        if (meta.isHeader) {
+            base.font.bold = true;
+        }
+        cell.s = base;
+    };
+
+    const setCell = (ws, row, col, value, style) => {
+        const addr = XLSX.utils.encode_cell({ r: row, c: col });
+        ws[addr] = { v: value, t: "s" };
+        if (style) {
+            ws[addr].s = style;
+        }
+    };
+
+    const mergeCells = (ws, row, startCol, endCol) => {
+        ws["!merges"] = ws["!merges"] || [];
+        ws["!merges"].push({
+            s: { r: row, c: startCol },
+            e: { r: row, c: endCol },
+        });
+    };
+
+    const buildLineStyle = (align = "center") => ({
+        font: { name: "Times New Roman", sz: 12 },
+        alignment: { horizontal: align, vertical: "center" },
+        border: { bottom: { style: "thin", color: { rgb: "000000" } } },
+    });
+
+    const buildTextStyle = (align = "center", bold = false) => ({
+        font: { name: "Times New Roman", sz: 12, bold },
+        alignment: { horizontal: align, vertical: "center" },
+    });
+
+    const appendTwoSignatureBlock = (ws, startRow, totalCols, leftLabel, leftName, rightLabel, rightName) => {
+        const leftStart = 0;
+        const leftEnd = Math.max(0, Math.floor((totalCols - 1) / 2));
+        const rightStart = leftEnd + 1;
+        const rightEnd = totalCols - 1;
+
+        setCell(ws, startRow, leftStart, leftLabel, buildTextStyle("center", false));
+        mergeCells(ws, startRow, leftStart, leftEnd);
+        setCell(ws, startRow, rightStart, rightLabel, buildTextStyle("center", false));
+        mergeCells(ws, startRow, rightStart, rightEnd);
+
+        setCell(ws, startRow + 1, leftStart, "", buildLineStyle("center"));
+        mergeCells(ws, startRow + 1, leftStart, leftEnd);
+        setCell(ws, startRow + 1, rightStart, "", buildLineStyle("center"));
+        mergeCells(ws, startRow + 1, rightStart, rightEnd);
+
+        setCell(ws, startRow + 2, leftStart, leftName, buildTextStyle("center", false));
+        mergeCells(ws, startRow + 2, leftStart, leftEnd);
+        setCell(ws, startRow + 2, rightStart, rightName, buildTextStyle("center", false));
+        mergeCells(ws, startRow + 2, rightStart, rightEnd);
+
+        return 3;
+    };
+
+    const appendSingleSignatureBlock = (ws, startRow, totalCols, label, name) => {
+        const span = 2;
+        const center = Math.floor((totalCols - 1) / 2);
+        const startCol = Math.max(0, center - span);
+        const endCol = Math.min(totalCols - 1, center + span);
+
+        setCell(ws, startRow, startCol, label, buildTextStyle("center", false));
+        mergeCells(ws, startRow, startCol, endCol);
+        setCell(ws, startRow + 1, startCol, "", buildLineStyle("center"));
+        mergeCells(ws, startRow + 1, startCol, endCol);
+        setCell(ws, startRow + 2, startCol, name, buildTextStyle("center", false));
+        mergeCells(ws, startRow + 2, startCol, endCol);
+
+        return 3;
+    };
+
+    const appendTableToSheet = (ws, table, startRow) => {
+        const temp = XLSX.utils.table_to_sheet(table, { raw: true });
+        const range = XLSX.utils.decode_range(temp["!ref"] || "A1:A1");
+        const meta = buildCellMeta(table);
+
+        for (let r = range.s.r; r <= range.e.r; r += 1) {
+            for (let c = range.s.c; c <= range.e.c; c += 1) {
+                const addr = XLSX.utils.encode_cell({ r, c });
+                const cell = temp[addr];
+                if (!cell) {
+                    continue;
+                }
+                const targetAddr = XLSX.utils.encode_cell({ r: r + startRow, c });
+                ws[targetAddr] = { ...cell };
+                const cellMeta = meta.get(`${r},${c}`) || { isHeader: false, align: "left" };
+                applyCellStyle(ws[targetAddr], cellMeta);
+            }
+        }
+
+        if (temp["!merges"]) {
+            ws["!merges"] = ws["!merges"] || [];
+            temp["!merges"].forEach((merge) => {
+                ws["!merges"].push({
+                    s: { r: merge.s.r + startRow, c: merge.s.c },
+                    e: { r: merge.e.r + startRow, c: merge.e.c },
+                });
+            });
+        }
+
+        return range.e.r - range.s.r + 1;
+    };
+
+    const exportExcel = () => {
+        if (typeof XLSX === "undefined") {
+            alert("Excel export library failed to load.");
             return;
         }
-        const headers = [
-            "Name",
-            "Current Position",
-            "Position Applied",
-            "Station / School",
-            "Result",
-            "Education",
-            "Training",
-            "Experience",
-            "Performance",
-            "Classroom Observable Indicators",
-            "Non-Classroom Observable Indicators",
-            "Total Score",
-        ];
-        const rows = applicants.map((item) => {
-            const qs = qsByPosition[item.positionApplied] || {};
-            const ppst = item.ppstCounts || {};
-            const classroomIndicators =
-                item.classroomIndicators ?? (ppst.coi_o ?? 0) + (ppst.coi_vs ?? 0);
-            const nonClassroomIndicators =
-                item.nonClassroomIndicators ?? (ppst.ncoi_o ?? 0) + (ppst.ncoi_vs ?? 0);
-            const totalScore = item.totalScore ?? classroomIndicators + nonClassroomIndicators;
 
-            return [
-                item.name || "",
-                item.currentPosition || "",
-                item.positionApplied || "",
-                item.station || "",
-                item.result || "",
-                item.education ?? qs.education ?? "",
-                item.training ?? qs.training ?? "",
-                item.experience ?? qs.experience ?? "",
-                item.performance ?? item.result ?? "",
-                classroomIndicators ?? "",
-                nonClassroomIndicators ?? "",
-                totalScore ?? "",
-            ];
+        const sections = [];
+        sections.push({ title: "", table: buildHeaderTable() });
+
+        const infoTable = document.querySelector(".info-table");
+        if (infoTable) {
+            sections.push({ title: "", table: infoTable });
+        }
+
+        const qsTable = document.querySelector(".qs-table");
+        if (qsTable) {
+            sections.push({ title: "I. QUALIFICATION STANDARDS", table: qsTable });
+        }
+
+        const perfTable = document.querySelector(".perf-table");
+        if (perfTable) {
+            sections.push({ title: "II. PERFORMANCE REQUIREMENTS", table: perfTable });
+        }
+
+        const ppstTable = document.querySelector(".ppst-table");
+        if (ppstTable) {
+            sections.push({ title: "Summary of the Achievement of PPST Indicators", table: ppstTable });
+        }
+
+        sections.push({ title: "Performance Data", table: buildPerformanceDataTable() });
+
+        const applicantsTable = document.querySelector(".applicants-table");
+        if (applicantsTable) {
+            sections.push({ title: "Applicants", table: applicantsTable });
+        }
+
+        const assessmentTable = document.querySelector(".assessment-table");
+        if (assessmentTable) {
+            sections.push({ title: "III. COMPARATIVE ASSESSMENT RESULT", table: assessmentTable });
+        }
+
+        const actionTables = Array.from(document.querySelectorAll(".action-table"));
+        if (actionTables[0]) {
+            sections.push({ title: "IV. DEPED SCHOOLS DIVISION OFFICE ACTION", table: actionTables[0] });
+        }
+        if (actionTables[1]) {
+            sections.push({ title: "V. DEPED REGIONAL OFFICE ACTION", table: actionTables[1] });
+        }
+
+        const ws = {};
+        let rowOffset = 0;
+        sections.forEach((section) => {
+            if (!section.table) {
+                return;
+            }
+            const colCount = getTableColumnCount(section.table);
+            if (section.title) {
+                const titleTable = buildTitleTable(section.title, colCount);
+                rowOffset += appendTableToSheet(ws, titleTable, rowOffset);
+                rowOffset += 1;
+            }
+
+            rowOffset += appendTableToSheet(ws, section.table, rowOffset);
+            rowOffset += 1;
+
+            if (section.title === "III. COMPARATIVE ASSESSMENT RESULT") {
+                rowOffset += appendTwoSignatureBlock(
+                    ws,
+                    rowOffset,
+                    colCount,
+                    "Conforme:",
+                    "Teacher Applicant",
+                    "Attested by:",
+                    "HRMPSB Chair"
+                );
+                rowOffset += 1;
+            }
+
+            if (section.title === "IV. DEPED SCHOOLS DIVISION OFFICE ACTION") {
+                rowOffset += appendTwoSignatureBlock(
+                    ws,
+                    rowOffset,
+                    colCount,
+                    "Evaluated by:",
+                    "Administrative Officer IV (HRMO)",
+                    "Certified Correct",
+                    "Administrative Officer V (Admin Services)"
+                );
+                rowOffset += 1;
+                rowOffset += appendSingleSignatureBlock(
+                    ws,
+                    rowOffset,
+                    colCount,
+                    "Recommending Approval:",
+                    "Schools Division Superintendent"
+                );
+                rowOffset += 1;
+            }
+
+            if (section.title === "V. DEPED REGIONAL OFFICE ACTION") {
+                rowOffset += appendTwoSignatureBlock(
+                    ws,
+                    rowOffset,
+                    colCount,
+                    "Evaluated by:",
+                    "Teachers Credential Evaluator",
+                    "Certified Correct:",
+                    "Chief, Administrative Division"
+                );
+                rowOffset += 1;
+                rowOffset += appendSingleSignatureBlock(
+                    ws,
+                    rowOffset,
+                    colCount,
+                    "Approved:",
+                    "Regional Director"
+                );
+                rowOffset += 1;
+            }
         });
-        const escapeValue = (value) => `"${String(value).replace(/"/g, '""')}"`;
-        const csv = [headers, ...rows].map((row) => row.map(escapeValue).join(",")).join("\n");
-        const blob = new Blob([csv], { type: "text/csv" });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = "applicants.csv";
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
+
+        ws["!ref"] = XLSX.utils.encode_range({
+            s: { r: 0, c: 0 },
+            e: { r: Math.max(rowOffset - 1, 0), c: 6 },
+        });
+
+        ws["!pageSetup"] = {
+            orientation: "landscape",
+            fitToWidth: 1,
+            fitToHeight: 0,
+        };
+        ws["!margins"] = {
+            left: 0.3,
+            right: 0.3,
+            top: 0.4,
+            bottom: 0.4,
+            header: 0.2,
+            footer: 0.2,
+        };
+        ws["!cols"] = [
+            { wch: 18 },
+            { wch: 18 },
+            { wch: 20 },
+            { wch: 18 },
+            { wch: 22 },
+            { wch: 22 },
+            { wch: 14 },
+        ];
+        ws["!rows"] = Array.from({ length: Math.max(rowOffset, 1) }, () => ({ hpt: 18 }));
+
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Reclassification Form");
+        XLSX.writeFile(wb, "reclassification_form.xlsx");
     };
 
     const filterApplicants = () => {
@@ -1856,7 +2166,7 @@ function format_performance_requirements(array $rules): string
         saveDraft();
     });
     printButton.addEventListener("click", () => window.print());
-    exportButton.addEventListener("click", exportCsv);
+    exportButton.addEventListener("click", exportExcel);
     updateFormScope();
     updatePositionOptions();
     updateAppliedOptions();
