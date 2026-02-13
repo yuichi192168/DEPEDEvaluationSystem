@@ -662,6 +662,9 @@ function format_performance_requirements(array $rules): string
             text-align: center;
             vertical-align: middle;
         }
+        .action-table .line-input {
+            text-align: center;
+        }
         .assessment-table th,
         .action-table th {
             font-weight: 600;
@@ -1723,7 +1726,7 @@ function format_performance_requirements(array $rules): string
         return table;
     };
 
-    const buildCellMeta = (table) => {
+    const buildCellMeta = (table, forceAlign) => {
         const meta = new Map();
         const grid = [];
         const rows = Array.from(table.rows);
@@ -1742,9 +1745,10 @@ function format_performance_requirements(array $rules): string
                         grid[r + rr][c + cc] = true;
                     }
                 }
+                const alignOverride = forceAlign || "";
                 meta.set(`${r},${c}`, {
                     isHeader: cell.tagName === "TH" || row.parentElement?.tagName === "THEAD",
-                    align: cell.getAttribute("align") || (cell.tagName === "TH" ? "center" : "left"),
+                    align: alignOverride || cell.getAttribute("align") || (cell.tagName === "TH" ? "center" : "left"),
                 });
                 c += colSpan;
             });
@@ -1839,7 +1843,8 @@ function format_performance_requirements(array $rules): string
     const appendTableToSheet = (ws, table, startRow) => {
         const temp = XLSX.utils.table_to_sheet(table, { raw: true });
         const range = XLSX.utils.decode_range(temp["!ref"] || "A1:A1");
-        const meta = buildCellMeta(table);
+        const forceAlign = table.classList.contains("action-table") ? "center" : "";
+        const meta = buildCellMeta(table, forceAlign);
 
         for (let r = range.s.r; r <= range.e.r; r += 1) {
             for (let c = range.s.c; c <= range.e.c; c += 1) {
