@@ -929,7 +929,7 @@ function format_performance_requirements(array $rules): string
 </head>
 <body>
 <?php if ($isAdmin): ?>
-<a href="reclassification_admin/" class="admin-link">[Admin Dashboard]</a>
+<!-- <a href="reclassification_admin/" class="admin-link">[Admin Dashboard]</a> -->
 <?php endif; ?>
 <div class="page-meta">
     <span>DBM-DepEd JC 01, s.2025_Form No. 2-A</span>
@@ -1179,9 +1179,9 @@ function format_performance_requirements(array $rules): string
 <?php if ($isAdmin): ?>
 <div class="section" id="applicants-section">
     <h2>Saved Evaluation Records</h2>
-    <div class="small">
+    <!-- <div class="small">
         Access Role: Admin - <a href="reclassification_admin/" style="color: #2563eb; text-decoration: underline;">Go to Admin Dashboard</a> to manage all evaluation records
-    </div>
+    </div> -->
     <div class="toolbar">
         <input type="text" id="applicants-search" class="search-input" placeholder="Search by name, position, result">
     </div>
