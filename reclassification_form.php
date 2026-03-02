@@ -734,6 +734,16 @@ function format_performance_requirements(array $rules): string
             display: block;
             margin: 0 auto;
         }
+        .page-footer {
+            margin-top: 16px;
+            text-align: center;
+        }
+        .footer-img {
+            max-width: 100%;
+            height: auto;
+            display: block;
+            margin: 0 auto;
+        }
         @media print {
             body {
                 margin: 0.5in;
@@ -812,6 +822,9 @@ function format_performance_requirements(array $rules): string
                 grid-template-columns: 1fr;
                 justify-items: center;
             }
+            .page-footer {
+                margin-top: 12px;
+            }
         }
     </style>
 </head>
@@ -883,12 +896,6 @@ function format_performance_requirements(array $rules): string
             <td><input type="text" id="station" name="station" class="line-input" value="<?php echo htmlspecialchars(post_value("station")); ?>" required></td>
             <td class="label-cell">SG / Annual Salary:</td>
             <td><input type="text" id="sg_salary" name="sg_salary" class="line-input" value="<?php echo htmlspecialchars(post_value("sg_salary")); ?>" required></td>
-        </tr>
-        <tr>
-            <td class="label-cell">Evaluation Date:</td>
-            <td><input type="text" id="evaluation_date" name="evaluation_date" class="line-input" value="<?php echo htmlspecialchars(post_value("evaluation_date")); ?>" required></td>
-            <td></td>
-            <td></td>
         </tr>
         <tr>
             <td class="label-cell">Level:</td>
@@ -1031,19 +1038,19 @@ function format_performance_requirements(array $rules): string
         <div class="grid">
             <div>
                 <label for="coi_vs">Proficient COIs - Very Satisfactory</label>
-                <input type="number" id="coi_vs" name="coi_vs" min="0" value="<?php echo htmlspecialchars((string)$coiVs); ?>">
+                <input type="number" id="coi_vs" name="coi_vs" min="0" value="<?php echo htmlspecialchars((string)$coiVs); ?>" readonly>
             </div>
             <div>
                 <label for="ncoi_vs">Proficient NCOIs - Very Satisfactory</label>
-                <input type="number" id="ncoi_vs" name="ncoi_vs" min="0" value="<?php echo htmlspecialchars((string)$ncoiVs); ?>">
+                <input type="number" id="ncoi_vs" name="ncoi_vs" min="0" value="<?php echo htmlspecialchars((string)$ncoiVs); ?>" readonly>
             </div>
             <div>
                 <label for="coi_o">Proficient COIs - Outstanding</label>
-                <input type="number" id="coi_o" name="coi_o" min="0" value="<?php echo htmlspecialchars((string)$coiO); ?>">
+                <input type="number" id="coi_o" name="coi_o" min="0" value="<?php echo htmlspecialchars((string)$coiO); ?>" readonly>
             </div>
             <div>
                 <label for="ncoi_o">Proficient NCOIs - Outstanding</label>
-                <input type="number" id="ncoi_o" name="ncoi_o" min="0" value="<?php echo htmlspecialchars((string)$ncoiO); ?>">
+                <input type="number" id="ncoi_o" name="ncoi_o" min="0" value="<?php echo htmlspecialchars((string)$ncoiO); ?>" readonly>
             </div>
             <div>
                 <label for="total_vs">Total Very Satisfactory Indicators</label>
@@ -1247,6 +1254,10 @@ function format_performance_requirements(array $rules): string
     </div>
 <?php endif; ?>
 
+<div class="page-footer">
+    <img src="images/footer.png" alt="Form Footer" class="footer-img">
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
 <script>
     const performanceRules = <?php echo json_encode($performanceRules, JSON_UNESCAPED_SLASHES); ?>;
@@ -1263,7 +1274,6 @@ function format_performance_requirements(array $rules): string
     const positionSelect = document.getElementById("position_applied");
     const form = document.querySelector("form");
     const validationHint = document.getElementById("validation-hint");
-    const evaluationDateInput = document.getElementById("evaluation_date");
     const qsFields = {
         education: document.getElementById("qs_education"),
         training: document.getElementById("qs_training"),
@@ -1619,18 +1629,6 @@ function format_performance_requirements(array $rules): string
             validationHint.classList.add("is-visible");
         }
         return hasError;
-    };
-
-    const updateEvaluationDate = () => {
-        if (evaluationDateInput.value.trim() === "") {
-            const today = new Date();
-            const formatted = today.toLocaleDateString("en-US", {
-                year: "numeric",
-                month: "2-digit",
-                day: "2-digit",
-            });
-            evaluationDateInput.value = formatted;
-        }
     };
 
 
@@ -2166,7 +2164,6 @@ function format_performance_requirements(array $rules): string
         updateAppliedOptions();
         updateQsFields();
         clearPerformance();
-        updateEvaluationDate();
         clearValidationHints();
         saveDraft();
     });
@@ -2179,7 +2176,6 @@ function format_performance_requirements(array $rules): string
     updateQsFields();
     updatePerformanceFromPpst();
     updateTotals();
-    updateEvaluationDate();
     restoreDraft();
     updateActionTables();
     updateFormScope();
