@@ -2,6 +2,18 @@
 // DBM-DepEd JC 01 s.2025 Reclassification Form (Teaching Positions)
 // Plain PHP, single-file implementation for easy integration.
 
+session_start();
+
+require_once(__DIR__ . '/classes/DBConnection.php');
+require_once(__DIR__ . '/classes/AuthenticationHelper.php');
+require_once(__DIR__ . '/classes/PerformanceEvaluationManager.php');
+
+$authConn = DBConnection::getConnection();
+$auth = new AuthenticationHelper($authConn);
+$currentUser = $auth->getCurrentUser();
+$isAuthenticated = $auth->isAuthenticated();
+$isAdmin = $auth->isAdmin();
+
 $positions = [
     "Teacher II",
     "Teacher III",
@@ -379,6 +391,73 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && $positionApplied !== "" && $errorMe
                 "ncoi_o" => $meetsNcoiO,
             ],
         ];
+
+        // Allow both authenticated and unauthenticated users to submit evaluations
+        $recordId = post_int("evaluation_record_id", 0);
+        $ppstSelections = [];
+        foreach ($_POST as $key => $value) {
+            if (strpos((string)$key, 'ppst_') === 0) {
+                $ppstSelections[$key] = trim((string)$value) !== '' ? 1 : 0;
+            }
+        }
+
+        $performancePayload = [
+            "form_type" => post_value("form_type"),
+            "sg_salary" => post_value("sg_salary"),
+            "level" => post_value("level"),
+            "app_education" => post_value("app_education"),
+            "app_training" => post_value("app_training"),
+            "app_experience" => post_value("app_experience"),
+            "app_eligibility" => post_value("app_eligibility"),
+            "app_competency" => post_value("app_competency"),
+            "qs_remark_education" => post_value("qs_remark_education"),
+            "qs_remark_training" => post_value("qs_remark_training"),
+            "qs_remark_experience" => post_value("qs_remark_experience"),
+            "qs_remark_eligibility" => post_value("qs_remark_eligibility"),
+            "qs_remark_competency" => post_value("qs_remark_competency"),
+            "coi_vs" => $coiVs,
+            "ncoi_vs" => $ncoiVs,
+            "coi_o" => $coiO,
+            "ncoi_o" => $ncoiO,
+            "total_vs" => $totalVs,
+            "total_o" => $totalO,
+            "ppst_counts" => $ppstCounts,
+            "ppst_selections" => $ppstSelections,
+            "action_date" => post_value("action_date"),
+            "region_date" => post_value("region_date"),
+        ];
+
+        $manager = new PerformanceEvaluationManager($authConn);
+        $recordData = [
+            "name" => post_value("name"),
+            "current_position" => $currentPosition,
+            "position_applied" => $positionApplied,
+            "station" => post_value("station"),
+            "item_number" => post_value("item_number"),
+            "result" => $passed ? "PASSED" : "FAILED",
+            "performance_payload" => $performancePayload,
+        ];
+
+        // Only authenticated users can edit existing records
+        if ($recordId > 0) {
+            if (!$isAuthenticated || !$isAdmin) {
+                $errorMessage = "Unauthorized: Only Admin can edit evaluation records.";
+            } elseif ($manager->hasDuplicate($recordData["name"], $recordData["item_number"], (int)$currentUser["id"], true, $recordId)) {
+                $errorMessage = "Duplicate evaluation record for the same name and item number.";
+            } else {
+                $manager->updateEvaluation($recordId, $recordData);
+            }
+        } else {
+            // New submissions: check for duplicates and create record
+            // Use NULL for unauthenticated users (guest submissions)
+            $submittedByUserId = $isAuthenticated ? (int)$currentUser["id"] : null;
+            
+            if ($manager->hasDuplicate($recordData["name"], $recordData["item_number"], $submittedByUserId, $isAdmin)) {
+                $errorMessage = "Duplicate evaluation record for the same name and item number.";
+            } else {
+                $manager->createEvaluation($recordData, $submittedByUserId);
+            }
+        }
     }
 }
 
@@ -826,9 +905,32 @@ function format_performance_requirements(array $rules): string
                 margin-top: 12px;
             }
         }
+        .admin-link {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #1e3a8a;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 6px;
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            transition: all 0.2s;
+            z-index: 1000;
+        }
+        .admin-link:hover {
+            background: #312e81;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+        }
     </style>
 </head>
 <body>
+<?php if ($isAdmin): ?>
+<a href="reclassification_admin/" class="admin-link">[Admin Dashboard]</a>
+<?php endif; ?>
 <div class="page-meta">
     <span>DBM-DepEd JC 01, s.2025_Form No. 2-A</span>
     <span id="form-scope">For Teacher II, III, IV, V, VI, VII, MT I</span>
@@ -1065,6 +1167,7 @@ function format_performance_requirements(array $rules): string
     </div>
 
     <div class="actions">
+        <input type="hidden" id="evaluation_record_id" name="evaluation_record_id" value="<?php echo htmlspecialchars(post_value("evaluation_record_id")); ?>">
         <button type="submit">Evaluate Performance</button>
         <button type="button" class="button-secondary" id="autofill-last">Autofill Last Applicant</button>
         <button type="button" class="button-secondary" id="clear-form">Clear Form</button>
@@ -1073,8 +1176,12 @@ function format_performance_requirements(array $rules): string
     </div>
 </form>
 
+<?php if ($isAdmin): ?>
 <div class="section" id="applicants-section">
-    <h2>Applicants</h2>
+    <h2>Saved Evaluation Records</h2>
+    <div class="small">
+        Access Role: Admin - <a href="reclassification_admin/" style="color: #2563eb; text-decoration: underline;">Go to Admin Dashboard</a> to manage all evaluation records
+    </div>
     <div class="toolbar">
         <input type="text" id="applicants-search" class="search-input" placeholder="Search by name, position, result">
     </div>
@@ -1086,12 +1193,14 @@ function format_performance_requirements(array $rules): string
             <th>Position Applied</th>
             <th>Station / School</th>
             <th>Result</th>
+            <th id="applicant-actions-col">Actions</th>
         </tr>
         </thead>
         <tbody id="applicants-body"></tbody>
     </table>
     <div class="small" id="applicants-empty">No applicants yet.</div>
 </div>
+<?php endif; ?>
 
 <?php if ($errorMessage): ?>
     <div class="result fail">
@@ -1274,11 +1383,18 @@ function format_performance_requirements(array $rules): string
     const positionSelect = document.getElementById("position_applied");
     const form = document.querySelector("form");
     const validationHint = document.getElementById("validation-hint");
+    const currentUserId = <?php echo (int)($currentUser['id'] ?? 0); ?>;
+    const currentUserRole = <?php echo json_encode((string)($currentUser['role'] ?? 'guest')); ?>;
+    const isAdminUser = currentUserRole === "admin";
+    const evaluationRecordIdInput = document.getElementById("evaluation_record_id");
+    let evaluationRecords = [];
+    let editingEvaluationId = evaluationRecordIdInput && evaluationRecordIdInput.value ? parseInt(evaluationRecordIdInput.value, 10) : 0;
     const qsFields = {
         education: document.getElementById("qs_education"),
         training: document.getElementById("qs_training"),
         experience: document.getElementById("qs_experience"),
         eligibility: document.getElementById("qs_eligibility"),
+        competency: document.getElementById("qs_competency"),
     };
 
     const updateQsFields = () => {
@@ -1287,11 +1403,13 @@ function format_performance_requirements(array $rules): string
             training: "",
             experience: "",
             eligibility: "",
+            competency: "",
         };
-        qsFields.education.value = selected.education;
-        qsFields.training.value = selected.training;
-        qsFields.experience.value = selected.experience;
-        qsFields.eligibility.value = selected.eligibility;
+        qsFields.education.value = selected.education || "";
+        qsFields.training.value = selected.training || "";
+        qsFields.experience.value = selected.experience || "";
+        qsFields.eligibility.value = selected.eligibility || "";
+        qsFields.competency.value = selected.competency || "";
     };
 
     const getCurrentOrder = () => (formTypeSelect.value === "form2" ? form2Order : form1Order);
@@ -1470,45 +1588,76 @@ function format_performance_requirements(array $rules): string
         updateActionTables();
     };
 
-    const applicantsKey = "rftpApplicants";
     const draftKey = "rftpDraft";
 
-    const loadApplicants = () => {
-        try {
-            const stored = sessionStorage.getItem(applicantsKey);
-            return stored ? JSON.parse(stored) : [];
-        } catch (error) {
-            return [];
+    const escapeHtml = (value) => {
+        const div = document.createElement("div");
+        div.textContent = value ?? "";
+        return div.innerHTML;
+    };
+
+    const setEditingState = (id) => {
+        const submitButton = form.querySelector('button[type="submit"]');
+        editingEvaluationId = id > 0 ? id : 0;
+        if (evaluationRecordIdInput) {
+            evaluationRecordIdInput.value = editingEvaluationId > 0 ? String(editingEvaluationId) : "";
+        }
+        if (submitButton) {
+            submitButton.textContent = editingEvaluationId > 0 ? "Update Performance" : "Evaluate Performance";
         }
     };
 
-    const saveApplicants = (items) => {
-        sessionStorage.setItem(applicantsKey, JSON.stringify(items));
-    };
-
     const renderApplicants = () => {
-        const items = loadApplicants();
         const tbody = document.getElementById("applicants-body");
         const empty = document.getElementById("applicants-empty");
-        tbody.innerHTML = "";
+        const actionsHeader = document.getElementById("applicant-actions-col");
 
-        if (items.length === 0) {
+        tbody.innerHTML = "";
+        if (actionsHeader) {
+            actionsHeader.style.display = isAdminUser ? "" : "none";
+        }
+
+        if (evaluationRecords.length === 0) {
             empty.style.display = "block";
             return;
         }
 
         empty.style.display = "none";
-        items.forEach((item) => {
+        evaluationRecords.forEach((item) => {
             const row = document.createElement("tr");
             row.innerHTML = `
-                <td>${item.name}</td>
-                <td>${item.currentPosition}</td>
-                <td>${item.positionApplied}</td>
-                <td>${item.station}</td>
-                <td>${item.result}</td>
+                <td>${escapeHtml(item.name)}</td>
+                <td>${escapeHtml(item.current_position)}</td>
+                <td>${escapeHtml(item.position_applied)}</td>
+                <td>${escapeHtml(item.station)}</td>
+                <td>${escapeHtml(item.result)}</td>
+                ${isAdminUser ? `<td>
+                    <button type="button" class="button-secondary edit-record" data-id="${item.id}">Edit</button>
+                    <button type="button" class="button-secondary delete-record" data-id="${item.id}">Delete</button>
+                </td>` : ""}
             `;
             tbody.appendChild(row);
         });
+    };
+
+    const loadEvaluationRecords = async () => {
+        try {
+            const response = await fetch("api/performance_evaluations_list.php", { credentials: "same-origin" });
+            const data = await response.json();
+            if (!data.success) {
+                throw new Error(data.message || "Failed to load records.");
+            }
+            evaluationRecords = Array.isArray(data.records) ? data.records : [];
+            renderApplicants();
+            filterApplicants();
+        } catch (error) {
+            evaluationRecords = [];
+            renderApplicants();
+            const empty = document.getElementById("applicants-empty");
+            if (empty) {
+                empty.textContent = error.message || "Unable to load records.";
+            }
+        }
     };
 
     const getDraftData = () => {
@@ -1595,10 +1744,13 @@ function format_performance_requirements(array $rules): string
         if (!normalizedName || !normalizedItem) {
             return false;
         }
-        return loadApplicants().some((applicant) =>
-            applicant.name.trim().toLowerCase() === normalizedName &&
-            applicant.itemNumber.trim().toLowerCase() === normalizedItem
-        );
+        return evaluationRecords.some((record) => {
+            if (editingEvaluationId > 0 && Number(record.id) === editingEvaluationId) {
+                return false;
+            }
+            return record.name.trim().toLowerCase() === normalizedName &&
+                record.item_number.trim().toLowerCase() === normalizedItem;
+        });
     };
 
 
@@ -1607,6 +1759,7 @@ function format_performance_requirements(array $rules): string
     const printButton = document.getElementById("print-form");
     const exportButton = document.getElementById("export-excel");
     const applicantsSearch = document.getElementById("applicants-search");
+    const applicantsTable = document.getElementById("applicants-table");
 
     const clearValidationHints = () => {
         validationHint.classList.remove("is-visible");
@@ -1643,20 +1796,93 @@ function format_performance_requirements(array $rules): string
         updatePerformanceFromPpst();
     };
 
-    const autofillLastApplicant = () => {
-        const applicants = loadApplicants();
-        if (!applicants.length) {
+    const applyRecordToForm = (record) => {
+        if (!record) {
             return;
         }
-        const last = applicants[applicants.length - 1];
-        document.getElementById("name").value = last.name || "";
-        currentSelect.value = last.currentPosition || "";
-        positionSelect.value = last.positionApplied || "";
-        document.getElementById("station").value = last.station || "";
+
+        const payload = record.performance_payload && typeof record.performance_payload === "object"
+            ? record.performance_payload
+            : {};
+
+        document.getElementById("name").value = record.name || "";
+        currentSelect.value = record.current_position || "";
+        positionSelect.value = record.position_applied || "";
+        document.getElementById("station").value = record.station || "";
+        document.getElementById("item_number").value = record.item_number || "";
+        document.getElementById("sg_salary").value = payload.sg_salary || "";
+
+        if (payload.form_type && formTypeSelect.value !== payload.form_type) {
+            formTypeSelect.value = payload.form_type;
+            updateFormScope();
+            updatePositionOptions();
+        }
+
         updateAppliedOptions();
         updateQsFields();
-        clearPerformance();
+
+        const levelValue = payload.level || "";
+        levelRadios.forEach((radio) => {
+            radio.checked = radio.value === levelValue;
+        });
+
+        document.getElementById("app_education").value = payload.app_education || "";
+        document.getElementById("app_training").value = payload.app_training || "";
+        document.getElementById("app_experience").value = payload.app_experience || "";
+        document.getElementById("app_eligibility").value = payload.app_eligibility || "";
+        document.getElementById("app_competency").value = payload.app_competency || "";
+
+        const setIfExists = (name) => {
+            const input = form.querySelector(`[name="${name}"]`);
+            if (input) {
+                input.value = payload[name] || "";
+            }
+        };
+        setIfExists("qs_remark_education");
+        setIfExists("qs_remark_training");
+        setIfExists("qs_remark_experience");
+        setIfExists("qs_remark_eligibility");
+        setIfExists("qs_remark_competency");
+
+        ppstCheckboxes.forEach((checkbox) => {
+            checkbox.checked = false;
+        });
+        if (payload.ppst_selections && typeof payload.ppst_selections === "object") {
+            Object.entries(payload.ppst_selections).forEach(([name, value]) => {
+                const checkbox = form.querySelector(`input[name="${name}"]`);
+                if (checkbox) {
+                    checkbox.checked = String(value) === "1";
+                }
+            });
+        }
+
+        updatePerformanceFromPpst();
+        updateTotals();
+        updateActionTables();
+    };
+
+    const autofillLastApplicant = () => {
+        if (!evaluationRecords.length) {
+            return;
+        }
+        const last = evaluationRecords[0];
+        applyRecordToForm(last);
+        setEditingState(isAdminUser ? Number(last.id) : 0);
         saveDraft();
+    };
+
+    const deleteEvaluationRecord = async (id) => {
+        const response = await fetch("api/performance_evaluations_delete.php", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "same-origin",
+            body: JSON.stringify({ id }),
+        });
+        const data = await response.json();
+        if (!data.success) {
+            throw new Error(data.message || "Delete failed.");
+        }
+        await loadEvaluationRecords();
     };
 
     const buildTitleTable = (title, columnCount) => {
@@ -2101,32 +2327,6 @@ function format_performance_requirements(array $rules): string
             }
         }
 
-        const applicants = loadApplicants();
-        const ppstCounts = getPpstCounts();
-        const classroomIndicators = ppstCounts.coi_o + ppstCounts.coi_vs;
-        const nonClassroomIndicators = ppstCounts.ncoi_o + ppstCounts.ncoi_vs;
-        applicants.push({
-            name: nameValue.trim(),
-            currentPosition: currentSelect.value,
-            positionApplied: positionSelect.value,
-            station: document.getElementById("station").value.trim(),
-            itemNumber: itemNumberValue.trim(),
-            result: getPerformanceResult(),
-            education: document.getElementById("app_education").value.trim(),
-            training: document.getElementById("app_training").value.trim(),
-            experience: document.getElementById("app_experience").value.trim(),
-            performance: getPerformanceResult(),
-            classroomIndicators: String(classroomIndicators),
-            nonClassroomIndicators: String(nonClassroomIndicators),
-            totalScore: String(classroomIndicators + nonClassroomIndicators),
-            ppstCounts: {
-                coi_o: ppstCounts.coi_o,
-                coi_vs: ppstCounts.coi_vs,
-                ncoi_o: ppstCounts.ncoi_o,
-                ncoi_vs: ppstCounts.ncoi_vs,
-            },
-        });
-        saveApplicants(applicants);
         saveDraft();
     });
     form.addEventListener("input", () => {
@@ -2156,11 +2356,50 @@ function format_performance_requirements(array $rules): string
     });
     applicantsSearch.addEventListener("input", filterApplicants);
     autofillLastButton.addEventListener("click", autofillLastApplicant);
+
+    applicantsTable.addEventListener("click", async (event) => {
+        const target = event.target;
+        if (!(target instanceof HTMLElement) || !isAdminUser) {
+            return;
+        }
+
+        if (target.classList.contains("edit-record")) {
+            const id = parseInt(target.dataset.id || "0", 10);
+            const record = evaluationRecords.find((item) => Number(item.id) === id);
+            if (!record) {
+                return;
+            }
+            applyRecordToForm(record);
+            setEditingState(id);
+            window.scrollTo({ top: 0, behavior: "smooth" });
+            return;
+        }
+
+        if (target.classList.contains("delete-record")) {
+            const id = parseInt(target.dataset.id || "0", 10);
+            if (!id) {
+                return;
+            }
+            if (!confirm("Delete this evaluation record?")) {
+                return;
+            }
+            try {
+                await deleteEvaluationRecord(id);
+                if (editingEvaluationId === id) {
+                    setEditingState(0);
+                }
+            } catch (error) {
+                alert(error.message || "Failed to delete record.");
+            }
+        }
+    });
+
     clearFormButton.addEventListener("click", () => {
         if (!confirm("Clear the form? This will not delete applicants.")) {
             return;
         }
         form.reset();
+        setEditingState(0);
         updateAppliedOptions();
         updateQsFields();
         clearPerformance();
@@ -2169,6 +2408,7 @@ function format_performance_requirements(array $rules): string
     });
     printButton.addEventListener("click", () => window.print());
     exportButton.addEventListener("click", exportExcel);
+
     updateFormScope();
     updatePositionOptions();
     updateAppliedOptions();
@@ -2177,16 +2417,18 @@ function format_performance_requirements(array $rules): string
     updatePerformanceFromPpst();
     updateTotals();
     restoreDraft();
-    updateActionTables();
-    updateFormScope();
-    updatePositionOptions();
     updateAppliedOptions();
-    updatePerformanceTable();
     updateQsFields();
     updatePerformanceFromPpst();
     updateTotals();
     updateActionTables();
-    renderApplicants();
+    setEditingState(editingEvaluationId);
+    
+    // Load evaluation records only for admin users
+    if (isAdminUser) {
+        loadEvaluationRecords();
+    }
+    
     const banners = Array.from(document.querySelectorAll(".banner"));
     if (banners.length) {
         setTimeout(() => {
