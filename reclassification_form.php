@@ -818,16 +818,6 @@ function format_performance_requirements(array $rules): string
             display: block;
             margin: 0 auto;
         }
-        .page-footer {
-            margin-top: 16px;
-            text-align: center;
-        }
-        .footer-img {
-            max-width: 100%;
-            height: auto;
-            display: block;
-            margin: 0 auto;
-        }
         @media print {
             body {
                 margin: 0.5in;
@@ -905,9 +895,6 @@ function format_performance_requirements(array $rules): string
             .signature-row.signature-single {
                 grid-template-columns: 1fr;
                 justify-items: center;
-            }
-            .page-footer {
-                margin-top: 12px;
             }
         }
         .admin-link {
@@ -1367,10 +1354,6 @@ function format_performance_requirements(array $rules): string
         </div>
     </div>
 <?php endif; ?>
-
-<div class="page-footer">
-    <img src="images/footer.png" alt="Form Footer" class="footer-img">
-</div>
 
 <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
 <script>
