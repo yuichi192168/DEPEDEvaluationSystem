@@ -392,19 +392,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         // Handle sample data generation
         elseif ($generateSample) {
-            $sourceFile = $_POST['source_file'] ?? 'OSDS-January-2026.xlsx';
+            $sourceFile = $_POST['source_file'] ?? 'attendance-data.xlsx';
             $templateFile = $_POST['template_file'] ?? 'dtr-jan-2026.xlsx';
             
             $generator = new DTRGenerator($sourceFile, $templateFile, $outputDir);
             ob_start(); // Suppress sample generation output
             $generator->generateSampleData();
             ob_end_clean(); // Discard output
-            $message = "Sample data generated successfully! File: OSDS-January-2026-SAMPLE.xlsx";
+            $message = "Sample data generated successfully! File: sample-attendance-data.xlsx";
             $messageType = 'success';
         }
         // Handle DTR generation
         else {
-            $sourceFile = $_POST['source_file'] ?? 'OSDS-January-2026.xlsx';
+            $sourceFile = $_POST['source_file'] ?? 'attendance-data.xlsx';
             $templateFile = $_POST['template_file'] ?? 'dtr-jan-2026.xlsx';
             $selectedDepartment = trim($_POST['filter_department'] ?? '');
             $skipGenerated = isset($_POST['skip_generated']);
@@ -505,7 +505,7 @@ $excelFiles = array_filter(scandir(__DIR__), function($file) {
 
 // Separate source and template files
 $sourceFiles = array_values(array_filter($excelFiles, function($file) {
-    return preg_match('/OSDS|source|log|attendance|uploaded_raw/i', $file);
+    return preg_match('/source|log|attendance|data|uploaded_raw/i', $file);
 }));
 
 $templateFiles = array_values(array_filter($excelFiles, function($file) {
@@ -720,7 +720,7 @@ if (!empty($dateFilter)) {
                         </svg>
                         Upload Raw Data
                     </h2>
-                    <p class="text-sm text-gray-600 mb-4">Upload the OSDS attendance logs file containing employee clock-in/out records.</p>
+                    <p class="text-sm text-gray-600 mb-4">Upload the employee attendance logs file containing clock-in/out records from any department.</p>
                     
                     <form method="POST" enctype="multipart/form-data" id="rawUploadForm">
                         <input type="hidden" name="output_dir" value="<?php echo htmlspecialchars($outputDir); ?>">
@@ -950,7 +950,7 @@ if (!empty($dateFilter)) {
                         Quick Guide
                     </h3>
                     <ol class="text-sm text-gray-700 space-y-2 list-decimal list-inside">
-                        <li>Upload your raw attendance logs (OSDS file)</li>
+                        <li>Upload your employee attendance logs file</li>
                         <li>Upload the master DTR template</li>
                         <li>Select source and template files from dropdowns</li>
                         <li>Choose output directory</li>
