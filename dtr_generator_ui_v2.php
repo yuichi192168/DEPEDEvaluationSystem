@@ -286,6 +286,29 @@ if (isset($_GET['delete']) && isset($_GET['dir'])) {
     exit;
 }
 
+// Handle uploaded source/template file deletion
+if (isset($_GET['delete_uploaded'])) {
+    $fileToDelete = basename($_GET['delete_uploaded']);
+    $fullPath = __DIR__ . DIRECTORY_SEPARATOR . $fileToDelete;
+    
+    if (file_exists($fullPath) && preg_match('/^uploaded_(raw|template)_/', $fileToDelete) && preg_match('/\.(xlsx|xls)$/i', $fileToDelete)) {
+        if (unlink($fullPath)) {
+            $message = "Uploaded file deleted successfully: {$fileToDelete}";
+            $messageType = 'success';
+        } else {
+            $message = "Failed to delete uploaded file: {$fileToDelete}";
+            $messageType = 'error';
+        }
+    } else {
+        $message = "File not found or invalid file type.";
+        $messageType = 'error';
+    }
+    
+    // Redirect to clean URL
+    header('Location: ' . strtok($_SERVER['REQUEST_URI'], '?'));
+    exit;
+}
+
 // Handle file download
 if (isset($_GET['download']) && isset($_GET['dir'])) {
     $fileToDownload = basename($_GET['download']);
@@ -612,39 +635,39 @@ if (!empty($dateFilter)) {
                 </div>
 
                 <!-- Generated Card -->
-                <div class="bg-white rounded-lg shadow-md p-6 border-l-4 border-green-600">
+                <div class="bg-white rounded-lg shadow-md p-6 border-l-4 border-teal-600">
                     <div class="flex items-center justify-between">
                         <div>
                             <p class="text-gray-500 text-sm font-medium">Generated</p>
                             <p class="text-3xl font-bold text-gray-800 mt-2"><?php echo $totalGeneratedCount; ?></p>
                         </div>
-                        <svg class="w-12 h-12 text-green-200" fill="currentColor" viewBox="0 0 20 20">
+                        <svg class="w-12 h-12 text-teal-200" fill="currentColor" viewBox="0 0 20 20">
                             <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
                         </svg>
                     </div>
                 </div>
 
                 <!-- Pending Card -->
-                <div class="bg-white rounded-lg shadow-md p-6 border-l-4 border-yellow-600">
+                <div class="bg-white rounded-lg shadow-md p-6 border-l-4 border-gray-400">
                     <div class="flex items-center justify-between">
                         <div>
                             <p class="text-gray-500 text-sm font-medium">Pending</p>
                             <p class="text-3xl font-bold text-gray-800 mt-2"><?php echo max(0, $totalPendingCount); ?></p>
                         </div>
-                        <svg class="w-12 h-12 text-yellow-200" fill="currentColor" viewBox="0 0 20 20">
+                        <svg class="w-12 h-12 text-gray-300" fill="currentColor" viewBox="0 0 20 20">
                             <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v3.5a1 1 0 002 0V7zm0 7a1 1 0 11-2 0 1 1 0 012 0z" clip-rule="evenodd"/>
                         </svg>
                     </div>
                 </div>
 
                 <!-- Output Files Card -->
-                <div class="bg-white rounded-lg shadow-md p-6 border-l-4 border-purple-600">
+                <div class="bg-white rounded-lg shadow-md p-6 border-l-4 border-indigo-600">
                     <div class="flex items-center justify-between">
                         <div>
                             <p class="text-gray-500 text-sm font-medium">Generated Files</p>
                             <p class="text-3xl font-bold text-gray-800 mt-2"><?php echo count($outputFiles); ?></p>
                         </div>
-                        <svg class="w-12 h-12 text-purple-200" fill="currentColor" viewBox="0 0 20 20">
+                        <svg class="w-12 h-12 text-indigo-200" fill="currentColor" viewBox="0 0 20 20">
                             <path d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z"/>
                         </svg>
                     </div>
@@ -654,10 +677,10 @@ if (!empty($dateFilter)) {
 
         <!-- Duplicate Files Alert -->
         <?php if (!empty($duplicateFiles)): ?>
-        <div class="mb-6 p-4 rounded-lg bg-yellow-50 border border-yellow-200">
-            <p class="text-yellow-800 font-semibold mb-2">Found Duplicate Files:</p>
+        <div class="mb-6 p-4 rounded-lg bg-gray-50 border border-gray-300">
+            <p class="text-gray-800 font-semibold mb-2">Found Duplicate Files:</p>
             <?php foreach ($duplicateFiles as $basename => $files): ?>
-            <p class="text-sm text-yellow-700">
+            <p class="text-sm text-gray-700">
                 <strong><?php echo htmlspecialchars($basename); ?></strong> - <?php echo count($files); ?> versions found
             </p>
             <?php endforeach; ?>
@@ -678,7 +701,7 @@ if (!empty($dateFilter)) {
                         </p>
                         <p class="text-xs text-gray-500"><?php echo $event['timestamp']; ?></p>
                     </div>
-                    <span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">Success</span>
+                    <span class="bg-teal-100 text-teal-800 text-xs px-2 py-1 rounded">Success</span>
                 </div>
                 <?php endforeach; ?>
             </div>
@@ -721,15 +744,27 @@ if (!empty($dateFilter)) {
                     </form>
                     
                     <?php if (!empty($uploadedRawFile)): ?>
-                    <div class="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
-                        <p class="text-sm text-green-800">
-                            <strong>Uploaded:</strong> <?php echo htmlspecialchars($uploadedRawFile); ?>
-                        </p>
-                        <?php if (!empty($employeeNames)): ?>
-                        <p class="text-sm text-green-700 mt-1">
-                            Found <?php echo count($employeeNames); ?> employees
-                        </p>
-                        <?php endif; ?>
+                    <div class="mt-4 p-3 bg-teal-50 border border-teal-200 rounded-lg">
+                        <div class="flex items-start justify-between">
+                            <div class="flex-1">
+                                <p class="text-sm text-teal-800">
+                                    <strong>Uploaded:</strong> <?php echo htmlspecialchars($uploadedRawFile); ?>
+                                </p>
+                                <?php if (!empty($employeeNames)): ?>
+                                <p class="text-sm text-teal-700 mt-1">
+                                    Found <?php echo count($employeeNames); ?> employees
+                                </p>
+                                <?php endif; ?>
+                            </div>
+                            <a href="?delete_uploaded=<?php echo urlencode($uploadedRawFile); ?>" 
+                               onclick="return confirm('Are you sure you want to delete this uploaded file?');" 
+                               class="ml-3 text-gray-600 hover:text-gray-800 transition-colors" 
+                               title="Delete uploaded file">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                </svg>
+                            </a>
+                        </div>
                     </div>
                     <?php endif; ?>
                 </div>
@@ -737,7 +772,7 @@ if (!empty($dateFilter)) {
                 <!-- Template Upload Card -->
                 <div class="bg-white rounded-lg shadow-md p-6">
                     <h2 class="text-xl font-semibold text-gray-800 mb-4 flex items-center">
-                        <svg class="w-6 h-6 mr-2 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg class="w-6 h-6 mr-2 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                         </svg>
                         Upload Master Template
@@ -747,7 +782,7 @@ if (!empty($dateFilter)) {
                     <form method="POST" enctype="multipart/form-data" id="templateUploadForm">
                         <input type="hidden" name="output_dir" value="<?php echo htmlspecialchars($outputDir); ?>">
                         
-                        <div class="file-dropzone border-2 border-dashed border-gray-300 rounded-lg p-8 text-center cursor-pointer hover:border-purple-400" id="templateDropzone">
+                        <div class="file-dropzone border-2 border-dashed border-gray-300 rounded-lg p-8 text-center cursor-pointer hover:border-teal-400" id="templateDropzone">
                             <svg class="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
                                 <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                             </svg>
@@ -760,16 +795,26 @@ if (!empty($dateFilter)) {
                         
                         <div id="templateFilePicked" class="mt-3 text-sm text-gray-700"></div>
                         
-                        <button type="submit" name="upload_template" value="1" class="mt-4 w-full bg-purple-600 text-white py-2 px-4 rounded-lg hover:bg-purple-700 transition-colors font-medium">
+                        <button type="submit" name="upload_template" value="1" class="mt-4 w-full bg-teal-600 text-white py-2 px-4 rounded-lg hover:bg-teal-700 transition-colors font-medium">
                             Upload Template File
                         </button>
                     </form>
                     
                     <?php if (!empty($uploadedTemplateFile)): ?>
-                    <div class="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
-                        <p class="text-sm text-green-800">
-                            <strong>Uploaded:</strong> <?php echo htmlspecialchars($uploadedTemplateFile); ?>
-                        </p>
+                    <div class="mt-4 p-3 bg-teal-50 border border-teal-200 rounded-lg">
+                        <div class="flex items-center justify-between">
+                            <p class="text-sm text-teal-800">
+                                <strong>Uploaded:</strong> <?php echo htmlspecialchars($uploadedTemplateFile); ?>
+                            </p>
+                            <a href="?delete_uploaded=<?php echo urlencode($uploadedTemplateFile); ?>" 
+                               onclick="return confirm('Are you sure you want to delete this template file?');" 
+                               class="ml-3 text-gray-600 hover:text-gray-800 transition-colors" 
+                               title="Delete template file">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                </svg>
+                            </a>
+                        </div>
                     </div>
                     <?php endif; ?>
                 </div>
@@ -897,9 +942,9 @@ if (!empty($dateFilter)) {
                 </div>
 
                 <!-- Quick Info Card -->
-                <div class="bg-blue-50 rounded-lg shadow-md p-6 border border-blue-100">
+                <div class="bg-indigo-50 rounded-lg shadow-md p-6 border border-indigo-100">
                     <h3 class="text-lg font-semibold text-gray-800 mb-3 flex items-center">
-                        <svg class="w-5 h-5 mr-2 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                        <svg class="w-5 h-5 mr-2 text-indigo-600" fill="currentColor" viewBox="0 0 20 20">
                             <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
                         </svg>
                         Quick Guide
@@ -948,7 +993,7 @@ if (!empty($dateFilter)) {
                         <tr class="hover:bg-gray-50 transition-colors">
                             <td class="px-6 py-4 whitespace-nowrap">
                                 <div class="flex items-center">
-                                    <svg class="w-5 h-5 mr-3 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                                    <svg class="w-5 h-5 mr-3 text-teal-500" fill="currentColor" viewBox="0 0 20 20">
                                         <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd"/>
                                     </svg>
                                     <span class="text-sm font-medium text-gray-900"><?php echo htmlspecialchars($file['name']); ?></span>
@@ -970,7 +1015,7 @@ if (!empty($dateFilter)) {
                                 </a>
                                 <a href="?delete=<?php echo urlencode($file['name']); ?>&dir=<?php echo urlencode($outputDir); ?>" 
                                    onclick="return confirm('Are you sure you want to delete <?php echo htmlspecialchars($file['name']); ?>?');"
-                                   class="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-white bg-red-600 hover:bg-red-700 transition-colors">
+                                   class="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-white bg-gray-600 hover:bg-gray-700 transition-colors">
                                     <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
                                     </svg>
@@ -1048,7 +1093,7 @@ if (!empty($dateFilter)) {
             
             templateFileInput.addEventListener('change', () => {
                 if (templateFileInput.files.length > 0) {
-                    templateFilePicked.innerHTML = `<span class="font-medium text-purple-600">Selected:</span> ${templateFileInput.files[0].name}`;
+                    templateFilePicked.innerHTML = `<span class="font-medium text-teal-600">Selected:</span> ${templateFileInput.files[0].name}`;
                 }
             });
 
@@ -1072,7 +1117,7 @@ if (!empty($dateFilter)) {
                 const files = e.dataTransfer.files;
                 if (files.length > 0) {
                     templateFileInput.files = files;
-                    templateFilePicked.innerHTML = `<span class="font-medium text-purple-600">Selected:</span> ${files[0].name}`;
+                    templateFilePicked.innerHTML = `<span class="font-medium text-teal-600">Selected:</span> ${files[0].name}`;
                 }
             });
         }
