@@ -105,23 +105,37 @@ class DTRGenerator
             $name = trim($row[0] ?? '');
             $date = $row[1] ?? '';
             $timetable = trim($row[2] ?? ''); // Morning or Afternoon
-            $clockIn = trim($row[3] ?? '');
-            $clockOut = trim($row[4] ?? '');
+            $clockIn = $row[3] ?? ''; // Don't trim yet - preserve original for better parsing
+            $clockOut = $row[4] ?? ''; // Don't trim yet - preserve original for better parsing
             $department = trim($row[5] ?? '');
             
-            if (empty($name) || empty($date)) continue;
+            if (empty($name) || empty($date)) {
+                echo "Warning: Skipping row " . ($rowIndex + 2) . " - missing name or date\n";
+                continue;
+            }
             
             // Parse date to get day of month
             $dateObj = $this->parseDate($date);
-            if (!$dateObj) continue;
+            if (!$dateObj) {
+                echo "Warning: Could not parse date '" . substr((string)$date, 0, 20) . "' for $name at row " . ($rowIndex + 2) . "\n";
+                continue;
+            }
             $dayOfMonth = $dateObj->format('j'); // 1-31
             
             // Initialize employee array if needed
             if (!isset($this->logData[$name])) {
                 $this->logData[$name] = [
                     'department' => $department,
-                    'dates' => []
+                    'dates' => [],
+                    'schedule' => null, // Will be detected later
+                    'arrival_times' => [], // Fallback for schedule detection when timetable labels are missing
+                    'timetable_values' => [] // Track raw timetable labels for deterministic schedule detection
                 ];
+            }
+
+            // Track timetable values for schedule detection (e.g., "7-4pm Morning", "8-5pm Afternoon")
+            if ($timetable !== '') {
+                $this->logData[$name]['timetable_values'][] = $timetable;
             }
             
             // Initialize day array if needed
@@ -137,16 +151,113 @@ class DTRGenerator
             
             // Map clock in/out based on timetable type
             if (stripos($timetable, 'Morning') !== false) {
-                $this->logData[$name]['dates'][$dayOfMonth]['morning_arrival'] = $this->formatTime($clockIn);
-                $this->logData[$name]['dates'][$dayOfMonth]['morning_departure'] = $this->formatTime($clockOut);
+                $morningArrival = $this->formatTime($clockIn, $name, 'Morning Arrival', $dayOfMonth);
+                $morningDeparture = $this->formatTime($clockOut, $name, 'Morning Departure', $dayOfMonth);
+                
+                $this->logData[$name]['dates'][$dayOfMonth]['morning_arrival'] = $morningArrival;
+                $this->logData[$name]['dates'][$dayOfMonth]['morning_departure'] = $morningDeparture;
+                
+                // Track arrival time for schedule detection
+                if ($morningArrival) {
+                    $this->logData[$name]['arrival_times'][] = $morningArrival;
+                }
             } elseif (stripos($timetable, 'Afternoon') !== false) {
-                $this->logData[$name]['dates'][$dayOfMonth]['afternoon_arrival'] = $this->formatTime($clockIn);
-                $this->logData[$name]['dates'][$dayOfMonth]['afternoon_departure'] = $this->formatTime($clockOut);
+                $afternoonArrival = $this->formatTime($clockIn, $name, 'Afternoon Arrival', $dayOfMonth);
+                $afternoonDeparture = $this->formatTime($clockOut, $name, 'Afternoon Departure', $dayOfMonth);
+                
+                $this->logData[$name]['dates'][$dayOfMonth]['afternoon_arrival'] = $afternoonArrival;
+                $this->logData[$name]['dates'][$dayOfMonth]['afternoon_departure'] = $afternoonDeparture;
+            } else {
+                // If timetable doesn't match Morning/Afternoon, log it
+                if ($timetable !== '') {
+                    echo "Notice: Unknown timetable type '" . substr($timetable, 0, 30) . "' for $name on day $dayOfMonth\n";
+                }
             }
         }
         
+        // Detect schedules for all employees
+        $this->detectSchedules();
+        
         echo "Loaded data for " . count($this->logData) . " employees\n";
         return true;
+    }
+    
+    /**
+     * Detect employee schedule (7-4 or 8-5)
+     * Priority: timetable labels (7-4pm/8-5pm) -> fallback to arrival times
+     */
+    private function detectSchedules()
+    {
+        foreach ($this->logData as $name => &$data) {
+            $sevenFourLabelCount = 0;
+            $eightFiveLabelCount = 0;
+
+            foreach (($data['timetable_values'] ?? []) as $timetableValue) {
+                $detected = $this->detectScheduleFromTimetable($timetableValue);
+                if ($detected === '7-4') {
+                    $sevenFourLabelCount++;
+                } elseif ($detected === '8-5') {
+                    $eightFiveLabelCount++;
+                }
+            }
+
+            // Primary logic: timetable labels decide schedule
+            if ($sevenFourLabelCount > 0 || $eightFiveLabelCount > 0) {
+                $data['schedule'] = ($sevenFourLabelCount > $eightFiveLabelCount) ? '7-4' : '8-5';
+                continue;
+            }
+
+            if (empty($data['arrival_times'])) {
+                $data['schedule'] = '8-5'; // Default when no usable timetable/arrival data
+                continue;
+            }
+            
+            $sevenAMCount = 0;
+            $eightAMCount = 0;
+            
+            foreach ($data['arrival_times'] as $time) {
+                $hour = (int)substr($time, 0, 2);
+                
+                // Consider 6:00-7:59 as 7-4 schedule
+                if ($hour >= 6 && $hour < 8) {
+                    $sevenAMCount++;
+                } 
+                // Consider 8:00-9:00 as 8-5 schedule
+                elseif ($hour >= 8 && $hour < 9) {
+                    $eightAMCount++;
+                }
+            }
+            
+            // Determine schedule based on majority of arrivals
+            if ($sevenAMCount > $eightAMCount) {
+                $data['schedule'] = '7-4';
+            } else {
+                $data['schedule'] = '8-5';
+            }
+        }
+        unset($data); // Break reference
+    }
+
+    /**
+     * Detect schedule from timetable text (e.g., "7-4pm Morning", "8-5pm Afternoon")
+     */
+    private function detectScheduleFromTimetable($timetableValue)
+    {
+        $timetable = strtolower(trim((string)$timetableValue));
+
+        if ($timetable === '') {
+            return null;
+        }
+
+        if (strpos($timetable, '7-4pm') !== false || (strpos($timetable, '7') !== false && strpos($timetable, '4pm') !== false)) {
+            return '7-4';
+        }
+
+        if (strpos($timetable, '8-5pm') !== false || (strpos($timetable, '8') !== false && strpos($timetable, '5pm') !== false)) {
+            return '8-5';
+        }
+
+        return null;
     }
     
     /**
@@ -181,42 +292,78 @@ class DTRGenerator
     
     /**
      * Format time string to HH:mm format (24-hour)
+     * Now includes better fallback handling and diagnostic logging
      */
-    private function formatTime($timeStr)
+    private function formatTime($timeStr, $employeeName = '', $fieldName = '', $day = 0)
     {
-        if (empty($timeStr)) return '';
+        if (empty($timeStr) || $timeStr === '' || $timeStr === null) {
+            return '';
+        }
+        
+        $originalValue = $timeStr;
         
         // Handle numeric Excel time (decimal fraction of day)
-        if (is_numeric($timeStr) && $timeStr < 1) {
-            $hours = floor($timeStr * 24);
-            $minutes = round(($timeStr * 24 - $hours) * 60);
-            return sprintf('%02d:%02d', $hours, $minutes);
+        if (is_numeric($timeStr)) {
+            if ($timeStr < 1 && $timeStr >= 0) {
+                $hours = floor($timeStr * 24);
+                $minutes = round(($timeStr * 24 - $hours) * 60);
+                return sprintf('%02d:%02d', $hours, $minutes);
+            } elseif ($timeStr >= 1) {
+                // Might be a full datetime serial - try to extract time portion
+                $timePortion = $timeStr - floor($timeStr);
+                if ($timePortion > 0) {
+                    $hours = floor($timePortion * 24);
+                    $minutes = round(($timePortion * 24 - $hours) * 60);
+                    return sprintf('%02d:%02d', $hours, $minutes);
+                }
+            }
         }
         
         // Regular string parsing
         $timeStr = trim((string)$timeStr);
         
-        // Try to parse common formats
-        $time = \DateTime::createFromFormat('H:i:s', $timeStr);
-        if (!$time) {
-            $time = \DateTime::createFromFormat('H:i', $timeStr);
-        }
-        if (!$time) {
-            $time = \DateTime::createFromFormat('h:i A', $timeStr);
-        }
-        if (!$time) {
-            $time = \DateTime::createFromFormat('h:i:s A', $timeStr);
-        }
-        
-        if (!$time) {
-            // Fallback: return as-is if it looks like a time
-            if (preg_match('/^\d{1,2}:\d{2}/', $timeStr)) {
-                return $timeStr;
-            }
+        if ($timeStr === '') {
             return '';
         }
         
-        return $time->format('H:i');
+        // Try to parse common formats
+        $formats = [
+            'H:i:s',      // 14:30:00
+            'H:i',        // 14:30
+            'h:i:s A',    // 02:30:00 PM
+            'h:i A',      // 02:30 PM
+            'h:i:s a',    // 02:30:00 pm
+            'h:i a',      // 02:30 pm
+            'g:i A',      // 2:30 PM
+            'g:i a',      // 2:30 pm
+        ];
+        
+        foreach ($formats as $format) {
+            $time = \DateTime::createFromFormat($format, $timeStr);
+            if ($time !== false) {
+                return $time->format('H:i');
+            }
+        }
+        
+        // Fallback: return as-is if it looks like a time pattern
+        if (preg_match('/^\d{1,2}:\d{2}(:\d{2})?/', $timeStr)) {
+            // Extract just the time part (HH:MM or HH:MM:SS)
+            if (preg_match('/^(\d{1,2}):(\d{2})/', $timeStr, $matches)) {
+                return sprintf('%02d:%02d', (int)$matches[1], (int)$matches[2]);
+            }
+            return $timeStr;
+        }
+        
+        // Last resort: if the value is non-empty and we couldn't parse it, log and preserve it
+        if ($timeStr !== '') {
+            $context = $employeeName ? "for $employeeName" : '';
+            $context .= $fieldName ? " ($fieldName)" : '';
+            $context .= $day ? " on day $day" : '';
+            echo "Warning: Could not parse time '" . substr($timeStr, 0, 20) . "' $context - preserving raw value\n";
+            return $timeStr; // Preserve the original value rather than losing it
+        }
+        
+        return '';
     }
     
     /**
@@ -260,6 +407,14 @@ class DTRGenerator
     }
 
     /**
+     * Get employee data with schedules
+     */
+    public function getEmployeeData()
+    {
+        return $this->logData;
+    }
+    
+    /**
      * Get loaded employee count
      */
     public function getEmployeeCount()
@@ -275,6 +430,28 @@ class DTRGenerator
         // Load template
         $template = $this->loadTemplate();
         $sheet = $template->getActiveSheet();
+        
+        // Detect and update official hours based on schedule
+        $schedule = $employeeData['schedule'] ?? '8-5';
+        $officialHoursText = '';
+        
+        if ($schedule === '7-4') {
+            $officialHoursText = 'Official hours for arrival and departure: 7:00 a.m. to 4:00 p.m.';
+        } else {
+            $officialHoursText = 'Official hours for arrival and departure: 8:00 a.m. to 5:00 p.m.';
+        }
+        
+        // Update cells A14 and I14 with official hours
+        $sheet->setCellValue('A14', $officialHoursText);
+        $sheet->setCellValue('I14', $officialHoursText);
+
+        // Ensure no mixed duplicate "Official hours" line remains in nearby cells
+        foreach (['A15', 'I15'] as $cellRef) {
+            $currentValue = strtolower(trim((string)$sheet->getCell($cellRef)->getValue()));
+            if (strpos($currentValue, 'official hours for arrival and departure:') !== false) {
+                $sheet->setCellValue($cellRef, $officialHoursText);
+            }
+        }
         
         // CLEAR ALL existing data rows completely (columns A-F)
         // Remove all template/default data - nothing should remain
@@ -298,25 +475,17 @@ class DTRGenerator
                 // Set the day number in Column A (only if there's data for this day)
                 $sheet->setCellValueByColumnAndRow(1, $row, $day);
                 
-                // Set morning arrival (Column B)
-                if (!empty($dayData['morning_arrival'])) {
-                    $sheet->setCellValueByColumnAndRow(2, $row, $dayData['morning_arrival']);
-                }
+                // Set morning arrival (Column B) - write even if empty to ensure data visibility
+                $sheet->setCellValueByColumnAndRow(2, $row, $dayData['morning_arrival'] ?? '');
                 
                 // Set morning departure (Column C)
-                if (!empty($dayData['morning_departure'])) {
-                    $sheet->setCellValueByColumnAndRow(3, $row, $dayData['morning_departure']);
-                }
+                $sheet->setCellValueByColumnAndRow(3, $row, $dayData['morning_departure'] ?? '');
                 
                 // Set afternoon arrival (Column D)
-                if (!empty($dayData['afternoon_arrival'])) {
-                    $sheet->setCellValueByColumnAndRow(4, $row, $dayData['afternoon_arrival']);
-                }
+                $sheet->setCellValueByColumnAndRow(4, $row, $dayData['afternoon_arrival'] ?? '');
                 
                 // Set afternoon departure (Column E)
-                if (!empty($dayData['afternoon_departure'])) {
-                    $sheet->setCellValueByColumnAndRow(5, $row, $dayData['afternoon_departure']);
-                }
+                $sheet->setCellValueByColumnAndRow(5, $row, $dayData['afternoon_departure'] ?? '');
                 
                 // Set remarks if any
                 if (!empty($dayData['remarks'])) {
@@ -325,8 +494,9 @@ class DTRGenerator
             }
         }
         
-        // Save the file
-        $filename = $this->sanitizeFilename("DTR_Generated_{$employeeName}.xlsx");
+        // Save the file with schedule-specific filename
+        $schedule = $employeeData['schedule'] ?? '8-5';
+        $filename = $this->sanitizeFilename("DTR_{$schedule}_{$employeeName}.xlsx");
         $filepath = "{$this->outputDir}/{$filename}";
         
         $writer = IOFactory::createWriter($template, 'Xlsx');
