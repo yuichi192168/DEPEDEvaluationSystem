@@ -193,7 +193,64 @@ $defaultTemplate = 'DTR-TEMPLATE-TEST.xlsx';
 $autoConvertXlsFiles = true;
 $deleteOriginalXlsAfterConversion = false;
 
-// Handle file uploads
+// AJAX endpoint for file uploads
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['excel_files']) && isset($_POST['ajax'])) {
+    header('Content-Type: application/json');
+    
+    $uploadDir = __DIR__ . DIRECTORY_SEPARATOR . 'excel-files';
+    
+    // Create directory if it doesn't exist
+    if (!is_dir($uploadDir)) {
+        mkdir($uploadDir, 0755, true);
+    }
+    
+    $uploadedCount = 0;
+    $uploadErrors = [];
+    
+    foreach ($_FILES['excel_files']['tmp_name'] as $key => $tmp_name) {
+        if ($_FILES['excel_files']['error'][$key] !== UPLOAD_ERR_OK) {
+            if ($_FILES['excel_files']['error'][$key] !== UPLOAD_ERR_NO_FILE) {
+                $uploadErrors[] = $_FILES['excel_files']['name'][$key] . ': Upload error code ' . $_FILES['excel_files']['error'][$key];
+            }
+            continue;
+        }
+        
+        $filename = basename($_FILES['excel_files']['name'][$key]);
+        $fileext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
+        
+        // Validate file type
+        if (!in_array($fileext, ['xls', 'xlsx'])) {
+            $uploadErrors[] = $filename . ': Invalid file type. Only .xls and .xlsx files are allowed.';
+            continue;
+        }
+        
+        $destination = $uploadDir . DIRECTORY_SEPARATOR . $filename;
+        
+        // Check if file already exists
+        if (file_exists($destination)) {
+            $uploadErrors[] = $filename . ': File already exists. Please rename and try again.';
+            continue;
+        }
+        
+        if (move_uploaded_file($tmp_name, $destination)) {
+            $uploadedCount++;
+        } else {
+            $uploadErrors[] = $filename . ': Could not save file.';
+        }
+    }
+    
+    $response = [
+        'success' => $uploadedCount > 0,
+        'uploadedCount' => $uploadedCount,
+        'errors' => $uploadErrors,
+        'files' => getExcelFilesFromFolder('excel-files', $autoConvertXlsFiles, $deleteOriginalXlsAfterConversion)
+    ];
+    
+    echo json_encode($response);
+    exit;
+}
+
+// Handle file uploads (non-AJAX fallback)
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['excel_files'])) {
     $uploadDir = __DIR__ . DIRECTORY_SEPARATOR . 'excel-files';
     
@@ -321,7 +378,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     }
 }
 
-// Handle file deletion
+// AJAX endpoint for single file deletion
+if (isset($_GET['delete']) && isset($_GET['from']) && isset($_GET['ajax'])) {
+    header('Content-Type: application/json');
+    
+    $fileToDelete = basename($_GET['delete']);
+    $from = $_GET['from'];
+    $fullPath = __DIR__ . DIRECTORY_SEPARATOR . $from . DIRECTORY_SEPARATOR . $fileToDelete;
+    
+    $success = file_exists($fullPath) && unlink($fullPath);
+    
+    $response = [
+        'success' => $success,
+        'message' => $success ? 'File deleted successfully.' : 'Could not delete file.',
+        'files' => $from === 'output' ? getOutputFiles($outputDir) : getExcelFilesFromFolder('excel-files', $autoConvertXlsFiles, $deleteOriginalXlsAfterConversion)
+    ];
+    
+    echo json_encode($response);
+    exit;
+}
+
+// Handle file deletion (non-AJAX fallback)
 if (isset($_GET['delete']) && isset($_GET['from'])) {
     $fileToDelete = basename($_GET['delete']);
     $from = $_GET['from'];
@@ -339,7 +416,53 @@ if (isset($_GET['delete']) && isset($_GET['from'])) {
     exit;
 }
 
-// Handle bulk file deletion
+// AJAX endpoint for bulk file deletion
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['bulk_delete']) && isset($_POST['ajax'])) {
+    header('Content-Type: application/json');
+    
+    $filesToDelete = isset($_POST['delete_files']) ? (array)$_POST['delete_files'] : [];
+    $from = isset($_POST['delete_from']) ? $_POST['delete_from'] : '';
+    
+    if (empty($filesToDelete)) {
+        echo json_encode([
+            'success' => false,
+            'message' => 'No files selected for deletion.',
+            'files' => $from === 'output' ? getOutputFiles($outputDir) : getExcelFilesFromFolder('excel-files', $autoConvertXlsFiles, $deleteOriginalXlsAfterConversion)
+        ]);
+        exit;
+    }
+    
+    $deletedCount = 0;
+    $failedCount = 0;
+    
+    foreach ($filesToDelete as $file) {
+        $safeFile = basename($file);
+        $fullPath = __DIR__ . DIRECTORY_SEPARATOR . $from . DIRECTORY_SEPARATOR . $safeFile;
+        
+        if (file_exists($fullPath) && unlink($fullPath)) {
+            $deletedCount++;
+        } else {
+            $failedCount++;
+        }
+    }
+    
+    $success = $deletedCount > 0;
+    $message = $success ? "Successfully deleted $deletedCount file(s)." : "Failed to delete files.";
+    if ($failedCount > 0 && $deletedCount > 0) {
+        $message .= " Failed to delete $failedCount file(s).";
+    }
+    
+    echo json_encode([
+        'success' => $success,
+        'message' => $message,
+        'deletedCount' => $deletedCount,
+        'failedCount' => $failedCount,
+        'files' => $from === 'output' ? getOutputFiles($outputDir) : getExcelFilesFromFolder('excel-files', $autoConvertXlsFiles, $deleteOriginalXlsAfterConversion)
+    ]);
+    exit;
+}
+
+// Handle bulk file deletion (non-AJAX fallback)
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['bulk_delete'])) {
     $filesToDelete = isset($_POST['delete_files']) ? (array)$_POST['delete_files'] : [];
     $from = isset($_POST['delete_from']) ? $_POST['delete_from'] : '';
@@ -614,7 +737,7 @@ foreach ($outputFiles as $file) {
                     <h2 class="text-xl font-bold text-gray-800 mb-4">0. Upload Excel Files</h2>
                     
                     <!-- File Upload Form -->
-                    <form method="POST" enctype="multipart/form-data" id="upload-form">
+                    <form method="POST" enctype="multipart/form-data" id="upload-form" onsubmit="return handleUploadSubmit(event)">
                         <div class="border-2 border-dashed border-indigo-300 rounded-lg p-6 bg-indigo-50 hover:bg-indigo-100 transition" id="drop-zone" ondrop="handleDrop(event)" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)">
                             <div class="text-center">
                                 <svg class="mx-auto h-12 w-12 text-indigo-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -906,7 +1029,7 @@ foreach ($outputFiles as $file) {
                                 <td class="px-4 py-3 text-gray-600"><?php echo date('M d, Y H:i', $file['modified']); ?></td>
                                 <td class="px-4 py-3 text-right space-x-2">
                                     <a href="?download=<?php echo urlencode($file['name']); ?>&from=<?php echo $outputDir; ?>" class="text-green-600 hover:text-green-800 font-medium text-sm">Download</a>
-                                    <a href="?delete=<?php echo urlencode($file['name']); ?>&from=<?php echo $outputDir; ?>" onclick="return confirm('Delete this file?')" class="text-red-600 hover:text-red-800 font-medium text-sm">Delete</a>
+                                    <a href="#" onclick="deleteSingleFile('<?php echo htmlspecialchars($file['name'], ENT_QUOTES); ?>', '<?php echo $outputDir; ?>'); return false;" class="text-red-600 hover:text-red-800 font-medium text-sm">Delete</a>
                                 </td>
                             </tr>
                             <?php endforeach; ?>
@@ -1052,7 +1175,69 @@ foreach ($outputFiles as $file) {
             });
         }
 
-        // Delete selected input files
+        // Handle upload form submission with AJAX
+        function handleUploadSubmit(event) {
+            event.preventDefault();
+            
+            const form = event.target;
+            const formData = new FormData(form);
+            formData.append('ajax', '1');
+            
+            const uploadStatus = document.getElementById('upload-status');
+            uploadStatus.textContent = 'Uploading files...';
+            uploadStatus.className = 'mt-2 text-sm text-blue-600';
+            
+            fetch(window.location.href, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    let message = `Successfully uploaded ${data.uploadedCount} file(s).`;
+                    if (data.errors.length > 0) {
+                        message += ` However, ${data.errors.length} file(s) had errors: ${data.errors.join('; ')}`;
+                    }
+                    showAlert(message, 'success');
+                    clearFileSelection();
+                    refreshInputFileList(data.files);
+                } else {
+                    showAlert('Upload failed: ' + data.errors.join('; '), 'error');
+                }
+                uploadStatus.textContent = '';
+            })
+            .catch(error => {
+                showAlert('Upload error: ' + error.message, 'error');
+                uploadStatus.textContent = '';
+            });
+            
+            return false;
+        }
+
+        // Delete single file with AJAX
+        function deleteSingleFile(filename, from) {
+            if (!confirm('Delete this file?')) {
+                return;
+            }
+            
+            fetch(`?delete=${encodeURIComponent(filename)}&from=${from}&ajax=1`)
+            .then(response => response.json())
+            .then(data => {
+                showAlert(data.message, data.success ? 'success' : 'error');
+                if (data.success) {
+                    if (from === 'output') {
+                        refreshOutputFileList(data.files);
+                    } else {
+                        refreshInputFileList(data.files);
+                    }
+                }
+            })
+            .catch(error => {
+                showAlert('Delete error: ' + error.message, 'error');
+            });
+        }
+
+        // Delete selected input files with AJAX
         function deleteSelectedInputFiles() {
             const checkboxes = document.querySelectorAll('.process-file-checkbox:checked');
             
@@ -1065,22 +1250,32 @@ foreach ($outputFiles as $file) {
                 return;
             }
             
-            const form = document.getElementById('delete-input-form');
-            const container = document.getElementById('delete-input-files-container');
-            container.innerHTML = '';
+            const formData = new FormData();
+            formData.append('bulk_delete', '1');
+            formData.append('delete_from', 'excel-files');
+            formData.append('ajax', '1');
             
             checkboxes.forEach(function(checkbox) {
-                const input = document.createElement('input');
-                input.type = 'hidden';
-                input.name = 'delete_files[]';
-                input.value = checkbox.value;
-                container.appendChild(input);
+                formData.append('delete_files[]', checkbox.value);
             });
             
-            form.submit();
+            fetch(window.location.href, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                showAlert(data.message, data.success ? 'success' : 'error');
+                if (data.success) {
+                    refreshInputFileList(data.files);
+                }
+            })
+            .catch(error => {
+                showAlert('Delete error: ' + error.message, 'error');
+            });
         }
 
-        // Delete selected output files
+        // Delete selected output files with AJAX
         function deleteSelectedOutputFiles() {
             const checkboxes = document.querySelectorAll('.output-file-checkbox:checked');
             
@@ -1093,7 +1288,228 @@ foreach ($outputFiles as $file) {
                 return;
             }
             
-            document.getElementById('output-files-form').submit();
+            const formData = new FormData();
+            formData.append('bulk_delete', '1');
+            formData.append('delete_from', '<?php echo $outputDir; ?>');
+            formData.append('ajax', '1');
+            
+            checkboxes.forEach(function(checkbox) {
+                formData.append('delete_files[]', checkbox.value);
+            });
+            
+            fetch(window.location.href, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                showAlert(data.message, data.success ? 'success' : 'error');
+                if (data.success) {
+                    refreshOutputFileList(data.files);
+                }
+            })
+            .catch(error => {
+                showAlert('Delete error: ' + error.message, 'error');
+            });
+        }
+
+        // Show alert message dynamically
+        function showAlert(message, type) {
+            // Remove existing alerts
+            const existingAlert = document.querySelector('.dynamic-alert');
+            if (existingAlert) {
+                existingAlert.remove();
+            }
+            
+            const alertDiv = document.createElement('div');
+            alertDiv.className = 'dynamic-alert mb-6 p-4 rounded-lg flex items-start gap-3 ' + 
+                (type === 'success' ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200');
+            
+            const icon = type === 'success' ? 
+                '<svg class="w-6 h-6 text-green-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>' :
+                '<svg class="w-6 h-6 text-red-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/></svg>';
+            
+            alertDiv.innerHTML = icon + `<p class="${type === 'success' ? 'text-green-800' : 'text-red-800'}">${message}</p>`;
+            
+            const main = document.querySelector('main');
+            main.insertBefore(alertDiv, main.firstChild);
+            
+            // Auto-remove after 5 seconds
+            setTimeout(() => {
+                alertDiv.style.transition = 'opacity 0.5s';
+                alertDiv.style.opacity = '0';
+                setTimeout(() => alertDiv.remove(), 500);
+            }, 5000);
+        }
+
+        // Refresh input file list dynamically
+        function refreshInputFileList(files) {
+            const processForm = document.getElementById('process-form');
+            if (!processForm) return;
+            
+            // Find the file list container
+            const fileListContainer = processForm.querySelector('.space-y-2');
+            if (!fileListContainer) return;
+            
+            // Clear current list
+            fileListContainer.innerHTML = '';
+            
+            if (files.length === 0) {
+                processForm.parentElement.innerHTML = `
+                    <div class="text-center py-12 bg-gray-50 rounded-lg">
+                        <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                        </svg>
+                        <p class="mt-4 text-gray-700 font-medium">No files available</p>
+                        <p class="text-sm text-gray-600">Upload Excel files to the <code class="bg-gray-200 px-2 py-1 rounded">excel-files</code> folder</p>
+                    </div>`;
+                return;
+            }
+            
+            // Rebuild file list
+            files.forEach(file => {
+                const label = document.createElement('label');
+                label.className = 'flex items-start p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer';
+                
+                const statusText = file.converted ? '<span class="text-green-600">✓ Auto-converted</span> | ' : '';
+                const validText = file.valid ? 
+                    `<span>${file.employees} employees</span> | ` : 
+                    '<span class="text-red-600">Not readable</span> | ';
+                const errorText = !file.valid && file.error ? 
+                    `<p class="text-xs text-red-600 mt-1">${escapeHtml(file.error)}</p>` : '';
+                
+                label.innerHTML = `
+                    <input type="checkbox" name="files[]" value="${escapeHtml(file.name)}" 
+                           class="mt-1 h-4 w-4 text-indigo-600 rounded process-file-checkbox" 
+                           data-valid="${file.valid ? '1' : '0'}">
+                    <div class="ml-3 flex-1">
+                        <p class="font-medium text-gray-800">${escapeHtml(file.name)}</p>
+                        <p class="text-sm text-gray-600">
+                            ${statusText}${validText}<span>${formatFileSize(file.size)}</span>
+                        </p>
+                        ${errorText}
+                    </div>
+                `;
+                
+                fileListContainer.appendChild(label);
+            });
+            
+            // Update stats
+            const validFiles = files.filter(f => f.valid);
+            const invalidFiles = files.filter(f => !f.valid);
+            const totalEmployees = validFiles.reduce((sum, f) => sum + f.employees, 0);
+            
+            updateDashboardStats(validFiles.length, totalEmployees, invalidFiles.length);
+        }
+
+        // Refresh output file list dynamically
+        function refreshOutputFileList(files) {
+            const tbody = document.querySelector('#output-files-form tbody');
+            if (!tbody) return;
+            
+            // Clear current list
+            tbody.innerHTML = '';
+            
+            if (files.length === 0) {
+                const container = document.querySelector('#output-files-form').parentElement;
+                container.innerHTML = `
+                    <div class="text-center py-12 bg-gray-50 rounded-lg">
+                        <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                        </svg>
+                        <p class="mt-4 text-gray-700 font-medium">No generated files yet</p>
+                        <p class="text-sm text-gray-600">Generate DTRs from available files above</p>
+                    </div>`;
+                return;
+            }
+            
+            // Rebuild file list
+            files.forEach(file => {
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-gray-50';
+                
+                let scheduleBadge = '';
+                if (file.schedule === '7-4') {
+                    scheduleBadge = '<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">7-4pm</span>';
+                } else if (file.schedule === '8-5') {
+                    scheduleBadge = '<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">8-5pm</span>';
+                } else {
+                    scheduleBadge = '<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">N/A</span>';
+                }
+                
+                const modifiedDate = new Date(file.modified * 1000);
+                const dateStr = modifiedDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) + ' ' +
+                                modifiedDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+                
+                tr.innerHTML = `
+                    <td class="px-4 py-3">
+                        <input type="checkbox" name="delete_files[]" value="${escapeHtml(file.name)}" 
+                               class="h-4 w-4 text-indigo-600 rounded output-file-checkbox">
+                    </td>
+                    <td class="px-4 py-3">${scheduleBadge}</td>
+                    <td class="px-4 py-3 font-medium text-gray-800">${escapeHtml(file.name)}</td>
+                    <td class="px-4 py-3 text-gray-600">${formatFileSize(file.size)}</td>
+                    <td class="px-4 py-3 text-gray-600">${dateStr}</td>
+                    <td class="px-4 py-3 text-right space-x-2">
+                        <a href="?download=${encodeURIComponent(file.name)}&from=<?php echo $outputDir; ?>" 
+                           class="text-green-600 hover:text-green-800 font-medium text-sm">Download</a>
+                        <a href="#" onclick="deleteSingleFile('${escapeHtml(file.name).replace(/'/g, "\\'")}', '<?php echo $outputDir; ?>'); return false;" 
+                           class="text-red-600 hover:text-red-800 font-medium text-sm">Delete</a>
+                    </td>
+                `;
+                
+                tbody.appendChild(tr);
+            });
+            
+            // Update file count badge
+            const badge = document.querySelector('#output-files-form').closest('.bg-white').querySelector('.bg-green-100');
+            if (badge) {
+                badge.textContent = files.length + ' files';
+            }
+            
+            // Update dashboard stats
+            const dashboardBadge = document.querySelectorAll('.bg-white.rounded-lg.shadow-md')[2];
+            if (dashboardBadge) {
+                const countElement = dashboardBadge.querySelector('.text-3xl');
+                if (countElement) countElement.textContent = files.length;
+            }
+        }
+
+        // Update dashboard stats
+        function updateDashboardStats(availableFiles, totalEmployees, invalidFiles) {
+            const dashboardCards = document.querySelectorAll('.bg-white.rounded-lg.shadow-md');
+            
+            // Available Files card
+            if (dashboardCards[0]) {
+                const countElement = dashboardCards[0].querySelector('.text-3xl');
+                const statusElement = dashboardCards[0].querySelector('.text-xs');
+                if (countElement) countElement.textContent = availableFiles;
+                if (statusElement) {
+                    statusElement.textContent = invalidFiles > 0 ? 
+                        invalidFiles + ' file(s) need conversion' : 
+                        'All files ready';
+                }
+            }
+            
+            // Total Employees card
+            if (dashboardCards[1]) {
+                const countElement = dashboardCards[1].querySelector('.text-3xl');
+                if (countElement) countElement.textContent = totalEmployees;
+            }
+        }
+
+        // Utility: Escape HTML
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Utility: Format file size (JavaScript version)
+        function formatFileSize(bytes) {
+            if (bytes >= 1048576) return (bytes / 1048576).toFixed(2) + ' MB';
+            if (bytes >= 1024) return (bytes / 1024).toFixed(2) + ' KB';
+            return bytes + ' B';
         }
 
         // Prevent processing unreadable files while still allowing deletion selection

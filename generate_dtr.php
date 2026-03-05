@@ -27,6 +27,9 @@ class DTRGenerator
     private $outputDir;
     private $logData = [];
     private $monthYear;
+    private $currentMonth;
+    private $currentYear;
+    private $holidays = [];
     
     /**
      * Constructor
@@ -41,10 +44,108 @@ class DTRGenerator
         $this->outputDir = $outputDir;
         $this->monthYear = 'January 2026';
         
+        // Extract month and year from filename or use defaults
+        $this->extractMonthYear();
+        
+        // Initialize holidays for the current month/year
+        $this->initializeHolidays();
+        
         // Create output directory if it doesn't exist
         if (!is_dir($this->outputDir)) {
             mkdir($this->outputDir, 0755, true);
         }
+    }
+    
+    /**
+     * Extract month and year from source filename or monthYear property
+     */
+    private function extractMonthYear()
+    {
+        // Try to extract from source filename (e.g., "OSDS-January-2026.xls")
+        if (preg_match('/(January|February|March|April|May|June|July|August|September|October|November|December)[-_\s]?(\d{4})/i', $this->sourceFile, $matches)) {
+            $monthName = ucfirst(strtolower($matches[1]));
+            $this->currentYear = (int)$matches[2];
+            $this->currentMonth = date('n', strtotime($monthName));
+            $this->monthYear = "$monthName {$this->currentYear}";
+        } else {
+            // Default to current month/year
+            $this->currentMonth = (int)date('n');
+            $this->currentYear = (int)date('Y');
+        }
+    }
+    
+    /**
+     * Initialize holiday calendar for Philippines (DepEd)
+     * Can be customized per year
+     */
+    private function initializeHolidays()
+    {
+        $year = $this->currentYear;
+        
+        // Philippine Public Holidays 2026 (update as needed)
+        $allHolidays = [
+            // Regular Holidays
+            "$year-01-01" => "New Year's Day",
+            "$year-04-09" => "Araw ng Kagitingan (Day of Valor)",
+            "$year-05-01" => "Labor Day",
+            "$year-06-12" => "Independence Day",
+            "$year-08-31" => "National Heroes Day",
+            "$year-11-30" => "Bonifacio Day",
+            "$year-12-25" => "Christmas Day",
+            "$year-12-30" => "Rizal Day",
+            
+            // 2026 Specific (Moveable dates)
+            "$year-04-17" => "Maundy Thursday",
+            "$year-04-18" => "Good Friday",
+            "$year-11-01" => "All Saints' Day",
+            "$year-12-24" => "Christmas Eve (Special Non-Working)",
+            "$year-12-31" => "New Year's Eve (Special Non-Working)",
+        ];
+        
+        // Filter holidays for current month
+        $this->holidays = [];
+        foreach ($allHolidays as $date => $name) {
+            $holidayDate = strtotime($date);
+            if ($holidayDate && (int)date('n', $holidayDate) === $this->currentMonth) {
+                $day = (int)date('j', $holidayDate);
+                $this->holidays[$day] = $name;
+            }
+        }
+    }
+    
+    /**
+     * Check if a given day in the current month is a weekend
+     */
+    private function isWeekend($dayOfMonth)
+    {
+        $date = mktime(0, 0, 0, $this->currentMonth, $dayOfMonth, $this->currentYear);
+        $dayOfWeek = (int)date('N', $date); // 1 (Mon) to 7 (Sun)
+        return $dayOfWeek >= 6; // Saturday (6) or Sunday (7)
+    }
+    
+    /**
+     * Check if a given day is a holiday
+     */
+    private function isHoliday($dayOfMonth)
+    {
+        return isset($this->holidays[$dayOfMonth]);
+    }
+    
+    /**
+     * Get holiday name for a given day
+     */
+    private function getHolidayName($dayOfMonth)
+    {
+        return $this->holidays[$dayOfMonth] ?? null;
+    }
+    
+    /**
+     * Get day name (Monday, Tuesday, etc.)
+     */
+    private function getDayName($dayOfMonth)
+    {
+        $date = mktime(0, 0, 0, $this->currentMonth, $dayOfMonth, $this->currentYear);
+        return date('l', $date); // Full day name
     }
     
     /**
@@ -465,32 +566,65 @@ class DTRGenerator
         // Set employee name in cell A13
         $sheet->setCellValue('A13', strtoupper($employeeName));
         
-        // Populate ONLY with uploaded data - replace everything
-        for ($day = 1; $day <= 31; $day++) {
+        // Populate ALL days of the month (1-31), marking weekends and holidays
+        $daysInMonth = (int)date('t', mktime(0, 0, 0, $this->currentMonth, 1, $this->currentYear));
+        
+        for ($day = 1; $day <= $daysInMonth; $day++) {
             $row = 18 + $day; // Days start at row 19 (day 1)
             
-            $dayData = $employeeData['dates'][$day] ?? null;
+            // Always write the day number
+            $sheet->setCellValueByColumnAndRow(1, $row, $day);
             
-            if ($dayData) {
-                // Set the day number in Column A (only if there's data for this day)
-                $sheet->setCellValueByColumnAndRow(1, $row, $day);
-                
-                // Set morning arrival (Column B) - write even if empty to ensure data visibility
-                $sheet->setCellValueByColumnAndRow(2, $row, $dayData['morning_arrival'] ?? '');
-                
-                // Set morning departure (Column C)
-                $sheet->setCellValueByColumnAndRow(3, $row, $dayData['morning_departure'] ?? '');
-                
-                // Set afternoon arrival (Column D)
-                $sheet->setCellValueByColumnAndRow(4, $row, $dayData['afternoon_arrival'] ?? '');
-                
-                // Set afternoon departure (Column E)
-                $sheet->setCellValueByColumnAndRow(5, $row, $dayData['afternoon_departure'] ?? '');
-                
-                // Set remarks if any
-                if (!empty($dayData['remarks'])) {
-                    $sheet->setCellValueByColumnAndRow(6, $row, $dayData['remarks']);
+            $dayData = $employeeData['dates'][$day] ?? null;
+            $isWeekend = $this->isWeekend($day);
+            $isHoliday = $this->isHoliday($day);
+            
+            // Determine remarks for this day
+            // Only write remarks for holidays or employee-specific data
+            // Skip weekends since the template already displays them
+            $remarks = '';
+            if ($isHoliday) {
+                $remarks = $this->getHolidayName($day);
+            } elseif ($dayData && !empty($dayData['remarks'])) {
+                $remarks = $dayData['remarks'];
+            }
+            
+            // For weekends and holidays, skip writing time data (leave blank)
+            if ($isWeekend || $isHoliday) {
+                // Leave time columns blank
+                $sheet->setCellValueByColumnAndRow(2, $row, '');
+                $sheet->setCellValueByColumnAndRow(3, $row, '');
+                $sheet->setCellValueByColumnAndRow(4, $row, '');
+                $sheet->setCellValueByColumnAndRow(5, $row, '');
+                // Only write remarks for holidays, skip weekends to avoid duplication
+                if ($isHoliday) {
+                    $sheet->setCellValueByColumnAndRow(6, $row, $remarks);
+                } else {
+                    // Leave remarks blank for weekends - template already shows them
+                    $sheet->setCellValueByColumnAndRow(6, $row, '');
                 }
+            } elseif ($dayData) {
+                // Regular workday with data
+                $sheet->setCellValueByColumnAndRow(2, $row, $dayData['morning_arrival'] ?? '');
+                $sheet->setCellValueByColumnAndRow(3, $row, $dayData['morning_departure'] ?? '');
+                $sheet->setCellValueByColumnAndRow(4, $row, $dayData['afternoon_arrival'] ?? '');
+                $sheet->setCellValueByColumnAndRow(5, $row, $dayData['afternoon_departure'] ?? '');
+                $sheet->setCellValueByColumnAndRow(6, $row, $remarks);
+            } else {
+                // Workday with no data (employee might be absent)
+                $sheet->setCellValueByColumnAndRow(2, $row, '');
+                $sheet->setCellValueByColumnAndRow(3, $row, '');
+                $sheet->setCellValueByColumnAndRow(4, $row, '');
+                $sheet->setCellValueByColumnAndRow(5, $row, '');
+                $sheet->setCellValueByColumnAndRow(6, $row, $remarks);
+            }
+        }
+        
+        // Clear any remaining rows beyond the actual days in the month
+        for ($day = $daysInMonth + 1; $day <= 31; $day++) {
+            $row = 18 + $day;
+            for ($col = 1; $col <= 6; $col++) {
+                $sheet->setCellValueByColumnAndRow($col, $row, '');
             }
         }
         
