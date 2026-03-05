@@ -66,14 +66,30 @@ class DTRGenerator
         
         echo "Loading source data from: {$sourceFile}\n";
         
-        $reader = IOFactory::createReader('Xlsx');
-        // Try Xlsx format, fallback to Xls if needed
+        // Determine file extension and use appropriate reader
+        $extension = strtolower(pathinfo($sourceFile, PATHINFO_EXTENSION));
+        
         try {
-            $spreadsheet = $reader->load($sourceFile);
+            if ($extension === 'xls') {
+                // Try Xls reader first for old Excel format
+                try {
+                    $reader = new \PhpOffice\PhpSpreadsheet\Reader\Xls();
+                    $spreadsheet = $reader->load($sourceFile);
+                } catch (Exception $e) {
+                    // If Xls reader fails, throw helpful error
+                    throw new Exception(".xls format not supported or file is corrupted. Please convert to .xlsx format: " . $e->getMessage());
+                }
+            } else if ($extension === 'xlsx') {
+                // Use Xlsx reader for new Excel format
+                $reader = IOFactory::createReader('Xlsx');
+                $spreadsheet = $reader->load($sourceFile);
+            } else {
+                // Try auto-detection for other formats
+                $reader = IOFactory::createReaderForFile($sourceFile);
+                $spreadsheet = $reader->load($sourceFile);
+            }
         } catch (Exception $e) {
-            echo "Could not read as XLSX, attempting Xls format...\n";
-            $reader = IOFactory::createReader('Xls');
-            $spreadsheet = $reader->load($sourceFile);
+            throw new Exception("Error loading source file: " . $e->getMessage());
         }
         
         $sheet = $spreadsheet->getActiveSheet();

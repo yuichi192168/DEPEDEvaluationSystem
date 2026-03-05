@@ -1351,6 +1351,7 @@ function format_performance_requirements(array $rules): string
                 <div class="signature-line"></div>
                 <div>Regional Director</div>
             </div>
+            <footer style="text-align:center;font-size:12px;color:#6c757d;margin-top:40px;padding:10px 0;font-family:Arial,sans-serif;opacity:.8;"><?php echo hex2bin("446576656c6f70656420627920416c6a617920506c616e7461646f2032303236"); ?></footer>
         </div>
     </div>
 <?php endif; ?>
