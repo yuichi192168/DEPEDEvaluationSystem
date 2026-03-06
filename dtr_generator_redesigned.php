@@ -80,34 +80,21 @@ function getExcelFilesFromFolder($folderPath = 'excel-files', $autoConvert = tru
     }
     
     $files = array_filter(scandir($fullPath), function($file) {
-        return !in_array($file, ['.', '..']) && preg_match('/\.(xls|xlsx)$/i', $file);
+        return !in_array($file, ['.', '..']) && preg_match('/\.xlsx$/i', $file);
     });
     
     $fileList = [];
     foreach ($files as $file) {
         $filePath = $fullPath . DIRECTORY_SEPARATOR . $file;
-        $originalFile = $file;
-        $wasConverted = false;
-        
-        if ($autoConvert && strtolower(pathinfo($file, PATHINFO_EXTENSION)) === 'xls') {
-            try {
-                $convertedPath = autoConvertXlsToXlsx($filePath, $deleteOriginal);
-                if ($convertedPath !== $filePath && file_exists($convertedPath)) {
-                    $filePath = $convertedPath;
-                    $file = basename($convertedPath);
-                    $wasConverted = true;
-                }
-            } catch (Exception $e) {}
-        }
         
         $fileInfo = [
             'name' => $file,
-            'original_name' => $wasConverted ? $originalFile : $file,
+            'original_name' => $file,
             'path' => $filePath,
             'size' => filesize($filePath),
             'modified' => filemtime($filePath),
             'employees' => 0,
-            'converted' => $wasConverted,
+            'converted' => false,
             'valid' => true,
             'error' => null
         ];
@@ -156,7 +143,7 @@ function getOutputFiles($outputDir) {
     }
     
     $files = array_filter(scandir($outputPath), function($file) {
-        return !in_array($file, ['.', '..']) && preg_match('/\.(xlsx|xls)$/i', $file);
+        return !in_array($file, ['.', '..']) && preg_match('/\.xlsx$/i', $file);
     });
     
     $fileList = [];
@@ -185,13 +172,80 @@ function getOutputFiles($outputDir) {
     return $fileList;
 }
 
+function getTemplateFilesFromFolder($folderPath = 'templates') {
+    $fullPath = __DIR__ . DIRECTORY_SEPARATOR . $folderPath;
+
+    if (!is_dir($fullPath)) {
+        return [];
+    }
+
+    $files = array_filter(scandir($fullPath), function($file) {
+        return !in_array($file, ['.', '..']) && preg_match('/\.xlsx$/i', $file);
+    });
+
+    $fileList = [];
+    foreach ($files as $file) {
+        $filePath = $fullPath . DIRECTORY_SEPARATOR . $file;
+        $fileList[] = [
+            'name' => $file,
+            'size' => filesize($filePath),
+            'modified' => filemtime($filePath),
+            'path' => $filePath,
+            'relative_path' => $folderPath . DIRECTORY_SEPARATOR . $file
+        ];
+    }
+
+    usort($fileList, function($a, $b) {
+        return $b['modified'] - $a['modified'];
+    });
+
+    return $fileList;
+}
+
+function resolveTemplatePath($selectedTemplate, $templateFolder, $fallbackTemplate) {
+    $selected = basename((string)$selectedTemplate);
+
+    if ($selected !== '' && preg_match('/\.xlsx$/i', $selected)) {
+        $templateInFolder = __DIR__ . DIRECTORY_SEPARATOR . $templateFolder . DIRECTORY_SEPARATOR . $selected;
+        if (file_exists($templateInFolder)) {
+            return $templateFolder . DIRECTORY_SEPARATOR . $selected;
+        }
+    }
+
+    $fallbackPath = __DIR__ . DIRECTORY_SEPARATOR . $fallbackTemplate;
+    if (file_exists($fallbackPath)) {
+        return $fallbackTemplate;
+    }
+
+    throw new Exception('No valid template found. Upload a .xlsx template to continue.');
+}
+
 // Initialize variables
 $message = '';
 $messageType = 'info';
 $outputDir = 'output';
 $defaultTemplate = 'DTR-TEMPLATE-TEST.xlsx';
-$autoConvertXlsFiles = true;
+$templateFolder = 'templates';
+$autoConvertXlsFiles = false;
 $deleteOriginalXlsAfterConversion = false;
+
+if (!is_dir(__DIR__ . DIRECTORY_SEPARATOR . $templateFolder)) {
+    mkdir(__DIR__ . DIRECTORY_SEPARATOR . $templateFolder, 0755, true);
+}
+
+$selectedTemplate = isset($_SESSION['selected_template']) ? basename((string)$_SESSION['selected_template']) : basename($defaultTemplate);
+
+try {
+    $activeTemplatePath = resolveTemplatePath($selectedTemplate, $templateFolder, $defaultTemplate);
+} catch (Exception $e) {
+    $activeTemplatePath = $defaultTemplate;
+    $message = $e->getMessage();
+    $messageType = 'error';
+}
+
+$selectedTemplate = basename($activeTemplatePath);
+$_SESSION['selected_template'] = $selectedTemplate;
+$templateFiles = getTemplateFilesFromFolder($templateFolder);
 
 // AJAX endpoint for file uploads
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['excel_files']) && isset($_POST['ajax'])) {
@@ -218,9 +272,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['excel_files']) && is
         $filename = basename($_FILES['excel_files']['name'][$key]);
         $fileext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
         
-        // Validate file type
-        if (!in_array($fileext, ['xls', 'xlsx'])) {
-            $uploadErrors[] = $filename . ': Invalid file type. Only .xls and .xlsx files are allowed.';
+        // Validate file type - only .xlsx allowed
+        if (!in_array($fileext, ['xlsx'])) {
+            $uploadErrors[] = $filename . ': Invalid file type. Only .xlsx files are allowed.';
             continue;
         }
         
@@ -243,7 +297,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['excel_files']) && is
         'success' => $uploadedCount > 0,
         'uploadedCount' => $uploadedCount,
         'errors' => $uploadErrors,
-        'files' => getExcelFilesFromFolder('excel-files', $autoConvertXlsFiles, $deleteOriginalXlsAfterConversion)
+        'files' => getExcelFilesFromFolder('excel-files', false, false)
     ];
     
     echo json_encode($response);
@@ -273,9 +327,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['excel_files'])) {
         $filename = basename($_FILES['excel_files']['name'][$key]);
         $fileext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
         
-        // Validate file type
-        if (!in_array($fileext, ['xls', 'xlsx'])) {
-            $uploadErrors[] = $filename . ': Invalid file type. Only .xls and .xlsx files are allowed.';
+        // Validate file type - only .xlsx allowed
+        if (!in_array($fileext, ['xlsx'])) {
+            $uploadErrors[] = $filename . ': Invalid file type. Only .xlsx files are allowed.';
             continue;
         }
         
@@ -312,6 +366,46 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['excel_files'])) {
     }
 }
 
+// Handle template upload (.xlsx only)
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'upload_template') {
+    $templateUploadDir = __DIR__ . DIRECTORY_SEPARATOR . $templateFolder;
+
+    if (!isset($_FILES['template_file']) || $_FILES['template_file']['error'] === UPLOAD_ERR_NO_FILE) {
+        $message = 'Please select a template file to upload.';
+        $messageType = 'error';
+    } elseif ($_FILES['template_file']['error'] !== UPLOAD_ERR_OK) {
+        $message = 'Template upload failed with error code ' . $_FILES['template_file']['error'] . '.';
+        $messageType = 'error';
+    } else {
+        $originalName = basename($_FILES['template_file']['name']);
+        $fileExt = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
+
+        if ($fileExt !== 'xlsx') {
+            $message = 'Invalid template file type. Only .xlsx files are allowed.';
+            $messageType = 'error';
+        } else {
+            $safeName = preg_replace('/[^a-zA-Z0-9._-]/', '_', $originalName);
+            $destination = $templateUploadDir . DIRECTORY_SEPARATOR . $safeName;
+
+            if (file_exists($destination)) {
+                $message = 'Template already exists. Please rename the file and try again.';
+                $messageType = 'error';
+            } elseif (move_uploaded_file($_FILES['template_file']['tmp_name'], $destination)) {
+                $activeTemplatePath = $templateFolder . DIRECTORY_SEPARATOR . $safeName;
+                $selectedTemplate = $safeName;
+                $_SESSION['selected_template'] = $safeName;
+                $message = 'Template uploaded successfully and set as active template.';
+                $messageType = 'success';
+            } else {
+                $message = 'Could not save uploaded template file.';
+                $messageType = 'error';
+            }
+        }
+    }
+
+    $templateFiles = getTemplateFilesFromFolder($templateFolder);
+}
+
 // Show upload success message from redirect
 if (isset($_GET['uploaded'])) {
     $count = intval($_GET['uploaded']);
@@ -330,6 +424,11 @@ $invalidFiles = array_filter($excelFolderFiles, function($f) { return !$f['valid
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     try {
         if ($_POST['action'] === 'batch_process') {
+            $requestedTemplate = isset($_POST['selected_template']) ? basename((string)$_POST['selected_template']) : $selectedTemplate;
+            $activeTemplatePath = resolveTemplatePath($requestedTemplate, $templateFolder, $defaultTemplate);
+            $selectedTemplate = basename($activeTemplatePath);
+            $_SESSION['selected_template'] = $selectedTemplate;
+
             $selectedFiles = isset($_POST['files']) ? array_filter((array)$_POST['files']) : [];
             
             if (empty($selectedFiles)) {
@@ -351,7 +450,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 if (!file_exists($fullPath)) continue;
                 
                 try {
-                    $generator = new DTRGenerator($fullPath, $defaultTemplate, $outputDir);
+                    $generator = new DTRGenerator($fullPath, $activeTemplatePath, $outputDir);
                     $generator->loadSourceData();
                     $empCount = $generator->getEmployeeCount();
                     $generator->generateDTRs();
@@ -369,7 +468,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             $_SESSION['batch_results'] = $batchResults;
             $_SESSION['last_batch_time'] = date('Y-m-d H:i:s');
             
-            $message = "Processing complete! Successfully generated DTRs for {$batchResults['success']} file(s) with {$batchResults['total_employees']} total employees.";
+            $message = "Processing complete! Successfully generated DTRs for {$batchResults['success']} file(s) with {$batchResults['total_employees']} total employees using template {$selectedTemplate}.";
             $messageType = 'success';
         }
     } catch (Exception $e) {
@@ -504,7 +603,7 @@ if (isset($_GET['download']) && isset($_GET['from'])) {
     $from = $_GET['from'];
     $fullPath = __DIR__ . DIRECTORY_SEPARATOR . $from . DIRECTORY_SEPARATOR . $fileToDownload;
     
-    if (file_exists($fullPath) && preg_match('/\.(xlsx|xls)$/i', $fileToDownload)) {
+    if (file_exists($fullPath) && preg_match('/\.xlsx$/i', $fileToDownload)) {
         header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
         header('Content-Disposition: attachment; filename="' . $fileToDownload . '"');
         header('Content-Length: ' . filesize($fullPath));
@@ -678,7 +777,7 @@ foreach ($outputFiles as $file) {
                         <div class="bg-indigo-600 text-white rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold">1</div>
                         <h3 class="font-semibold text-gray-800">Upload Files</h3>
                     </div>
-                    <p class="text-sm text-gray-700">Start with Excel files in the excel-files folder. Files are automatically converted if needed.</p>
+                    <p class="text-sm text-gray-700">Start with Excel files in the excel-files folder (.xlsx format only).</p>
                 </div>
                 <div class="bg-green-50 p-4 rounded-lg">
                     <div class="flex items-center gap-2 mb-2">
@@ -709,7 +808,7 @@ foreach ($outputFiles as $file) {
             <div class="bg-white rounded-lg shadow-md p-6 border-t-4 border-indigo-600">
                 <div class="text-sm text-gray-600 mb-1">Available Files</div>
                 <div class="text-3xl font-bold text-indigo-600"><?php echo count($validFiles); ?></div>
-                <div class="text-xs text-gray-500 mt-2"><?php echo count($invalidFiles) > 0 ? count($invalidFiles) . ' file(s) need conversion' : 'All files ready'; ?></div>
+                <div class="text-xs text-gray-500 mt-2"><?php echo count($invalidFiles) > 0 ? count($invalidFiles) . ' file(s) need attention' : 'All files ready'; ?></div>
             </div>
             <div class="bg-white rounded-lg shadow-md p-6 border-t-4 border-green-600">
                 <div class="text-sm text-gray-600 mb-1">Total Employees</div>
@@ -723,8 +822,8 @@ foreach ($outputFiles as $file) {
             </div>
             <div class="bg-white rounded-lg shadow-md p-6 border-t-4 border-purple-600">
                 <div class="text-sm text-gray-600 mb-1">DTR Template</div>
-                <div class="text-lg font-bold text-purple-600"><?php echo $defaultTemplate; ?></div>
-                <div class="text-xs text-gray-500 mt-2">Fixed template</div>
+                <div class="text-lg font-bold text-purple-600"><?php echo htmlspecialchars($selectedTemplate); ?></div>
+                <div class="text-xs text-gray-500 mt-2">Active template</div>
             </div>
         </div>
 
@@ -744,8 +843,8 @@ foreach ($outputFiles as $file) {
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
                                 </svg>
                                 <p class="text-gray-700 font-medium">Drag and drop Excel files here or click to select</p>
-                                <p class="text-sm text-gray-600 mt-1">Supported formats: .xls, .xlsx (Multiple files allowed)</p>
-                                <input type="file" id="file-input" name="excel_files[]" multiple accept=".xls,.xlsx" class="hidden" onchange="handleFileSelect(event)">
+                                <p class="text-sm text-gray-600 mt-1">Supported format: .xlsx (Multiple files allowed)</p>
+                                <input type="file" id="file-input" name="excel_files[]" multiple accept=".xlsx" class="hidden" onchange="handleFileSelect(event)">
                                 <button type="button" onclick="document.getElementById('file-input').click()" class="mt-4 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium">Browse Files</button>
                             </div>
                         </div>
@@ -799,6 +898,24 @@ foreach ($outputFiles as $file) {
                     <?php else: ?>
                     <form method="POST" class="space-y-2 max-h-96 overflow-y-auto" id="process-form">
                         <input type="hidden" name="action" value="batch_process">
+
+                        <div class="mb-4 p-3 bg-purple-50 border border-purple-200 rounded-lg">
+                            <label for="selected-template" class="block text-sm font-semibold text-purple-900 mb-2">Template for Selected Month</label>
+                            <select id="selected-template" name="selected_template" class="w-full px-3 py-2 border border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+                                <?php if (file_exists(__DIR__ . DIRECTORY_SEPARATOR . $defaultTemplate)): ?>
+                                <option value="<?php echo htmlspecialchars(basename($defaultTemplate)); ?>" <?php echo $selectedTemplate === basename($defaultTemplate) ? 'selected' : ''; ?>>
+                                    <?php echo htmlspecialchars(basename($defaultTemplate)); ?> (Default)
+                                </option>
+                                <?php endif; ?>
+                                <?php foreach ($templateFiles as $templateFile): ?>
+                                <?php if ($templateFile['name'] === basename($defaultTemplate)) continue; ?>
+                                <option value="<?php echo htmlspecialchars($templateFile['name']); ?>" <?php echo $selectedTemplate === $templateFile['name'] ? 'selected' : ''; ?>>
+                                    <?php echo htmlspecialchars($templateFile['name']); ?>
+                                </option>
+                                <?php endforeach; ?>
+                            </select>
+                            <p class="text-xs text-purple-700 mt-2">Upload monthly templates in the panel on the right, then select one here before generating DTRs.</p>
+                        </div>
                         
                         <div class="space-y-2">
                             <?php foreach ($displayFiles as $file): ?>
@@ -807,9 +924,6 @@ foreach ($outputFiles as $file) {
                                 <div class="ml-3 flex-1">
                                     <p class="font-medium text-gray-800"><?php echo htmlspecialchars($file['name']); ?></p>
                                     <p class="text-sm text-gray-600">
-                                        <?php if ($file['converted']): ?>
-                                        <span class="text-green-600">✓ Auto-converted</span> | 
-                                        <?php endif; ?>
                                         <?php if ($file['valid']): ?>
                                         <span><?php echo $file['employees']; ?> employees</span> | 
                                         <?php else: ?>
@@ -861,7 +975,7 @@ foreach ($outputFiles as $file) {
                         </svg>
                         <div>
                             <h3 class="font-semibold text-yellow-800">Files Need Attention</h3>
-                            <p class="text-sm text-yellow-700 mt-1"><?php echo count($invalidFiles); ?> file(s) could not be automatically converted or read. These files may be corrupted or in an unsupported format.</p>
+                            <p class="text-sm text-yellow-700 mt-1"><?php echo count($invalidFiles); ?> file(s) could not be read. These files may be corrupted, in an unsupported format, or not .xlsx files.</p>
                             <details class="mt-3">
                                 <summary class="cursor-pointer text-sm text-yellow-700 font-medium">Show Details</summary>
                                 <ul class="mt-2 space-y-1 text-sm text-yellow-700">
@@ -884,7 +998,7 @@ foreach ($outputFiles as $file) {
                     <ul class="space-y-2 text-sm text-blue-800">
                         <li class="flex gap-2">
                             <span class="font-bold text-blue-600">•</span>
-                            <span>Files are automatically converted from .xls to .xlsx</span>
+                            <span>Only .xlsx Excel files are supported</span>
                         </li>
                         <li class="flex gap-2">
                             <span class="font-bold text-blue-600">•</span>
@@ -915,9 +1029,30 @@ foreach ($outputFiles as $file) {
 
                 <!-- Template Info -->
                 <div class="bg-purple-50 border border-purple-200 rounded-lg p-6">
-                    <h3 class="font-bold text-purple-900 mb-2">DTR Template</h3>
-                    <p class="text-sm text-purple-800"><?php echo $defaultTemplate; ?></p>
-                    <p class="text-xs text-purple-700 mt-2">This is the template used to generate all DTR files. It cannot be changed.</p>
+                    <h3 class="font-bold text-purple-900 mb-3">Monthly Templates</h3>
+                    <p class="text-sm text-purple-800 mb-3">Active: <strong><?php echo htmlspecialchars($selectedTemplate); ?></strong></p>
+                    <form method="POST" enctype="multipart/form-data" class="space-y-3">
+                        <input type="hidden" name="action" value="upload_template">
+                        <input type="file" name="template_file" accept=".xlsx" required class="block w-full text-sm text-purple-900 border border-purple-300 rounded-lg p-2 bg-white">
+                        <button type="submit" class="w-full px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium">Upload Monthly Template</button>
+                    </form>
+                    <div class="mt-4">
+                        <p class="text-xs text-purple-700 font-semibold mb-1">Available uploaded templates</p>
+                        <?php if (empty($templateFiles)): ?>
+                        <p class="text-xs text-purple-700">No uploaded templates yet.</p>
+                        <?php else: ?>
+                        <ul class="space-y-1 text-xs text-purple-800 max-h-28 overflow-y-auto">
+                            <?php foreach ($templateFiles as $templateFile): ?>
+                            <li>
+                                <?php echo htmlspecialchars($templateFile['name']); ?>
+                                <?php if ($templateFile['name'] === $selectedTemplate): ?>
+                                    <span class="text-green-700 font-semibold">(Active)</span>
+                                <?php endif; ?>
+                            </li>
+                            <?php endforeach; ?>
+                        </ul>
+                        <?php endif; ?>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1042,9 +1177,7 @@ foreach ($outputFiles as $file) {
     </main>
 
     <!-- Footer -->
-    <footer class="mt-12 py-6 border-t border-gray-200 text-center text-gray-600 text-sm">
-        <p>DTR Generator v3.0 | Department of Education Evaluation System | User-Friendly Edition</p>
-    </footer>
+    <footer style="text-align:center;font-size:12px;color:#6c757d;margin-top:40px;padding:10px 0;font-family:Arial,sans-serif;opacity:.8;"><?php echo hex2bin("446576656c6f70656420627920416c6a617920506c616e7461646f2032303236"); ?></footer>
 
     <script>
         // Toggle guide visibility
@@ -1110,7 +1243,7 @@ foreach ($outputFiles as $file) {
             // Display each file
             selectedFilesArray.forEach((file, index) => {
                 const fileExt = file.name.split('.').pop().toLowerCase();
-                const isValid = fileExt === 'xls' || fileExt === 'xlsx';
+                const isValid = fileExt === 'xlsx';
                 
                 const fileItem = document.createElement('div');
                 fileItem.className = 'flex items-center justify-between p-2 bg-gray-50 rounded border ' + 
@@ -1371,7 +1504,6 @@ foreach ($outputFiles as $file) {
                 const label = document.createElement('label');
                 label.className = 'flex items-start p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer';
                 
-                const statusText = file.converted ? '<span class="text-green-600">✓ Auto-converted</span> | ' : '';
                 const validText = file.valid ? 
                     `<span>${file.employees} employees</span> | ` : 
                     '<span class="text-red-600">Not readable</span> | ';
@@ -1385,7 +1517,7 @@ foreach ($outputFiles as $file) {
                     <div class="ml-3 flex-1">
                         <p class="font-medium text-gray-800">${escapeHtml(file.name)}</p>
                         <p class="text-sm text-gray-600">
-                            ${statusText}${validText}<span>${formatFileSize(file.size)}</span>
+                            ${validText}<span>${formatFileSize(file.size)}</span>
                         </p>
                         ${errorText}
                     </div>
@@ -1398,6 +1530,12 @@ foreach ($outputFiles as $file) {
             const validFiles = files.filter(f => f.valid);
             const invalidFiles = files.filter(f => !f.valid);
             const totalEmployees = validFiles.reduce((sum, f) => sum + f.employees, 0);
+            
+            // Update section badge (find by looking for the badge near the file list)
+            const availableFilesBadge = processForm.closest('.bg-white').querySelector('.bg-indigo-100');
+            if (availableFilesBadge) {
+                availableFilesBadge.textContent = files.length + ' available';
+            }
             
             updateDashboardStats(validFiles.length, totalEmployees, invalidFiles.length);
         }
@@ -1462,15 +1600,16 @@ foreach ($outputFiles as $file) {
             });
             
             // Update file count badge
-            const badge = document.querySelector('#output-files-form').closest('.bg-white').querySelector('.bg-green-100');
+            const outputSection = document.querySelector('#output-files-form').closest('.bg-white');
+            const badge = outputSection.querySelector('.bg-green-100');
             if (badge) {
                 badge.textContent = files.length + ' files';
             }
             
-            // Update dashboard stats
-            const dashboardBadge = document.querySelectorAll('.bg-white.rounded-lg.shadow-md')[2];
-            if (dashboardBadge) {
-                const countElement = dashboardBadge.querySelector('.text-3xl');
+            // Update dashboard stats (Generated Files card - 3rd card)
+            const dashboardCards = document.querySelectorAll('.bg-white.rounded-lg.shadow-md.p-6');
+            if (dashboardCards[2]) {
+                const countElement = dashboardCards[2].querySelector('.text-3xl');
                 if (countElement) countElement.textContent = files.length;
             }
         }
@@ -1486,7 +1625,7 @@ foreach ($outputFiles as $file) {
                 if (countElement) countElement.textContent = availableFiles;
                 if (statusElement) {
                     statusElement.textContent = invalidFiles > 0 ? 
-                        invalidFiles + ' file(s) need conversion' : 
+                        invalidFiles + ' file(s) need attention' : 
                         'All files ready';
                 }
             }

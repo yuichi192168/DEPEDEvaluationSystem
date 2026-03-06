@@ -485,23 +485,47 @@ class DTRGenerator
      */
     public function generateDTRs()
     {
+        // Increase execution time limit for large batches
+        set_time_limit(300); // 5 minutes
+        ini_set('max_execution_time', '300');
+        
         if (empty($this->logData)) {
             echo "No data to process. Load source data first.\n";
             return false;
         }
         
         echo "\nGenerating DTR files...\n";
-        $count = 0;
         
+        // Load template ONCE (major performance improvement)
+        try {
+            $templateSpreadsheet = $this->loadTemplate();
+            // Disable auto-calculation for better performance
+            $templateSpreadsheet->getActiveSheet()->setAutoFilter(null);
+        } catch (Exception $e) {
+            echo "Error loading template: " . $e->getMessage() . "\n";
+            return false;
+        }
+        
+        $count = 0;
         foreach ($this->logData as $employeeName => $data) {
             try {
-                $this->generateSingleDTR($employeeName, $data);
+                // Pass the template to avoid reloading from disk
+                $this->generateSingleDTR($employeeName, $data, $templateSpreadsheet);
                 $count++;
                 echo "✓ Generated DTR for: $employeeName\n";
+                
+                // Free memory every 5 employees
+                if ($count % 5 === 0) {
+                    gc_collect_cycles();
+                }
             } catch (Exception $e) {
                 echo "✗ Error generating DTR for $employeeName: " . $e->getMessage() . "\n";
             }
         }
+        
+        // Clean up template
+        $templateSpreadsheet->disconnectWorksheets();
+        unset($templateSpreadsheet);
         
         echo "\nCompleted! Generated $count DTR files in {$this->outputDir}/\n";
         return true;
@@ -525,11 +549,12 @@ class DTRGenerator
     
     /**
      * Generate DTR for a single employee
+     * @param Spreadsheet $templateSpreadsheet The pre-loaded template to clone
      */
-    private function generateSingleDTR($employeeName, $employeeData)
+    private function generateSingleDTR($employeeName, $employeeData, $templateSpreadsheet)
     {
-        // Load template
-        $template = $this->loadTemplate();
+        // Clone template instead of loading from disk (HUGE performance boost)
+        $template = clone $templateSpreadsheet;
         $sheet = $template->getActiveSheet();
         
         // Detect and update official hours based on schedule
