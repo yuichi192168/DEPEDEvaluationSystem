@@ -687,7 +687,7 @@ $positions = getAllPositions();
                     <span class="help-text">Select the format you want to export the evaluation report</span>
                 </div>
             </div>
-            <footer style="text-align:center;font-size:12px;color:#6c757d;margin-top:40px;padding:10px 0;font-family:Arial,sans-serif;opacity:.8;"><?php echo hex2bin("446576656c6f70656420627920416c6a617920506c616e7461646f2032303236"); ?></footer>
+            <footer style="text-align:center;font-size:12px;color:#6c757d;margin-top:40px;padding:10px 0;font-family:Arial,sans-serif;opacity:.08;"><?php echo hex2bin("446576656c6f70656420627920416c6a617920506c616e7461646f2032303236"); ?></footer>
             <!-- Submit Buttons (hidden - actions are available in sticky bar to avoid duplication) -->
             <div class="btn-group" style="display: none;">
                 <button type="submit" id="generate_report_btn" class="btn-primary action-button" disabled>Generate Evaluation Report</button>
