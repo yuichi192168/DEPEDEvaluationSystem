@@ -705,6 +705,201 @@ foreach ($outputFiles as $file) {
             display: block;
             margin: 0 auto;
         }
+        .help-toggle {
+            position: fixed;
+            right: 24px;
+            bottom: 24px;
+            width: 52px;
+            height: 52px;
+            border-radius: 9999px;
+            background: #2563eb;
+            color: #ffffff;
+            font-size: 28px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 10px 30px rgba(37, 99, 235, 0.35);
+            z-index: 1001;
+            transition: transform 0.2s ease, background-color 0.2s ease;
+        }
+        .help-toggle:hover {
+            background: #1d4ed8;
+            transform: translateY(-2px);
+        }
+        .help-drawer {
+            position: fixed;
+            top: 0;
+            right: -420px;
+            width: min(420px, 92vw);
+            height: 100vh;
+            background: #ffffff;
+            border-left: 1px solid #e5e7eb;
+            box-shadow: -16px 0 40px rgba(15, 23, 42, 0.18);
+            padding: 24px;
+            overflow-y: auto;
+            z-index: 1002;
+            transition: right 0.25s ease;
+        }
+        .help-drawer.is-open {
+            right: 0;
+        }
+        .help-drawer h3 {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: #1f2937;
+            margin-bottom: 14px;
+        }
+        .help-section {
+            margin-bottom: 16px;
+            padding: 12px;
+            border: 1px solid #e5e7eb;
+            border-radius: 10px;
+            background: #f8fafc;
+        }
+        .help-section h4 {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: #111827;
+            margin-bottom: 6px;
+        }
+        .help-section p {
+            font-size: 0.875rem;
+            line-height: 1.55;
+            color: #374151;
+        }
+        .btn-secondary {
+            background: #e5e7eb;
+            color: #111827;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            padding: 8px 14px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .btn-secondary:hover {
+            background: #d1d5db;
+        }
+        .help-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.35);
+            z-index: 1000;
+            display: none;
+        }
+        .help-backdrop.is-open {
+            display: block;
+        }
+        .generate-btn-floating {
+            position: fixed;
+            left: 24px;
+            bottom: 24px;
+            width: auto;
+            padding: 14px 20px;
+            background: #059669;
+            color: #ffffff;
+            font-size: 1rem;
+            font-weight: 700;
+            border: none;
+            border-radius: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            cursor: pointer;
+            box-shadow: 0 10px 30px rgba(5, 150, 105, 0.35);
+            z-index: 999;
+            transition: transform 0.2s ease, background-color 0.2s ease;
+        }
+        .generate-btn-floating:hover {
+            background: #047857;
+            transform: translateY(-2px);
+        }
+        /* Sticky Action Bar (adapted from evaluation system) */
+        .sticky-action-bar {
+            position: fixed;
+            right: 16px;
+            left: 16px;
+            bottom: 16px;
+            z-index: 1100;
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            pointer-events: none;
+        }
+        .sticky-action-bar .bar-inner {
+            background: rgba(255,255,255,0.98);
+            border-radius: 8px;
+            padding: 8px;
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+            pointer-events: auto;
+        }
+        .sticky-action-bar button {
+            min-width: 120px;
+            padding: 10px 14px;
+            font-size: 13px;
+            font-weight: 600;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+        }
+        .sticky-action-bar .btn-primary {
+            background: #2563eb;
+            color: white;
+        }
+        .sticky-action-bar .btn-primary:hover {
+            background: #1d4ed8;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+        }
+        .sticky-action-bar .btn-secondary {
+            background: #e5e7eb;
+            color: #1f2937;
+        }
+        .sticky-action-bar .btn-secondary:hover {
+            background: #d1d5db;
+            transform: translateY(-2px);
+        }
+        .sticky-action-bar .btn-success {
+            background: #059669;
+            color: white;
+        }
+        .sticky-action-bar .btn-success:hover {
+            background: #047857;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(5, 150, 105, 0.3);
+        }
+        .sticky-action-bar .btn-danger {
+            background: #dc2626;
+            color: white;
+        }
+        .sticky-action-bar .btn-danger:hover {
+            background: #b91c1c;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
+        }
+        .sticky-action-bar button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        @media (max-width: 768px) {
+            .sticky-action-bar .bar-inner {
+                gap: 6px;
+                padding: 6px;
+            }
+            .sticky-action-bar button {
+                padding: 8px 10px;
+                min-width: 0;
+                font-size: 12px;
+            }
+        }
         .help-tooltip:hover::after {
             content: attr(data-tooltip);
             position: absolute;
@@ -764,45 +959,35 @@ foreach ($outputFiles as $file) {
         </div>
         <?php endif; ?>
 
-        <!-- Quick Start Guide -->
-        <div class="mb-8 bg-white rounded-lg shadow-md p-6 border-l-4 border-indigo-600">
-            <div class="flex items-start justify-between mb-4">
-                <h2 class="text-2xl font-bold text-gray-800">Getting Started</h2>
-                <button onclick="document.getElementById('guide').classList.toggle('hidden')" class="text-sm text-indigo-600 hover:text-indigo-800 font-medium">
-                    <span id="guide-toggle">Hide</span> Guide
-                </button>
+        <div id="helpToggle" class="help-toggle" title="Help" role="button" aria-pressed="false" tabindex="0">?</div>
+        <div id="helpBackdrop" class="help-backdrop" aria-hidden="true"></div>
+        <aside id="helpDrawer" class="help-drawer" aria-hidden="true">
+            <h3>DTR Form Help</h3>
+            <div class="help-section">
+                <h4>What this form is</h4>
+                <p>This page helps you generate Daily Time Record (DTR) files from uploaded attendance Excel files using the selected monthly template.</p>
             </div>
-            <div id="guide" class="grid md:grid-cols-4 gap-4">
-                <div class="bg-indigo-50 p-4 rounded-lg">
-                    <div class="flex items-center gap-2 mb-2">
-                        <div class="bg-indigo-600 text-white rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold">1</div>
-                        <h3 class="font-semibold text-gray-800">Upload Files</h3>
-                    </div>
-                    <p class="text-sm text-gray-700">Start with Excel files in the excel-files folder (.xlsx format only).</p>
-                </div>
-                <div class="bg-green-50 p-4 rounded-lg">
-                    <div class="flex items-center gap-2 mb-2">
-                        <div class="bg-green-600 text-white rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold">2</div>
-                        <h3 class="font-semibold text-gray-800">Select Files</h3>
-                    </div>
-                    <p class="text-sm text-gray-700">Choose which files to process from the list below. Use the checkboxes to select multiple files.</p>
-                </div>
-                <div class="bg-blue-50 p-4 rounded-lg">
-                    <div class="flex items-center gap-2 mb-2">
-                        <div class="bg-blue-600 text-white rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold">3</div>
-                        <h3 class="font-semibold text-gray-800">Generate DTRs</h3>
-                    </div>
-                    <p class="text-sm text-gray-700">Click "Generate DTRs" to automatically create daily time records for all selected files.</p>
-                </div>
-                <div class="bg-purple-50 p-4 rounded-lg">
-                    <div class="flex items-center gap-2 mb-2">
-                        <div class="bg-purple-600 text-white rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold">4</div>
-                        <h3 class="font-semibold text-gray-800">Download Results</h3>
-                    </div>
-                    <p class="text-sm text-gray-700">Find your generated DTR files in the Results section below.</p>
-                </div>
+            <div class="help-section">
+                <h4>How generation works</h4>
+                <p>Upload your .xlsx files, choose which files to process, pick the correct monthly template, then click Generate DTRs. The system reads each employee record and creates one DTR file per employee.</p>
             </div>
-        </div>
+            <div class="help-section">
+                <h4>What happens after generation</h4>
+                <p>Generated files appear in the Download Generated DTR Files section. You can search, download one by one, download by schedule, or delete files you no longer need.</p>
+            </div>
+            <div class="help-section">
+                <h4>Help & Information</h4>
+                <ul class="text-sm text-gray-700 space-y-1">
+                    <li>• Only .xlsx Excel files are supported</li>
+                    <li>• Select multiple files using the checkboxes</li>
+                    <li>• Processing takes a few seconds per file</li>
+                    <li>• Download results from the Generated Files section</li>
+                </ul>
+            </div>
+            <div>
+                <button type="button" id="helpClose" class="btn-secondary">Close Help</button>
+            </div>
+        </aside>
 
         <!-- Dashboard Stats -->
         <div class="mb-8 grid md:grid-cols-4 gap-4">
@@ -949,13 +1134,8 @@ foreach ($outputFiles as $file) {
                             <button type="button" onclick="deleteSelectedInputFiles()" class="text-sm text-red-600 hover:text-red-800 font-medium">Delete Selected</button>
                         </div>
 
-                        <!-- Generate Button -->
-                        <button type="submit" class="w-full mt-4 bg-indigo-600 text-white py-3 px-4 rounded-lg hover:bg-indigo-700 font-bold text-lg shadow-lg transition-colors">
-                            <svg class="w-5 h-5 inline-block mr-2" fill="currentColor" viewBox="0 0 20 20">
-                                <path fill-rule="evenodd" d="M4 4a2 2 0 00-2 2v4a1 1 0 001 1h12a1 1 0 001-1V6a2 2 0 00-2-2H4zm12 12H4a2 2 0 01-2-2v-4a1 1 0 00-1-1H.5a.5.5 0 00-.5.5v4a4 4 0 004 4h12a4 4 0 004-4v-4a.5.5 0 00-.5-.5H17a1 1 0 00-1 1v4a2 2 0 01-2 2z" clip-rule="evenodd"/>
-                            </svg>
-                            Generate DTRs
-                        </button>
+                        <!-- Generate Button (hidden - action available in sticky bar) -->
+                        <button type="submit" style="display: none;">Generate DTRs</button>
                     </form>
                     
                     <!-- Hidden form for bulk delete input files -->
@@ -993,29 +1173,6 @@ foreach ($outputFiles as $file) {
 
             <!-- Right Column: Info & Results Summary -->
             <div class="space-y-6">
-                <!-- Help Section -->
-                <div class="bg-blue-50 border border-blue-200 rounded-lg p-6">
-                    <h3 class="font-bold text-blue-900 mb-3">Help & Information</h3>
-                    <ul class="space-y-2 text-sm text-blue-800">
-                        <li class="flex gap-2">
-                            <span class="font-bold text-blue-600">•</span>
-                            <span>Only .xlsx Excel files are supported</span>
-                        </li>
-                        <li class="flex gap-2">
-                            <span class="font-bold text-blue-600">•</span>
-                            <span>Select multiple files using the checkboxes</span>
-                        </li>
-                        <li class="flex gap-2">
-                            <span class="font-bold text-blue-600">•</span>
-                            <span>Processing takes a few seconds per file</span>
-                        </li>
-                        <li class="flex gap-2">
-                            <span class="font-bold text-blue-600">•</span>
-                            <span>Download results from the Generated Files section</span>
-                        </li>
-                    </ul>
-                </div>
-
                 <!-- Recent Results -->
                 <?php if (!empty($_SESSION['batch_results']) && isset($_SESSION['batch_results']['success'])): ?>
                 <div class="bg-green-50 border border-green-200 rounded-lg p-6">
@@ -1236,20 +1393,157 @@ foreach ($outputFiles as $file) {
         </div>
     </main>
 
+    <!-- Sticky Action Bar (keeps primary actions visible while scrolling) -->
+    <div class="sticky-action-bar" aria-hidden="false">
+        <div class="bar-inner">
+            <button type="button" id="sticky_upload_files" class="btn-primary" title="Upload Excel files">
+                <svg class="w-4 h-4 inline-block mr-1" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd"/>
+                </svg>Upload
+            </button>
+            <button type="button" id="sticky_generate_dtrs" class="btn-success" title="Generate DTRs">
+                <svg class="w-4 h-4 inline-block mr-1" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M4 4a2 2 0 00-2 2v4a1 1 0 001 1h12a1 1 0 001-1V6a2 2 0 00-2-2H4zm12 12H4a2 2 0 01-2-2v-4a1 1 0 00-1-1H.5a.5.5 0 00-.5.5v4a4 4 0 004 4h12a4 4 0 004-4v-4a.5.5 0 00-.5-.5H17a1 1 0 00-1 1v4a2 2 0 01-2 2z" clip-rule="evenodd"/>
+                </svg>Generate
+            </button>
+            <button type="button" id="sticky_download_files" class="btn-secondary" title="Download files">
+                <svg class="w-4 h-4 inline-block mr-1" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd"/>
+                </svg>Download
+            </button>
+            <button type="button" id="sticky_delete_files" class="btn-danger" title="Delete selected">
+                <svg class="w-4 h-4 inline-block mr-1" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                </svg>Delete
+            </button>
+            <button type="button" id="sticky_help" class="btn-secondary" title="Help guide">
+                <svg class="w-4 h-4 inline-block mr-1" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+                </svg>Help
+            </button>
+        </div>
+    </div>
+
     <!-- Footer -->
     <footer style="text-align:center;font-size:12px;color:#6c757d;margin-top:40px;padding:10px 0;font-family:Arial,sans-serif;opacity:.08;"><?php echo hex2bin("446576656c6f70656420627920416c6a617920506c616e7461646f2032303236"); ?></footer>
 
     <script>
-        // Toggle guide visibility
+        // Initialize UI interactions
         document.addEventListener('DOMContentLoaded', function() {
-                // Setup live search for output files
-                setupLiveSearch();
-            
-            const guideBtn = document.getElementById('guide-toggle');
-            const guide = document.getElementById('guide');
-            
-            // Show guide by default
-            guide.classList.remove('hidden');
+            // Setup live search for output files
+            setupLiveSearch();
+
+            // Wire sticky action bar buttons
+            const stickyUpload = document.getElementById('sticky_upload_files');
+            const stickyGenerate = document.getElementById('sticky_generate_dtrs');
+            const stickyDownload = document.getElementById('sticky_download_files');
+            const stickyDelete = document.getElementById('sticky_delete_files');
+            const stickyHelp = document.getElementById('sticky_help');
+
+            if (stickyUpload) {
+                stickyUpload.addEventListener('click', function() {
+                    document.getElementById('file-input').click();
+                });
+            }
+
+            if (stickyGenerate) {
+                stickyGenerate.addEventListener('click', function() {
+                    const processForm = document.getElementById('process-form');
+                    if (processForm) {
+                        const submitBtn = processForm.querySelector('button[type="submit"]');
+                        if (submitBtn) submitBtn.click();
+                    }
+                });
+            }
+
+            if (stickyDownload) {
+                stickyDownload.addEventListener('click', function() {
+                    const outputSection = document.querySelector('.mt-8');
+                    if (outputSection) {
+                        outputSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }
+                });
+            }
+
+            if (stickyDelete) {
+                stickyDelete.addEventListener('click', function() {
+                    const checkboxes = document.querySelectorAll('.output-file-checkbox:checked');
+                    if (checkboxes.length === 0) {
+                        alert('Please select files to delete.');
+                        return;
+                    }
+                    deleteSelectedOutputFiles();
+                });
+            }
+
+            if (stickyHelp) {
+                const helpToggle = document.getElementById('helpToggle');
+                stickyHelp.addEventListener('click', function() {
+                    if (helpToggle) {
+                        helpToggle.click();
+                    }
+                });
+            }
+
+            const helpToggle = document.getElementById('helpToggle');
+            const helpDrawer = document.getElementById('helpDrawer');
+            const helpClose = document.getElementById('helpClose');
+            const helpBackdrop = document.getElementById('helpBackdrop');
+
+            function openHelpDrawer() {
+                if (!helpDrawer || !helpToggle || !helpBackdrop) return;
+                helpDrawer.classList.add('is-open');
+                helpBackdrop.classList.add('is-open');
+                helpDrawer.setAttribute('aria-hidden', 'false');
+                helpToggle.setAttribute('aria-pressed', 'true');
+                helpBackdrop.setAttribute('aria-hidden', 'false');
+            }
+
+            function closeHelpDrawer() {
+                if (!helpDrawer || !helpToggle || !helpBackdrop) return;
+                helpDrawer.classList.remove('is-open');
+                helpBackdrop.classList.remove('is-open');
+                helpDrawer.setAttribute('aria-hidden', 'true');
+                helpToggle.setAttribute('aria-pressed', 'false');
+                helpBackdrop.setAttribute('aria-hidden', 'true');
+            }
+
+            if (helpToggle) {
+                helpToggle.addEventListener('click', function() {
+                    const isOpen = helpDrawer && helpDrawer.classList.contains('is-open');
+                    if (isOpen) {
+                        closeHelpDrawer();
+                    } else {
+                        openHelpDrawer();
+                    }
+                });
+
+                helpToggle.addEventListener('keydown', function(event) {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        const isOpen = helpDrawer && helpDrawer.classList.contains('is-open');
+                        if (isOpen) {
+                            closeHelpDrawer();
+                        } else {
+                            openHelpDrawer();
+                        }
+                    }
+                });
+            }
+
+            if (helpClose) {
+                helpClose.addEventListener('click', closeHelpDrawer);
+            }
+
+            if (helpBackdrop) {
+                helpBackdrop.addEventListener('click', closeHelpDrawer);
+            }
+
+            document.addEventListener('keydown', function(event) {
+                if (event.key === 'Escape' && helpDrawer && helpDrawer.classList.contains('is-open')) {
+                    closeHelpDrawer();
+                }
+            });
         });
 
         // Store selected files globally
