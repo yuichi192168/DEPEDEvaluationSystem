@@ -224,7 +224,7 @@ function resolveTemplatePath($selectedTemplate, $templateFolder, $fallbackTempla
 $message = '';
 $messageType = 'info';
 $outputDir = 'output';
-$defaultTemplate = 'DTR-TEMPLATE-TEST.xlsx';
+$defaultTemplate = 'DTR-TEMPLATE.xlsx';
 $templateFolder = 'templates';
 $autoConvertXlsFiles = false;
 $deleteOriginalXlsAfterConversion = false;
@@ -1068,76 +1068,72 @@ foreach ($outputFiles as $file) {
                         <p class="text-sm text-gray-600 mt-2">Upload Excel files to the <code class="bg-gray-200 px-2 py-1 rounded">excel-files</code> folder</p>
                     </div>
                     <?php else: ?>
+                    
+                    <!-- Template Selection & Upload Box -->
+                    <div class="mb-8 p-6 bg-purple-50 rounded-xl border-2 border-purple-200 shadow-sm">
+                        <h3 class="text-base font-bold text-purple-900 mb-4 flex items-center">
+                            <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M9 2a2 2 0 00-2 2v8a2 2 0 002 2h6a2 2 0 002-2V6.414A2 2 0 0016.414 5L14 2.586A2 2 0 0012.586 2H9z"/>
+                                <path d="M3 8a2 2 0 012-2v10h8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z"/>
+                            </svg>
+                            DTR Template Management
+                        </h3>
+                        
+                        <!-- Upload New Template Form -->
+                        <form method="POST" enctype="multipart/form-data" class="mb-4">
+                            <input type="hidden" name="action" value="upload_template">
+                            <label class="block text-sm font-semibold text-purple-900 mb-2">Upload New Monthly Template</label>
+                            <div class="flex gap-3">
+                                <input type="file" name="template_file" accept=".xlsx" required class="flex-1 text-sm text-purple-900 border border-purple-300 rounded-lg p-2 bg-white file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-purple-100 file:text-purple-700 hover:file:bg-purple-200">
+                                <button type="submit" class="px-5 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium whitespace-nowrap shadow-sm">
+                                    <svg class="w-4 h-4 inline-block mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd"/>
+                                    </svg>
+                                    Upload
+                                </button>
+                            </div>
+                        </form>
+
+                        <!-- Available Templates List -->
+                        <?php if (!empty($templateFiles)): ?>
+                        <div class="pt-3 border-t border-purple-200">
+                            <p class="text-xs font-semibold text-purple-900 mb-2">Available Templates (<?php echo count($templateFiles); ?>):</p>
+                            <div class="max-h-24 overflow-y-auto bg-white rounded-lg border border-purple-200 p-2">
+                                <ul class="space-y-1 text-xs text-purple-800">
+                                    <?php foreach ($templateFiles as $templateFile): ?>
+                                    <li class="flex items-center justify-between py-1 px-2 hover:bg-purple-50 rounded">
+                                        <span>📄 <?php echo htmlspecialchars($templateFile['name']); ?></span>
+                                        <?php if ($templateFile['name'] === $selectedTemplate): ?>
+                                            <span class="text-green-700 font-bold text-xs">✓ Active</span>
+                                        <?php endif; ?>
+                                    </li>
+                                    <?php endforeach; ?>
+                                </ul>
+                            </div>
+                        </div>
+                        <?php endif; ?>
+                    </div>
+
                     <form method="POST" id="process-form">
                         <input type="hidden" name="action" value="batch_process">
 
-                        <!-- Template Selection & Upload Box -->
-                        <div class="mb-8 p-6 bg-purple-50 rounded-xl border-2 border-purple-200 shadow-sm">
-                            <h3 class="text-base font-bold text-purple-900 mb-4 flex items-center">
-                                <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                                    <path d="M9 2a2 2 0 00-2 2v8a2 2 0 002 2h6a2 2 0 002-2V6.414A2 2 0 0016.414 5L14 2.586A2 2 0 0012.586 2H9z"/>
-                                    <path d="M3 8a2 2 0 012-2v10h8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z"/>
-                                </svg>
-                                DTR Template Management
-                            </h3>
-                            
-                            <!-- Active Template Selection -->
-                            <div class="mb-4">
-                                <label for="selected-template" class="block text-sm font-semibold text-purple-900 mb-2">Active Template for Selected Month</label>
-                                <select id="selected-template" name="selected_template" class="w-full px-4 py-3 text-base border border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white">
-                                    <?php if (file_exists(__DIR__ . DIRECTORY_SEPARATOR . $defaultTemplate)): ?>
-                                    <option value="<?php echo htmlspecialchars(basename($defaultTemplate)); ?>" <?php echo $selectedTemplate === basename($defaultTemplate) ? 'selected' : ''; ?>>
-                                        <?php echo htmlspecialchars(basename($defaultTemplate)); ?> (Default)
-                                    </option>
-                                    <?php endif; ?>
-                                    <?php foreach ($templateFiles as $templateFile): ?>
-                                    <?php if ($templateFile['name'] === basename($defaultTemplate)) continue; ?>
-                                    <option value="<?php echo htmlspecialchars($templateFile['name']); ?>" <?php echo $selectedTemplate === $templateFile['name'] ? 'selected' : ''; ?>>
-                                        <?php echo htmlspecialchars($templateFile['name']); ?>
-                                    </option>
-                                    <?php endforeach; ?>
-                                </select>
-                            </div>
-
-                            <!-- Upload New Template -->
-                            <div class="border-t-2 border-purple-200 pt-4">
-                                <label class="block text-sm font-semibold text-purple-900 mb-2">Upload New Monthly Template</label>
-                            </div>
-                        </div>
-    
-                        <!-- Template Upload Form (Outside main process form) -->
-                        <form method="POST" enctype="multipart/form-data" class="mb-8 -mt-8">
-                            <div class="bg-purple-50 rounded-b-xl border-2 border-t-0 border-purple-200 p-6 pt-0">
-                                <div class="flex gap-3">
-                                    <input type="hidden" name="action" value="upload_template">
-                                    <input type="file" name="template_file" accept=".xlsx" required class="flex-1 text-sm text-purple-900 border border-purple-300 rounded-lg p-2 bg-white file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-purple-100 file:text-purple-700 hover:file:bg-purple-200">
-                                    <button type="submit" class="px-5 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium whitespace-nowrap shadow-sm">
-                                        <svg class="w-4 h-4 inline-block mr-1" fill="currentColor" viewBox="0 0 20 20">
-                                            <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd"/>
-                                        </svg>
-                                        Upload
-                                    </button>
-                                </div>
-                                <!-- Available Templates List -->
-                                <?php if (!empty($templateFiles)): ?>
-                                <div class="mt-4 pt-3 border-t border-purple-200">
-                                    <p class="text-xs font-semibold text-purple-900 mb-2">Available Templates (<?php echo count($templateFiles); ?>):</p>
-                                    <div class="max-h-24 overflow-y-auto bg-white rounded-lg border border-purple-200 p-2">
-                                        <ul class="space-y-1 text-xs text-purple-800">
-                                            <?php foreach ($templateFiles as $templateFile): ?>
-                                            <li class="flex items-center justify-between py-1 px-2 hover:bg-purple-50 rounded">
-                                                <span>📄 <?php echo htmlspecialchars($templateFile['name']); ?></span>
-                                                <?php if ($templateFile['name'] === $selectedTemplate): ?>
-                                                    <span class="text-green-700 font-bold text-xs">✓ Active</span>
-                                                <?php endif; ?>
-                                            </li>
-                                            <?php endforeach; ?>
-                                        </ul>
-                                    </div>
-                                </div>
+                        <!-- Active Template Selection (for processing) -->
+                        <div class="mb-8 p-4 bg-purple-50 rounded-lg border border-purple-200">
+                            <label for="selected-template" class="block text-sm font-semibold text-purple-900 mb-2">Active Template for Selected Month</label>
+                            <select id="selected-template" name="selected_template" class="w-full px-4 py-3 text-base border border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white">
+                                <?php if (file_exists(__DIR__ . DIRECTORY_SEPARATOR . $defaultTemplate)): ?>
+                                <option value="<?php echo htmlspecialchars(basename($defaultTemplate)); ?>" <?php echo $selectedTemplate === basename($defaultTemplate) ? 'selected' : ''; ?>>
+                                    <?php echo htmlspecialchars(basename($defaultTemplate)); ?> (Default)
+                                </option>
                                 <?php endif; ?>
-                            </div>
-                        </form>
+                                <?php foreach ($templateFiles as $templateFile): ?>
+                                <?php if ($templateFile['name'] === basename($defaultTemplate)) continue; ?>
+                                <option value="<?php echo htmlspecialchars($templateFile['name']); ?>" <?php echo $selectedTemplate === $templateFile['name'] ? 'selected' : ''; ?>>
+                                    <?php echo htmlspecialchars($templateFile['name']); ?>
+                                </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
 
                         <!-- Search Input Files -->
                         <div class="mb-6">

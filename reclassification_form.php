@@ -509,7 +509,7 @@ function format_performance_requirements(array $rules): string
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <?php require_once(__DIR__ . '/includes/favicon.php'); ?>
-    <title>RECLASSIFICATION FORM FOR TEACHING POSITIONS(RFTP)</title>
+    <title>RFTP</title>
     <style>
         body {
             font-family: "Times New Roman", serif;
@@ -570,8 +570,9 @@ function format_performance_requirements(array $rules): string
             bottom: 16px;
             margin-left: auto;
             margin-right: auto;
+            width: fit-content;
             background: #fff;
-            padding: 8px 10px;
+            padding: 10px 16px;
             border: 1px solid #ddd;
             border-radius: 6px;
             box-shadow: 0 8px 18px rgba(0, 0, 0, 0.12);
