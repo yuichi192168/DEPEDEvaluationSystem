@@ -32,7 +32,7 @@ $scores = $data['scores'];
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #E04040 0%, #E06060 100%);
+            background: linear-gradient(135deg, #055489 0%, #0668aa 100%);
             padding: 20px;
             min-height: 100vh;
         }
@@ -41,10 +41,10 @@ $scores = $data['scores'];
             margin: 0 auto;
             background: #ffffff;
             border-radius: 10px;
-            box-shadow: 0 10px 40px rgba(224, 64, 64, 0.25);
+            box-shadow: 0 10px 40px rgba(5, 84, 137, 0.25);
             padding: 30px;
         }
-        h1 { color: #E04040; text-align: center; margin-bottom: 10px; }
+        h1 { color: #055489; text-align: center; margin-bottom: 10px; }
         .subtitle { text-align: center; color: #666; margin-bottom: 30px; }
         .success-banner {
             background: #d4edda;
@@ -61,7 +61,7 @@ $scores = $data['scores'];
             border-radius: 8px;
             margin-bottom: 20px;
         }
-        .info-section h3 { color: #E04040; margin-bottom: 15px; }
+        .info-section h3 { color: #055489; margin-bottom: 15px; }
         .info-row { display: flex; margin-bottom: 10px; }
         .info-label { font-weight: 600; width: 200px; color: #333; }
         .info-value { color: #666; }
@@ -75,9 +75,9 @@ $scores = $data['scores'];
             border: 1px solid #ddd;
             text-align: left;
         }
-        .scores-table th { background: #E04040; color: white; }
+        .scores-table th { background: #055489; color: white; }
         .scores-table tr:nth-child(even) { background: #f8f9fa; }
-        .scores-table .total-row { background: #E04040 !important; color: white; font-weight: bold; }
+        .scores-table .total-row { background: #055489 !important; color: white; font-weight: bold; }
         .btn-group { display: flex; gap: 10px; justify-content: center; margin-top: 30px; }
         .btn {
             padding: 12px 30px;
@@ -89,7 +89,7 @@ $scores = $data['scores'];
             text-decoration: none;
             display: inline-block;
         }
-        .btn-primary { background: linear-gradient(135deg, #E04040 0%, #E06060 100%); color: white; }
+        .btn-primary { background: linear-gradient(135deg, #055489 0%, #0668aa 100%); color: white; }
         .btn-secondary { background: #6c757d; color: white; }
         .btn:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
     </style>
@@ -180,7 +180,7 @@ $scores = $data['scores'];
         <div class="btn-group">
             <a href="index.php" class="btn btn-primary">New Evaluation</a>
             <a href="comparative_assessment_results.php?view=all" class="btn btn-primary">View All Results</a>
-            <a href="#" onclick="window.print(); return false;" class="btn btn-secondary">Print Report</a>
+            <!-- <a href="#" onclick="window.print(); return false;" class="btn btn-secondary">Print Report</a> -->
         </div>
     </div>
 </body>

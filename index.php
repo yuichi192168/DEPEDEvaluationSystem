@@ -357,6 +357,10 @@ $positions = getAllPositions();
         color: #60a5fa;
     }
 
+    body.dark-mode .live-preview p {
+        color: #94a3b8 !important;
+    }
+
     body.dark-mode .preview-table th,
     body.dark-mode .preview-table td {
         border-color: #475569;
@@ -369,6 +373,15 @@ $positions = getAllPositions();
 
     body.dark-mode .preview-table tbody tr:hover {
         background: #334155;
+    }
+
+    body.dark-mode .preview-table tfoot tr {
+        background: #0f172a !important;
+    }
+
+    body.dark-mode .preview-table tfoot td {
+        color: #f3f4f6 !important;
+        font-weight: bold;
     }
 
     body.dark-mode .baseline-info {

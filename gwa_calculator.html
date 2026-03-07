@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GWA Calculator - DepEd HRMPSB</title>
+    <title>GWA</title>
     <!-- Favicon -->
     <link rel="shortcut icon" href="images/favicon.ico" type="image/x-icon">
     <link rel="icon" type="image/x-icon" href="images/favicon.ico">
@@ -2854,7 +2854,7 @@
                 tableHTML += `</tr>`;
             }
 
-            tableHTML += `</tbody></table><div style="margin-top: 20px; padding-top: 20px; border-top: 2px solid #e0e0e0;"><strong>Summary:</strong><table class="compare-table" style="margin-top: 10px;"><tr><td><strong>Total Units</strong></td>${selected.map(app => `<td style="text-align: center;">${app.totalUnits}</td>`).join('')}</tr><tr><td><strong>Total Weighted</strong></td>${selected.map(app => `<td style="text-align: center;">${app.totalWeighted}</td>`).join('')}</tr><tr><td><strong>GWA</strong></td>${selected.map(app => `<td style="text-align: center; font-weight: bold; color: #055489; font-size: 15px;">${app.gwa}</td>`).join('')}</tr></table></div>`;
+            tableHTML += `</tbody></table><div style="margin-top: 20px; padding-top: 20px; border-top: 2px solid #e0e0e0;"><strong>Summary:</strong><table class="compare-table" style="margin-top: 10px;"><tr><td><strong>Total Units</strong></td>${selected.map(app => `<td style="text-align: center; font-weight: 600; color: #333; font-size: 14px;">${app.totalUnits}</td>`).join('')}</tr><tr><td><strong>Total Weighted</strong></td>${selected.map(app => `<td style="text-align: center; font-weight: 600; color: #333; font-size: 14px;">${app.totalWeighted}</td>`).join('')}</tr><tr><td><strong>GWA</strong></td>${selected.map(app => `<td style="text-align: center; font-weight: bold; color: #055489; font-size: 15px;">${app.gwa}</td>`).join('')}</tr></table></div>`;
 
             resultsDiv.innerHTML = tableHTML;
             modal.classList.add('show');

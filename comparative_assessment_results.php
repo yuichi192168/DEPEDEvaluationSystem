@@ -264,7 +264,7 @@ if (count($positions) > 0) {
         
         body {
             font-family: 'Calibri', 'Segoe UI', sans-serif;
-            background: linear-gradient(135deg, #E04040 0%, #E06060 100%);
+            background: linear-gradient(135deg, #055489 0%, #0668aa 100%);
             padding: 15px;
             min-height: 100vh;
         }
@@ -274,7 +274,7 @@ if (count($positions) > 0) {
             margin: 0 auto;
             background: #ffffff;
             border-radius: 6px;
-            box-shadow: 0 8px 32px rgba(224, 64, 64, 0.2);
+            box-shadow: 0 8px 32px rgba(5, 84, 137, 0.2);
             padding: 25px;
         }
         
@@ -287,7 +287,7 @@ if (count($positions) > 0) {
         
         .nav-btn {
             padding: 10px 18px;
-            background: #E04040;
+            background: #055489;
             color: white;
             border: none;
             border-radius: 4px;
@@ -300,9 +300,9 @@ if (count($positions) > 0) {
         }
         
         .nav-btn:hover {
-            background: #c73030;
+            background: #044073;
             transform: translateY(-2px);
-            box-shadow: 0 4px 8px rgba(224, 64, 64, 0.3);
+            box-shadow: 0 4px 8px rgba(5, 84, 137, 0.3);
         }
         
         .nav-btn.secondary {
@@ -507,7 +507,7 @@ if (count($positions) > 0) {
         
         .btn-action {
             padding: 8px 16px;
-            background: #E04040;
+            background: #055489;
             color: white;
             border: none;
             border-radius: 3px;
@@ -518,23 +518,23 @@ if (count($positions) > 0) {
         }
         
         .btn-action:hover {
-            background: #c73030;
+            background: #044073;
         }
         
         .btn-action.print {
-            background: #E04040;
+            background: #055489;
         }
         
         .btn-action.print:hover {
-            background: #c73030;
+            background: #044073;
         }
         
         .btn-action.export {
-            background: #E04040;
+            background: #055489;
         }
         
         .btn-action.export:hover {
-            background: #c73030;
+            background: #044073;
         }
         
         .empty-message {
@@ -640,17 +640,37 @@ if (count($positions) > 0) {
                         <h1 style="color: #333; font-size: 18px; border-bottom: 3px solid #666; padding-bottom: 12px; margin-bottom: 20px;">
                             All Applicants by Position
                         </h1>
+                        
+                        <!-- Search Box -->
+                        <div style="margin-top: 15px; margin-bottom: 15px;">
+                            <label style="display: block; font-weight: 600; color: #333; margin-bottom: 8px; font-size: 13px;">Search Applicants:</label>
+                            <input type="text" 
+                                   id="allApplicantsSearch" 
+                                   placeholder="Type name, application code, or position..."
+                                   style="padding: 10px; width: 100%; max-width: 500px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px;"
+                                   onkeyup="filterAllApplicants()">
+                            <div style="font-size: 12px; color: #666; margin-top: 5px;">
+                                Found: <span id="allApplicantsCount"><?php 
+                                    $totalCount = 0;
+                                    foreach ($groupedResults as $posData) {
+                                        $totalCount += count($posData['applicants']);
+                                    }
+                                    echo $totalCount;
+                                ?></span> applicant(s) across <span id="positionCount"><?php echo count($groupedResults); ?></span> position(s)
+                            </div>
+                        </div>
                     </div>
                     
+                    <div id="allApplicantsContainer">
                     <?php foreach ($groupedResults as $posName => $posData): ?>
-                        <div style="page-break-inside: avoid; margin-bottom: 35px; background: #fff; border: 1px solid #e0e0e0; border-radius: 6px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
+                        <div class="position-group-card" data-position-name="<?php echo htmlspecialchars(strtolower($posName)); ?>" style="page-break-inside: avoid; margin-bottom: 35px; background: #fff; border: 1px solid #e0e0e0; border-radius: 6px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
                             <!-- Position Header -->
                             <div style="background: #f5f5f5; color: #333; padding: 15px; border-bottom: 2px solid #ddd; border-left: 4px solid #666;">
                                 <h2 style="font-size: 15px; font-weight: bold; margin: 0;">
                                     <?php echo htmlspecialchars($posName); ?>
                                 </h2>
                                 <div style="font-size: 12px; margin-top: 5px; color: #666;">
-                                    Total Applicants: <strong><?php echo count($posData['applicants']); ?></strong>
+                                    Total Applicants: <strong class="position-visible-count"><?php echo count($posData['applicants']); ?></strong>
                                 </div>
                             </div>
                             
@@ -717,7 +737,10 @@ if (count($positions) > 0) {
                                     </thead>
                                     <tbody>
                                         <?php foreach ($posData['applicants'] as $index => $row): ?>
-                                            <tr style="border-bottom: 1px solid #f0f0f0; transition: background 0.2s;">
+                                            <tr class="applicant-row" 
+                                                data-applicant-name="<?php echo htmlspecialchars(strtolower($row['name'])); ?>" 
+                                                data-application-code="<?php echo htmlspecialchars(strtolower($row['application_code'] ?? '')); ?>"
+                                                style="border-bottom: 1px solid #f0f0f0; transition: background 0.2s;">
                                                 <td style="background: #fafafa; font-weight: 600; color: #666; border: 1px solid #e0e0e0;"><?php echo $row['rank'] ?? ($index + 1); ?></td>
                                                 <td class="name-column" style="text-align: left; font-weight: 500; color: #333; border: 1px solid #e0e0e0;"><?php echo htmlspecialchars($row['name']); ?></td>
                                                 <td class="code-column" style="font-family: 'Courier New', monospace; font-size: 11px; color: #777; border: 1px solid #e0e0e0;"><?php echo htmlspecialchars($row['application_code'] ?? '—'); ?></td>
@@ -732,6 +755,7 @@ if (count($positions) > 0) {
                             </div>
                         </div>
                     <?php endforeach; ?>
+                    </div>
                 <?php else: ?>
                     <div class="empty-message">
                         <h3>No Applicants Found</h3>
@@ -794,10 +818,10 @@ if (count($positions) > 0) {
             </div>
             
             <!-- Evaluation Criteria Reference - Collapsible -->
-            <div style="margin: 20px 0; padding: 15px; background: #f5f5f5; border-left: 4px solid #E04040; border-radius: 4px;">
+            <div style="margin: 20px 0; padding: 15px; background: #f5f5f5; border-left: 4px solid #055489; border-radius: 4px;">
                 <div style="display: flex; justify-content: space-between; align-items: center; cursor: pointer;" onclick="toggleCriteriaTable()">
-                    <h3 style="color: #E04040; margin: 0; font-size: 13px; flex: 1;">Evaluation Criteria and Maximum Points</h3>
-                    <span id="criteriaToggleIcon" style="color: #E04040; font-size: 18px; font-weight: bold;">+</span>
+                    <h3 style="color: #055489; margin: 0; font-size: 13px; flex: 1;">Evaluation Criteria and Maximum Points</h3>
+                    <span id="criteriaToggleIcon" style="color: #055489; font-size: 18px; font-weight: bold;">+</span>
                 </div>
                 <table id="criteriaTable" style="width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 12px; display: none;">
                     <thead>
@@ -1367,6 +1391,53 @@ if (count($positions) > 0) {
             });
             
             document.getElementById('applicantCount').textContent = visibleCount;
+        }
+
+        // Filter all applicants in "View All" mode
+        function filterAllApplicants() {
+            const searchInput = document.getElementById('allApplicantsSearch').value.toLowerCase();
+            const positionCards = document.querySelectorAll('.position-group-card');
+            let totalVisibleCount = 0;
+            let visiblePositionCount = 0;
+            
+            positionCards.forEach(posCard => {
+                const positionName = posCard.getAttribute('data-position-name');
+                const applicantRows = posCard.querySelectorAll('.applicant-row');
+                let visibleRowsInPosition = 0;
+                
+                applicantRows.forEach(row => {
+                    const applicantName = row.getAttribute('data-applicant-name');
+                    const applicationCode = row.getAttribute('data-application-code');
+                    
+                    // Search in name, code, or position
+                    if (applicantName.includes(searchInput) || 
+                        applicationCode.includes(searchInput) || 
+                        positionName.includes(searchInput)) {
+                        row.style.display = '';
+                        visibleRowsInPosition++;
+                        totalVisibleCount++;
+                    } else {
+                        row.style.display = 'none';
+                    }
+                });
+                
+                // Update count for this position
+                const countSpan = posCard.querySelector('.position-visible-count');
+                if (countSpan) {
+                    countSpan.textContent = visibleRowsInPosition;
+                }
+                
+                // Show/hide entire position card if no matches
+                if (visibleRowsInPosition > 0) {
+                    posCard.style.display = '';
+                    visiblePositionCount++;
+                } else {
+                    posCard.style.display = 'none';
+                }
+            });
+            
+            document.getElementById('allApplicantsCount').textContent = totalVisibleCount;
+            document.getElementById('positionCount').textContent = visiblePositionCount;
         }
 
         // Download individual IES as HTML/PDF with preview
