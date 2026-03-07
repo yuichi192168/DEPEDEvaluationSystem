@@ -663,14 +663,20 @@ class FormValidator {
         const helpOpen = document.getElementById('help_open');
         const helpDrawer = document.getElementById('helpDrawer');
         const helpClose = document.getElementById('helpClose');
-        const helpBtnTop = document.getElementById('helpToggle');
+        const setHelpToggleState = (open) => {
+            if (!helpToggle || !helpDrawer) return;
+            helpToggle.setAttribute('aria-pressed', String(open));
+            helpDrawer.setAttribute('aria-hidden', String(!open));
+            helpToggle.textContent = open ? '\u00d7' : '?';
+            helpToggle.title = open ? 'Close help' : 'Help';
+        };
         if (helpToggle) {
             helpToggle.addEventListener('click', () => {
                 helpDrawer.classList.toggle('open');
                 const open = helpDrawer.classList.contains('open');
-                helpToggle.setAttribute('aria-pressed', String(open));
-                helpDrawer.setAttribute('aria-hidden', String(!open));
+                setHelpToggleState(open);
             });
+            setHelpToggleState(helpDrawer ? helpDrawer.classList.contains('open') : false);
         }
         if (helpOpen) helpOpen.addEventListener('click', () => helpToggle.click());
         if (helpClose) helpClose.addEventListener('click', () => helpToggle.click());

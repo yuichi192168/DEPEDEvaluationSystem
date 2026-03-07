@@ -49,7 +49,7 @@ $totalPages = ceil($totalCount / $itemsPerPage);
     <link rel="stylesheet" href="../css/banners.css">
     <style>
         :root {
-            --admin-primary: #E04040;
+            --admin-primary: #055489;
             --admin-secondary: #333;
             --sidebar-width: 260px;
             --header-height: 70px;
@@ -78,7 +78,7 @@ $totalPages = ceil($totalCount / $itemsPerPage);
         /* Sidebar Navigation */
         .sidebar {
             width: var(--sidebar-width);
-            background: linear-gradient(180deg, #E04040 0%, #c83030 100%);
+            background: linear-gradient(180deg, #055489 0%, #044073 100%);
             color: white;
             display: flex;
             flex-direction: column;
@@ -398,8 +398,8 @@ $totalPages = ceil($totalCount / $itemsPerPage);
         }
 
         .btn-primary:hover {
-            background: #c83030;
-            box-shadow: 0 2px 8px rgba(224, 64, 64, 0.3);
+            background: #044073;
+            box-shadow: 0 2px 8px rgba(5, 84, 137, 0.3);
         }
 
         .btn-secondary {
@@ -877,7 +877,7 @@ $totalPages = ceil($totalCount / $itemsPerPage);
         }
 
         .total-score {
-            background: linear-gradient(135deg, #E04040 0%, #c83030 100%);
+            background: linear-gradient(135deg, #055489 0%, #044073 100%);
             color: white;
             padding: 20px;
             border-radius: 8px;
@@ -1191,8 +1191,8 @@ $totalPages = ceil($totalCount / $itemsPerPage);
         }
 
         body.dark-mode td[style*="color: #555"],
-        body.dark-mode td[style*="color: #E04040"],
-        body.dark-mode h3[style*="color: #E04040"] {
+        body.dark-mode td[style*="color: #055489"],
+        body.dark-mode h3[style*="color: #055489"] {
             color: #f3f4f6 !important;
         }
 
@@ -1399,7 +1399,7 @@ $totalPages = ceil($totalCount / $itemsPerPage);
                 <button class="modal-close" onclick="closeModal('archiveModal')">&times;</button>
             </div>
             <div class="modal-body">
-                <p style="margin-bottom: 20px; color: #666;">You are about to archive: <strong id="archiveApplicantName" style="color: #E04040;"></strong></p>
+                <p style="margin-bottom: 20px; color: #666;">You are about to archive: <strong id="archiveApplicantName" style="color: #055489;"></strong></p>
                 
                 <div class="form-group">
                     <label for="archiveReason" style="display: block; margin-bottom: 8px; font-weight: 600; color: #333;">
@@ -1410,7 +1410,7 @@ $totalPages = ceil($totalCount / $itemsPerPage);
                         rows="4" 
                         placeholder="Enter the reason for archiving this applicant (optional)..."
                         style="width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 6px; font-family: inherit; font-size: 14px; resize: vertical; transition: border-color 0.3s;"
-                        onfocus="this.style.borderColor='#E04040'"
+                        onfocus="this.style.borderColor='#055489'"
                         onblur="this.style.borderColor='#e0e0e0'"
                     ></textarea>
                 </div>
@@ -1942,7 +1942,7 @@ $totalPages = ceil($totalCount / $itemsPerPage);
                 if (data.success) {
                     let html = `
                         <div class="ies-section">
-                            <h3 style="margin-bottom: 15px; color: #E04040;">
+                            <h3 style="margin-bottom: 15px; color: #055489;">
                                 <i class="fas fa-user-circle" style="margin-right: 10px;"></i>
                                 ${data.applicant.name}
                             </h3>
@@ -2023,7 +2023,7 @@ $totalPages = ceil($totalCount / $itemsPerPage);
                                         <td>${detail.baseline_qualification || '-'}</td>
                                         <td style="text-align: center;">${detail.increment}</td>
                                         <td style="text-align: center;">${detail.weight}</td>
-                                        <td style="text-align: center; font-weight: 600; color: #E04040;">${parseFloat(detail.final_score).toFixed(2)}</td>
+                                        <td style="text-align: center; font-weight: 600; color: #055489;">${parseFloat(detail.final_score).toFixed(2)}</td>
                                     </tr>
                                 `;
                             });
@@ -2046,7 +2046,7 @@ $totalPages = ceil($totalCount / $itemsPerPage);
                             html += `
                                 <div class="ies-section">
                                     <h4><i class="fas fa-sticky-note" style="margin-right: 8px;"></i>Notes</h4>
-                                    <div style="background: #f8f9fa; padding: 15px; border-radius: 4px; border-left: 4px solid #E04040;">
+                                    <div style="background: #f8f9fa; padding: 15px; border-radius: 4px; border-left: 4px solid #055489;">
                                         ${data.evaluation.notes}
                                     </div>
                                 </div>

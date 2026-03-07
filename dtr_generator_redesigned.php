@@ -700,8 +700,8 @@ foreach ($outputFiles as $file) {
         .wizard-step.active { display: block; }
         .help-tooltip { position: relative; }
         body {
-            background-color: #DB8420;
-            background-image: linear-gradient(rgba(219, 132, 32, 0.62), rgba(219, 132, 32, 0.62)), url('images/sdocabuyao-cover.svg');
+            background-color: #055489;
+            background-image: linear-gradient(rgba(5, 84, 137, 0.62), rgba(5, 84, 137, 0.62)), url('images/sdocabuyao-cover.svg');
             background-size: cover;
             background-position: center;
             background-repeat: no-repeat;
@@ -712,8 +712,8 @@ foreach ($outputFiles as $file) {
             color: #e5e7eb;
         }
         main .bg-white.rounded-lg.shadow-md {
-            background: rgba(255, 248, 240, 0.95) !important;
-            border: 1px solid rgba(219, 132, 32, 0.28);
+            background: rgba(240, 247, 252, 0.95) !important;
+            border: 1px solid rgba(5, 84, 137, 0.28);
             backdrop-filter: blur(2px);
         }
         body.dark-mode main .bg-white.rounded-lg.shadow-md {
@@ -722,7 +722,7 @@ foreach ($outputFiles as $file) {
         }
         main .bg-white.rounded-lg.shadow-md.p-6.border-t-4,
         main .bg-white.rounded-lg.shadow-md.p-8.border-t-4 {
-            border-top-color: #DB8420 !important;
+            border-top-color: #055489 !important;
         }
         body.dark-mode main .text-gray-900,
         body.dark-mode main .text-gray-800,
@@ -780,6 +780,22 @@ foreach ($outputFiles as $file) {
         }
         body.dark-mode main .template-active-badge {
             color: #86efac !important;
+        }
+        .clear-selection-btn {
+            background: #e5e7eb !important;
+            color: #374151 !important;
+            border: 1px solid #d1d5db;
+        }
+        .clear-selection-btn:hover {
+            background: #d1d5db !important;
+        }
+        body.dark-mode main .clear-selection-btn {
+            background: #374151 !important;
+            color: #f3f4f6 !important;
+            border-color: #4b5563 !important;
+        }
+        body.dark-mode main .clear-selection-btn:hover {
+            background: #4b5563 !important;
         }
         body.dark-mode main .text-indigo-800,
         body.dark-mode main .text-blue-800,
@@ -927,7 +943,7 @@ foreach ($outputFiles as $file) {
             width: 52px;
             height: 52px;
             border-radius: 9999px;
-            background: #DB8420;
+            background: #055489;
             color: #ffffff;
             font-size: 28px;
             font-weight: 700;
@@ -935,12 +951,12 @@ foreach ($outputFiles as $file) {
             align-items: center;
             justify-content: center;
             cursor: pointer;
-            box-shadow: 0 10px 30px rgba(219, 132, 32, 0.35);
+            box-shadow: 0 10px 30px rgba(5, 84, 137, 0.35);
             z-index: 1001;
             transition: transform 0.2s ease, background-color 0.2s ease;
         }
         .help-toggle:hover {
-            background: #C26B0F;
+            background: #055489;
             transform: translateY(-2px);
         }
         .help-drawer {
@@ -1051,7 +1067,7 @@ foreach ($outputFiles as $file) {
 </head>
 <body class="bg-gray-100 min-h-screen">
     <!-- Navigation Header -->
-    <nav style="background: linear-gradient(135deg, #DB8420 0%, #C26B0F 100%);" class="text-white shadow-lg">
+    <nav style="background: linear-gradient(135deg, #055489 0%, #044073 100%);" class="text-white shadow-lg">
         <div class="max-w-7xl mx-auto px-4 py-4">
             <div class="flex items-center justify-between">
                 <div class="flex items-center space-x-3">
@@ -1307,7 +1323,7 @@ foreach ($outputFiles as $file) {
                             </span>
                             <button type="button" onclick="toggleSelectAll('process-file-checkbox', true)" class="text-sm px-5 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-semibold transition shadow-sm">Select All</button>
                             <span class="text-gray-400">|</span>
-                            <button type="button" onclick="toggleSelectAll('process-file-checkbox', false)" class="text-sm px-5 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-semibold transition">Clear Selection</button>
+                            <button type="button" onclick="toggleSelectAll('process-file-checkbox', false)" class="clear-selection-btn text-sm px-5 py-2 rounded-lg font-semibold transition">Clear Selection</button>
                             <span class="text-gray-400">|</span>
                             <button type="button" onclick="deleteSelectedInputFiles()" class="text-sm px-5 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-semibold transition shadow-sm inline-flex items-center gap-2">
                                 <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
@@ -1535,7 +1551,7 @@ foreach ($outputFiles as $file) {
                         </span>
                         <button type="button" onclick="toggleSelectAll('output-file-checkbox', true)" class="text-sm px-4 py-1.5 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 font-medium transition shadow-sm">Select All</button>
                         <span class="text-gray-400">|</span>
-                        <button type="button" onclick="toggleSelectAll('output-file-checkbox', false)" class="text-sm px-4 py-1.5 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 font-medium transition">Clear Selection</button>
+                        <button type="button" onclick="toggleSelectAll('output-file-checkbox', false)" class="clear-selection-btn text-sm px-4 py-1.5 rounded-md font-medium transition">Clear Selection</button>
                         <span class="text-gray-400">|</span>
                         <button type="button" onclick="deleteSelectedOutputFiles()" class="text-sm px-4 py-1.5 bg-red-600 text-white rounded-md hover:bg-red-700 font-semibold transition shadow-sm inline-flex items-center gap-1">
                             <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">

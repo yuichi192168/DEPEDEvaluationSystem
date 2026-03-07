@@ -37,8 +37,8 @@ $currentUserRole = $isAuthenticated ? $currentUser['role'] : 'guest';
         }
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #DB8420;
-            background-image: linear-gradient(rgba(219, 132, 32, 0.62), rgba(219, 132, 32, 0.62)), url('../images/sdocabuyao-cover.svg');
+            background-color: #055489;
+            background-image: linear-gradient(rgba(5, 84, 137, 0.62), rgba(5, 84, 137, 0.62)), url('../images/sdocabuyao-cover.svg');
             background-size: cover;
             background-position: center;
             background-repeat: no-repeat;
@@ -56,7 +56,7 @@ $currentUserRole = $isAuthenticated ? $currentUser['role'] : 'guest';
             overflow: hidden;
         }
         .admin-header {
-            background: #DB8420;
+            background: #055489;
             color: white;
             padding: 24px 32px;
             display: flex;
@@ -123,7 +123,7 @@ $currentUserRole = $isAuthenticated ? $currentUser['role'] : 'guest';
             background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
             padding: 20px;
             border-radius: 8px;
-            border-left: 4px solid #DB8420;
+            border-left: 4px solid #055489;
         }
         .stat-card.passed {
             border-left-color: #10b981;
@@ -186,11 +186,11 @@ $currentUserRole = $isAuthenticated ? $currentUser['role'] : 'guest';
             transition: all 0.2s;
         }
         .btn-primary {
-            background: #DB8420;
+            background: #055489;
             color: white;
         }
         .btn-primary:hover {
-            background: #C26B0F;
+            background: #044073;
         }
         .btn-secondary {
             background: #e5e7eb;
@@ -268,7 +268,7 @@ $currentUserRole = $isAuthenticated ? $currentUser['role'] : 'guest';
         }
         .action-btn-edit {
             background: #E3D2C4;
-            color: #DB8420;
+            color: #055489;
         }
         .action-btn-edit:hover {
             background: #bfdbfe;
@@ -373,7 +373,7 @@ $currentUserRole = $isAuthenticated ? $currentUser['role'] : 'guest';
         .login-btn {
             width: 100%;
             padding: 12px;
-            background: #DB8420;
+            background: #055489;
             color: white;
             border: none;
             border-radius: 6px;
@@ -383,10 +383,10 @@ $currentUserRole = $isAuthenticated ? $currentUser['role'] : 'guest';
             transition: background 0.2s;
         }
         .login-btn:hover {
-            background: #C26B0F;
+            background: #044073;
         }
         .login-btn:disabled {
-            background: #E5B88E;
+            background: #7ba3c4;
             cursor: not-allowed;
         }
         .login-error {
@@ -407,7 +407,7 @@ $currentUserRole = $isAuthenticated ? $currentUser['role'] : 'guest';
             margin-top: 16px;
         }
         .back-link a {
-            color: #DB8420;
+            color: #055489;
             text-decoration: none;
             font-size: 14px;
         }

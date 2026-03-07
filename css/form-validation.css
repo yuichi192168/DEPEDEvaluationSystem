@@ -465,3 +465,149 @@ input.invalid:focus {
     font-size: 12px;
     white-space: nowrap;
 }
+
+/* =====================================================
+   Dark Mode Styles
+   ===================================================== */
+
+/* Modal dark mode */
+body.dark-mode .modal {
+    background: #1e293b;
+    color: #f3f4f6;
+}
+
+body.dark-mode .modal h3 {
+    color: #60a5fa;
+}
+
+body.dark-mode .modal .modal-body {
+    color: #e5e7eb;
+}
+
+body.dark-mode .modal .btn-cancel {
+    background: #475569;
+    color: #f3f4f6;
+}
+
+body.dark-mode .modal .btn-confirm {
+    background: linear-gradient(90deg, #055489, #0668aa);
+}
+
+body.dark-mode .modal .checklist li {
+    border-bottom-color: #475569;
+}
+
+/* Sticky action bar dark mode */
+body.dark-mode .sticky-action-bar .bar-inner {
+    background: rgba(7, 65, 107, 0.84);
+    border: 1px solid rgba(96, 165, 250, 0.25);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+/* Help toggle and drawer dark mode */
+body.dark-mode .help-toggle {
+    background: #055489;
+    box-shadow: 0 6px 18px rgba(5, 84, 137, 0.4);
+}
+
+body.dark-mode .help-toggle[aria-pressed="true"] {
+    background: #0b6db1;
+}
+
+.help-toggle[aria-pressed="true"] {
+    background: #055489;
+}
+
+body.dark-mode .help-drawer {
+    background: #1e293b;
+    box-shadow: -8px 0 30px rgba(0, 0, 0, 0.5);
+}
+
+body.dark-mode .help-drawer h3 {
+    color: #60a5fa;
+}
+
+body.dark-mode .help-drawer p {
+    color: #cbd5e1;
+}
+
+body.dark-mode .compact-toggle {
+    background: #055489;
+}
+
+/* Drafts modal dark mode */
+body.dark-mode #draftsModal {
+    background: rgba(0, 0, 0, 0.7);
+}
+
+body.dark-mode .modal-inner {
+    background: #1e293b;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+}
+
+body.dark-mode .modal-inner h3 {
+    color: #60a5fa;
+}
+
+body.dark-mode .draft-row {
+    border-bottom-color: #475569;
+}
+
+body.dark-mode .draft-row > div:first-child {
+    color: #e5e7eb;
+}
+
+body.dark-mode .draft-row .load-draft-btn {
+    background: #475569;
+    color: #f3f4f6;
+}
+
+body.dark-mode .draft-row .load-draft-btn:hover {
+    background: #334155;
+}
+
+/* Form validation dark mode */
+body.dark-mode input.valid,
+body.dark-mode select.valid,
+body.dark-mode textarea.valid {
+    background-color: #064e3b;
+    border-color: #10b981 !important;
+}
+
+body.dark-mode input.invalid,
+body.dark-mode select.invalid,
+body.dark-mode textarea.invalid {
+    background-color: #450a0a;
+    border-color: #ef4444 !important;
+}
+
+body.dark-mode .field-error {
+    background-color: #450a0a;
+    border-left-color: #ef4444;
+    color: #fca5a5;
+}
+
+body.dark-mode .validation-summary {
+    background-color: #450a0a;
+    border-color: #991b1b;
+    color: #fca5a5;
+}
+
+body.dark-mode .progress-fill {
+    background: linear-gradient(90deg, #055489, #0668aa);
+}
+
+body.dark-mode .form-progress.completed .progress-fill {
+    background: linear-gradient(90deg, #10b981, #059669);
+}
+
+body.dark-mode .form-progress.completed .progress-text {
+    color: #10b981;
+}
+
+body.dark-mode input:focus,
+body.dark-mode select:focus,
+body.dark-mode textarea:focus {
+    border-color: #055489;
+    box-shadow: 0 0 0 3px rgba(5, 84, 137, 0.2);
+}
