@@ -819,6 +819,26 @@ function format_performance_requirements(array $rules): string
             display: block;
             margin: 0 auto;
         }
+        .header-text-block {
+            margin-top: 8px;
+            text-align: center;
+            font-family: "Old English Text MT", serif;
+            line-height: 1.2;
+        }
+        .header-text-rp {
+            font-size: 12pt;
+        }
+        .header-text-deped {
+            font-size: 18pt;
+        }
+        .form-main-title {
+            margin-top: 8px;
+            margin-bottom: 10px;
+            text-align: center;
+            font-family: "Bookman Old Style", serif;
+            font-size: 18pt;
+            font-weight: 700;
+        }
         @media print {
             body {
                 margin: 0.5in;
@@ -930,8 +950,13 @@ function format_performance_requirements(array $rules): string
 </div>
 <div class="page-header">
     <img src="images/deped_logo.svg" alt="DepEd Logo" class="header-logo">
-    <img src="images/header.png" alt="Form Header" class="header-title-img">
+    <!-- <img src="images/header.png" alt="Form Header" class="header-title-img"> -->
+    <div class="header-text-block">
+        <div class="header-text-rp">Republika ng Pilipinas</div>
+        <div class="header-text-deped">Department of Education</div>
+    </div>
 </div>
+<div class="form-main-title">RECLASSIFICATION FORM FOR TEACHING POSITIONS (RFTP)</div>
 
 <?php if ($errorMessage): ?>
     <div class="banner banner-fail"><?php echo htmlspecialchars($errorMessage); ?></div>
