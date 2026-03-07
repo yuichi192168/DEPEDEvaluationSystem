@@ -37,20 +37,26 @@ $currentUserRole = $isAuthenticated ? $currentUser['role'] : 'guest';
         }
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #547be6 0%, #3730a3 100%);
+            background-color: #DB8420;
+            background-image: linear-gradient(rgba(219, 132, 32, 0.62), rgba(219, 132, 32, 0.62)), url('../images/sdocabuyao-cover.svg');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
             min-height: 100vh;
             padding: 20px;
         }
         .admin-container {
             max-width: 1400px;
             margin: 0 auto;
-            background: white;
+            background: rgba(255, 255, 255, 0.96);
+            backdrop-filter: blur(2px);
             border-radius: 12px;
             box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
             overflow: hidden;
         }
         .admin-header {
-            background: linear-gradient(135deg, #1e3a8a 0%, #3730a3 100%);
+            background: #DB8420;
             color: white;
             padding: 24px 32px;
             display: flex;
@@ -117,7 +123,7 @@ $currentUserRole = $isAuthenticated ? $currentUser['role'] : 'guest';
             background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
             padding: 20px;
             border-radius: 8px;
-            border-left: 4px solid #3730a3;
+            border-left: 4px solid #DB8420;
         }
         .stat-card.passed {
             border-left-color: #10b981;
@@ -180,11 +186,11 @@ $currentUserRole = $isAuthenticated ? $currentUser['role'] : 'guest';
             transition: all 0.2s;
         }
         .btn-primary {
-            background: #3730a3;
+            background: #DB8420;
             color: white;
         }
         .btn-primary:hover {
-            background: #312e81;
+            background: #C26B0F;
         }
         .btn-secondary {
             background: #e5e7eb;
@@ -261,8 +267,8 @@ $currentUserRole = $isAuthenticated ? $currentUser['role'] : 'guest';
             transition: all 0.2s;
         }
         .action-btn-edit {
-            background: #dbeafe;
-            color: #1e40af;
+            background: #E3D2C4;
+            color: #DB8420;
         }
         .action-btn-edit:hover {
             background: #bfdbfe;
@@ -367,7 +373,7 @@ $currentUserRole = $isAuthenticated ? $currentUser['role'] : 'guest';
         .login-btn {
             width: 100%;
             padding: 12px;
-            background: #2563eb;
+            background: #DB8420;
             color: white;
             border: none;
             border-radius: 6px;
@@ -377,10 +383,10 @@ $currentUserRole = $isAuthenticated ? $currentUser['role'] : 'guest';
             transition: background 0.2s;
         }
         .login-btn:hover {
-            background: #1d4ed8;
+            background: #C26B0F;
         }
         .login-btn:disabled {
-            background: #93c5fd;
+            background: #E5B88E;
             cursor: not-allowed;
         }
         .login-error {
@@ -401,7 +407,7 @@ $currentUserRole = $isAuthenticated ? $currentUser['role'] : 'guest';
             margin-top: 16px;
         }
         .back-link a {
-            color: #2563eb;
+            color: #DB8420;
             text-decoration: none;
             font-size: 14px;
         }
@@ -414,15 +420,185 @@ $currentUserRole = $isAuthenticated ? $currentUser['role'] : 'guest';
         .dashboard-content.authenticated {
             display: block;
         }
+        .theme-toggle {
+            position: fixed;
+            right: 24px;
+            bottom: 24px;
+            padding: 10px 14px;
+            background: #111827;
+            color: #ffffff;
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            border-radius: 9999px;
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+            cursor: pointer;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+            z-index: 10002;
+            transition: transform 0.2s ease, background-color 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        .theme-toggle:hover {
+            background: #1f2937;
+            transform: translateY(-2px);
+        }
+        .theme-toggle-icon {
+            width: 16px;
+            height: 16px;
+            display: inline-block;
+        }
+        .theme-toggle-icon.is-hidden {
+            display: none;
+        }
+        .theme-toggle-label {
+            font-size: 12px;
+            line-height: 1;
+        }
+        body.dark-mode {
+            background-image: linear-gradient(rgba(15, 23, 42, 0.82), rgba(15, 23, 42, 0.82)), url('../images/sdocabuyao-cover.svg');
+            color: #e5e7eb;
+        }
+        body.dark-mode .theme-toggle {
+            background: #055489;
+            color: #f3f4f6;
+        }
+        body.dark-mode .theme-toggle:hover {
+            background: #0668aa;
+        }
+        body.dark-mode .admin-container {
+            background: rgba(17, 24, 39, 0.92);
+            border: 1px solid rgba(75, 85, 99, 0.85);
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.45);
+        }
+        body.dark-mode .admin-content,
+        body.dark-mode .admin-header p,
+        body.dark-mode .user-info .role {
+            color: #cbd5e1;
+        }
+        body.dark-mode .stat-card {
+            background: #1f2937;
+            border-left-color: #055489;
+        }
+        body.dark-mode .stat-card.passed {
+            border-left-color: #10b981;
+        }
+        body.dark-mode .stat-card.failed {
+            border-left-color: #ef4444;
+        }
+        body.dark-mode .stat-card .stat-label {
+            color: #94a3b8;
+        }
+        body.dark-mode .stat-card .stat-value {
+            color: #f3f4f6;
+        }
+        body.dark-mode .search-box input {
+            background: #111827;
+            color: #e5e7eb;
+            border-color: #4b5563;
+        }
+        body.dark-mode .search-box input::placeholder {
+            color: #9ca3af;
+        }
+        body.dark-mode .btn-secondary {
+            background: #374151;
+            color: #e5e7eb;
+        }
+        body.dark-mode .btn-secondary:hover {
+            background: #4b5563;
+        }
+        body.dark-mode .records-table {
+            background: #111827;
+            border-color: #374151;
+        }
+        body.dark-mode .records-table thead {
+            background: #1f2937;
+        }
+        body.dark-mode .records-table th {
+            color: #f3f4f6;
+            border-bottom-color: #374151;
+        }
+        body.dark-mode .records-table td {
+            color: #e5e7eb;
+            border-bottom-color: #1f2937;
+        }
+        body.dark-mode .records-table tbody tr:hover {
+            background: #1f2937;
+        }
+        body.dark-mode .badge-na {
+            background: #374151;
+            color: #e5e7eb;
+        }
+        body.dark-mode .action-btn-edit {
+            background: #3f2a1a;
+            color: #f5c58f;
+        }
+        body.dark-mode .action-btn-edit:hover {
+            background: #5a3a22;
+        }
+        body.dark-mode .action-btn-view {
+            background: #312e81;
+            color: #ddd6fe;
+        }
+        body.dark-mode .action-btn-view:hover {
+            background: #4338ca;
+        }
+        body.dark-mode .action-btn-delete {
+            background: #7f1d1d;
+            color: #fecaca;
+        }
+        body.dark-mode .action-btn-delete:hover {
+            background: #991b1b;
+        }
+        body.dark-mode .empty-state,
+        body.dark-mode .empty-state p {
+            color: #9ca3af;
+        }
+        body.dark-mode .empty-state h3 {
+            color: #f3f4f6;
+        }
+        body.dark-mode .login-modal {
+            background: #111827;
+            border: 1px solid #374151;
+        }
+        body.dark-mode .login-modal-header h2,
+        body.dark-mode .login-form-group label,
+        body.dark-mode .back-link a {
+            color: #f3f4f6;
+        }
+        body.dark-mode .login-modal-header p {
+            color: #cbd5e1;
+        }
+        body.dark-mode .login-form-group input {
+            background: #1f2937;
+            color: #e5e7eb;
+            border-color: #4b5563;
+        }
+        body.dark-mode .login-form-group input:focus {
+            border-color: #055489;
+            box-shadow: 0 0 0 3px rgba(5, 84, 137, 0.3);
+        }
     </style>
 </head>
 <body>
+
+<button type="button" id="themeToggle" class="theme-toggle" aria-pressed="false" aria-label="Switch to dark mode" title="Switch to dark mode">
+    <svg id="themeSunIcon" class="theme-toggle-icon is-hidden" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+        <path d="M12 4a1 1 0 011 1v1a1 1 0 11-2 0V5a1 1 0 011-1zm0 13a4 4 0 100-8 4 4 0 000 8zm7-5a1 1 0 011 1h1a1 1 0 110 2h-1a1 1 0 110-2zM3 12a1 1 0 011-1h1a1 1 0 110 2H4a1 1 0 01-1-1zm14.364 5.95a1 1 0 011.414 0l.707.707a1 1 0 11-1.414 1.414l-.707-.707a1 1 0 010-1.414zM4.515 4.515a1 1 0 011.414 0l.707.707A1 1 0 015.222 6.636l-.707-.707a1 1 0 010-1.414zm13.435 0a1 1 0 010 1.414l-.707.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM6.636 17.364a1 1 0 010 1.414l-.707.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0z"/>
+    </svg>
+    <svg id="themeMoonIcon" class="theme-toggle-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+        <path d="M21 12.8A9 9 0 1111.2 3a1 1 0 01.97 1.24 7 7 0 008.59 8.59A1 1 0 0121 12.8z"/>
+    </svg>
+    <span id="themeToggleLabel" class="theme-toggle-label">Dark</span>
+</button>
 
 <!-- Login Modal (shown when not authenticated or not admin) -->
 <div class="login-modal-overlay" id="loginModalOverlay">
     <div class="login-modal">
         <div class="login-modal-header">
-            <img src="../images/deped_logo.svg" alt="DepEd Logo">
+            <img src="../images/sdocabuyao_logo.svg" alt="DepEd Logo">
             <h2>Admin Login Required</h2>
             <p>Please log in with admin credentials to access the dashboard</p>
         </div>
@@ -449,7 +625,7 @@ $currentUserRole = $isAuthenticated ? $currentUser['role'] : 'guest';
     <div class="admin-container">
         <div class="admin-header">
             <div class="admin-header-left">
-                <img src="../images/deped_logo.svg" alt="DepEd Logo">
+                <img src="../images/sdocabuyao_logo.svg" alt="DepEd Logo">
                 <div>
                     <h1>Reclassification Admin Dashboard</h1>
                     <p>Manage Performance Evaluation Records</p>
@@ -545,6 +721,11 @@ const searchInput = document.getElementById('searchInput');
 const refreshBtn = document.getElementById('refreshBtn');
 const newRecordBtn = document.getElementById('newRecordBtn');
 const logoutBtn = document.getElementById('logoutBtn');
+const themeToggle = document.getElementById('themeToggle');
+const themeSunIcon = document.getElementById('themeSunIcon');
+const themeMoonIcon = document.getElementById('themeMoonIcon');
+const themeToggleLabel = document.getElementById('themeToggleLabel');
+const themeStorageKey = 'rftp_admin_theme_mode';
 
 // State
 let allRecords = [];
@@ -552,6 +733,8 @@ let filteredRecords = [];
 
 // Initialize
 (function init() {
+    applyTheme(getSavedTheme());
+
     if (isAuthenticated && isAdmin) {
         // User is authenticated as admin
         loginModalOverlay.style.display = 'none';
@@ -563,6 +746,45 @@ let filteredRecords = [];
         dashboardContent.classList.remove('authenticated');
     }
 })();
+
+function applyTheme(mode) {
+    const isDark = mode === 'dark';
+    document.body.classList.toggle('dark-mode', isDark);
+
+    if (themeToggle) {
+        themeToggle.setAttribute('aria-pressed', isDark ? 'true' : 'false');
+        themeToggle.setAttribute('title', isDark ? 'Switch to light mode' : 'Switch to dark mode');
+        themeToggle.setAttribute('aria-label', isDark ? 'Switch to light mode' : 'Switch to dark mode');
+    }
+    if (themeSunIcon && themeMoonIcon) {
+        themeSunIcon.classList.toggle('is-hidden', !isDark);
+        themeMoonIcon.classList.toggle('is-hidden', isDark);
+    }
+    if (themeToggleLabel) {
+        themeToggleLabel.textContent = isDark ? 'Light' : 'Dark';
+    }
+}
+
+function getSavedTheme() {
+    try {
+        const savedTheme = localStorage.getItem(themeStorageKey);
+        return savedTheme === 'dark' ? 'dark' : 'light';
+    } catch (error) {
+        return 'light';
+    }
+}
+
+if (themeToggle) {
+    themeToggle.addEventListener('click', () => {
+        const nextTheme = document.body.classList.contains('dark-mode') ? 'light' : 'dark';
+        applyTheme(nextTheme);
+        try {
+            localStorage.setItem(themeStorageKey, nextTheme);
+        } catch (error) {
+            // Ignore storage errors.
+        }
+    });
+}
 
 // Login Handler
 loginForm.addEventListener('submit', async (e) => {

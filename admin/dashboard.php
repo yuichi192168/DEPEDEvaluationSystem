@@ -943,6 +943,271 @@ $totalPages = ceil($totalCount / $itemsPerPage);
             outline: none;
             border-color: var(--admin-primary);
         }
+
+        /* Theme Toggle */
+        .theme-toggle {
+            padding: 8px 12px;
+            background: #111827;
+            color: #ffffff;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 9999px;
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+            cursor: pointer;
+            transition: transform 0.2s ease, background-color 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .theme-toggle:hover {
+            background: #1f2937;
+            transform: translateY(-1px);
+        }
+
+        .theme-toggle-icon {
+            width: 14px;
+            height: 14px;
+            display: inline-block;
+        }
+
+        .theme-toggle-icon.is-hidden {
+            display: none;
+        }
+
+        .theme-toggle-label {
+            font-size: 12px;
+            line-height: 1;
+        }
+
+        /* Dark Mode */
+        body.dark-mode {
+            background: #0f172a;
+            color: #e5e7eb;
+        }
+
+        body.dark-mode .sidebar {
+            background: linear-gradient(180deg, #1f2937 0%, #111827 100%);
+            box-shadow: 2px 0 12px rgba(0, 0, 0, 0.45);
+        }
+
+        body.dark-mode .main-content,
+        body.dark-mode .content-wrapper {
+            background: #0f172a;
+        }
+
+        body.dark-mode .top-header {
+            background: #111827;
+            border-bottom-color: #374151;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+        }
+
+        body.dark-mode .header-title,
+        body.dark-mode .stat-label,
+        body.dark-mode .user-role,
+        body.dark-mode .empty-state,
+        body.dark-mode .empty-state p,
+        body.dark-mode .history-date {
+            color: #cbd5e1 !important;
+        }
+
+        body.dark-mode .stat-card,
+        body.dark-mode .card,
+        body.dark-mode .controls,
+        body.dark-mode .table-container,
+        body.dark-mode .modal-content {
+            background: #111827;
+            border-color: #374151;
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+        }
+
+        body.dark-mode .stat-card {
+            border-left-color: #055489;
+        }
+
+        body.dark-mode .stat-value,
+        body.dark-mode td,
+        body.dark-mode .info-item span,
+        body.dark-mode .history-action,
+        body.dark-mode .form-group label,
+        body.dark-mode .empty-state h3,
+        body.dark-mode .ies-section h3,
+        body.dark-mode .ies-section h4,
+        body.dark-mode .modal-close,
+        body.dark-mode .modal-header h2 {
+            color: #f3f4f6 !important;
+        }
+
+        body.dark-mode thead,
+        body.dark-mode .ies-table th {
+            background: #1f2937;
+        }
+
+        body.dark-mode th,
+        body.dark-mode .ies-table th,
+        body.dark-mode .info-item strong {
+            color: #d1d5db !important;
+            border-bottom-color: #374151;
+        }
+
+        body.dark-mode td,
+        body.dark-mode .ies-table td {
+            border-bottom-color: #1f2937;
+            border-color: #374151;
+        }
+
+        body.dark-mode tbody tr:hover {
+            background: #1f2937;
+        }
+
+        body.dark-mode .search-box input,
+        body.dark-mode .search-box select,
+        body.dark-mode .form-group textarea,
+        body.dark-mode .form-group input[type="text"] {
+            background: #0b1220;
+            color: #e5e7eb;
+            border-color: #4b5563;
+        }
+
+        body.dark-mode .search-box input::placeholder,
+        body.dark-mode .form-group textarea::placeholder {
+            color: #94a3b8;
+        }
+
+        body.dark-mode .search-box input:focus,
+        body.dark-mode .search-box select:focus,
+        body.dark-mode .form-group textarea:focus,
+        body.dark-mode .form-group input[type="text"]:focus {
+            border-color: #055489;
+            box-shadow: 0 0 0 3px rgba(5, 84, 137, 0.28);
+        }
+
+        body.dark-mode .btn-secondary {
+            background: #374151;
+            color: #e5e7eb;
+        }
+
+        body.dark-mode .btn-secondary:hover {
+            background: #4b5563;
+        }
+
+        body.dark-mode [data-tab] {
+            color: #cbd5e1 !important;
+        }
+
+        body.dark-mode .active-tab-btn,
+        body.dark-mode [data-tab].active-tab-btn {
+            color: #93c5fd !important;
+            border-bottom-color: #055489 !important;
+            background: transparent !important;
+        }
+
+        body.dark-mode td code {
+            background: #1f2937 !important;
+            color: #f3f4f6 !important;
+            border: 1px solid #374151;
+        }
+
+        body.dark-mode .badge-group-teaching {
+            background: #1e3a2f;
+            color: #a7f3d0;
+        }
+
+        body.dark-mode .badge-group-non-teaching-level-i {
+            background: #153344;
+            color: #bae6fd;
+        }
+
+        body.dark-mode .badge-group-non-teaching-level-ii {
+            background: #3f3418;
+            color: #fde68a;
+        }
+
+        body.dark-mode .badge-group-related-teaching {
+            background: #312e81;
+            color: #ddd6fe;
+        }
+
+        body.dark-mode .badge-group-higher-teaching {
+            background: #4c1d95;
+            color: #e9d5ff;
+        }
+
+        body.dark-mode .badge-group-school-administration {
+            background: #3f2d22;
+            color: #fed7aa;
+        }
+
+        body.dark-mode .history-item {
+            background: #1f2937;
+            border-left-color: #055489;
+        }
+
+        body.dark-mode .loading-overlay {
+            background: rgba(2, 6, 23, 0.78);
+        }
+
+        body.dark-mode .mobile-menu-toggle {
+            background: #055489;
+            color: #f3f4f6;
+        }
+
+        body.dark-mode .theme-toggle {
+            background: #055489;
+            color: #f3f4f6;
+            border-color: rgba(17, 24, 39, 0.35);
+        }
+
+        body.dark-mode .theme-toggle:hover {
+            background: #0668aa;
+        }
+
+        body.dark-mode .pagination a,
+        body.dark-mode .pagination span {
+            background: #111827;
+            color: #e5e7eb;
+            border-color: #4b5563;
+        }
+
+        body.dark-mode .pagination a:hover {
+            background: #1f2937;
+            border-color: #055489;
+        }
+
+        body.dark-mode .modal {
+            background: rgba(2, 6, 23, 0.72);
+        }
+
+        body.dark-mode .modal-header {
+            border-bottom-color: #374151;
+        }
+
+        body.dark-mode p[style*="color: #666"],
+        body.dark-mode strong[style*="color: #666"],
+        body.dark-mode div[style*="color: #666"] {
+            color: #cbd5e1 !important;
+        }
+
+        body.dark-mode td[style*="color: #555"],
+        body.dark-mode td[style*="color: #E04040"],
+        body.dark-mode h3[style*="color: #E04040"] {
+            color: #f3f4f6 !important;
+        }
+
+        body.dark-mode div[style*="background: #f8f9fa"],
+        body.dark-mode div[style*="background:#f8f9fa"] {
+            background: #1f2937 !important;
+            color: #e5e7eb !important;
+        }
+
+        body.dark-mode div[style*="background: #fff3cd"],
+        body.dark-mode div[style*="background:#fff3cd"] {
+            background: #3f3418 !important;
+            border-left-color: #d39e00 !important;
+            color: #fef3c7 !important;
+        }
     </style>
 </head>
 <body>
@@ -1009,6 +1274,15 @@ $totalPages = ceil($totalCount / $itemsPerPage);
                     <span>Applicants Management</span>
                 </div>
                 <div class="header-actions">
+                    <button type="button" id="themeToggle" class="theme-toggle" aria-pressed="false" aria-label="Switch to dark mode" title="Switch to dark mode">
+                        <svg id="themeSunIcon" class="theme-toggle-icon is-hidden" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                            <path d="M12 4a1 1 0 011 1v1a1 1 0 11-2 0V5a1 1 0 011-1zm0 13a4 4 0 100-8 4 4 0 000 8zm7-5a1 1 0 011 1h1a1 1 0 110 2h-1a1 1 0 110-2zM3 12a1 1 0 011-1h1a1 1 0 110 2H4a1 1 0 01-1-1zm14.364 5.95a1 1 0 011.414 0l.707.707a1 1 0 11-1.414 1.414l-.707-.707a1 1 0 010-1.414zM4.515 4.515a1 1 0 011.414 0l.707.707A1 1 0 015.222 6.636l-.707-.707a1 1 0 010-1.414zm13.435 0a1 1 0 010 1.414l-.707.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM6.636 17.364a1 1 0 010 1.414l-.707.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0z"/>
+                        </svg>
+                        <svg id="themeMoonIcon" class="theme-toggle-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                            <path d="M21 12.8A9 9 0 1111.2 3a1 1 0 01.97 1.24 7 7 0 008.59 8.59A1 1 0 0121 12.8z"/>
+                        </svg>
+                        <span id="themeToggleLabel" class="theme-toggle-label">Dark</span>
+                    </button>
                     <button class="btn btn-secondary btn-small" onclick="refreshCurrentSection()">
                         <i class="fas fa-sync"></i> Refresh
                     </button>
@@ -1173,13 +1447,62 @@ $totalPages = ceil($totalCount / $itemsPerPage);
         let currentPage = 1;
         let searchTerm = '<?php echo addslashes($searchTerm); ?>';
         let groupFilter = '<?php echo addslashes($positionGroup); ?>';
+        const themeStorageKey = 'deped_admin_dashboard_theme_mode';
 
         // Initialize
         document.addEventListener('DOMContentLoaded', function() {
+            initThemeToggle();
             loadApplicants();
             setupTabSwitching();
             setupEnterKeySearch();
         });
+
+        function initThemeToggle() {
+            const themeToggle = document.getElementById('themeToggle');
+            if (!themeToggle) return;
+
+            const themeSunIcon = document.getElementById('themeSunIcon');
+            const themeMoonIcon = document.getElementById('themeMoonIcon');
+            const themeToggleLabel = document.getElementById('themeToggleLabel');
+
+            function applyTheme(mode) {
+                const isDark = mode === 'dark';
+                document.body.classList.toggle('dark-mode', isDark);
+
+                themeToggle.setAttribute('aria-pressed', isDark ? 'true' : 'false');
+                themeToggle.setAttribute('title', isDark ? 'Switch to light mode' : 'Switch to dark mode');
+                themeToggle.setAttribute('aria-label', isDark ? 'Switch to light mode' : 'Switch to dark mode');
+
+                if (themeSunIcon && themeMoonIcon) {
+                    themeSunIcon.classList.toggle('is-hidden', !isDark);
+                    themeMoonIcon.classList.toggle('is-hidden', isDark);
+                }
+
+                if (themeToggleLabel) {
+                    themeToggleLabel.textContent = isDark ? 'Light' : 'Dark';
+                }
+            }
+
+            let initialMode = 'light';
+            try {
+                initialMode = localStorage.getItem(themeStorageKey) === 'dark' ? 'dark' : 'light';
+            } catch (error) {
+                initialMode = 'light';
+            }
+
+            applyTheme(initialMode);
+
+            themeToggle.addEventListener('click', function() {
+                const nextTheme = document.body.classList.contains('dark-mode') ? 'light' : 'dark';
+                applyTheme(nextTheme);
+
+                try {
+                    localStorage.setItem(themeStorageKey, nextTheme);
+                } catch (error) {
+                    // Ignore storage errors and keep the current runtime theme.
+                }
+            });
+        }
 
         // Section Switching
         function switchSection(section) {

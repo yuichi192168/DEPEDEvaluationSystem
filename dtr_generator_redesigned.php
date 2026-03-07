@@ -693,12 +693,227 @@ foreach ($outputFiles as $file) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <?php require_once(__DIR__ . '/includes/favicon.php'); ?>
-    <title>DTR Generator - DepEd Evaluation System</title>
+    <title>DTR</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         .wizard-step { display: none; }
         .wizard-step.active { display: block; }
         .help-tooltip { position: relative; }
+        body {
+            background-color: #DB8420;
+            background-image: linear-gradient(rgba(219, 132, 32, 0.62), rgba(219, 132, 32, 0.62)), url('images/sdocabuyao-cover.svg');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+        }
+        body.dark-mode {
+            background-image: linear-gradient(rgba(15, 23, 42, 0.78), rgba(15, 23, 42, 0.78)), url('images/sdocabuyao-cover.svg');
+            color: #e5e7eb;
+        }
+        main .bg-white.rounded-lg.shadow-md {
+            background: rgba(255, 248, 240, 0.95) !important;
+            border: 1px solid rgba(219, 132, 32, 0.28);
+            backdrop-filter: blur(2px);
+        }
+        body.dark-mode main .bg-white.rounded-lg.shadow-md {
+            background: rgba(17, 24, 39, 0.9) !important;
+            border: 1px solid rgba(5, 84, 137, 0.55);
+        }
+        main .bg-white.rounded-lg.shadow-md.p-6.border-t-4,
+        main .bg-white.rounded-lg.shadow-md.p-8.border-t-4 {
+            border-top-color: #DB8420 !important;
+        }
+        body.dark-mode main .text-gray-900,
+        body.dark-mode main .text-gray-800,
+        body.dark-mode main .text-gray-700,
+        body.dark-mode main .text-gray-600,
+        body.dark-mode main .text-gray-500 {
+            color: #e5e7eb !important;
+        }
+        body.dark-mode main .bg-gray-50,
+        body.dark-mode main .bg-indigo-50,
+        body.dark-mode main .bg-blue-50,
+        body.dark-mode main .bg-purple-50,
+        body.dark-mode main .bg-green-50,
+        body.dark-mode main .bg-yellow-50 {
+            background: rgba(31, 41, 55, 0.85) !important;
+        }
+        body.dark-mode main .border-gray-200,
+        body.dark-mode main .border-gray-300,
+        body.dark-mode main .border-indigo-200,
+        body.dark-mode main .border-indigo-300,
+        body.dark-mode main .border-purple-200,
+        body.dark-mode main .border-blue-200,
+        body.dark-mode main .border-green-200,
+        body.dark-mode main .border-yellow-200 {
+            border-color: rgba(75, 85, 99, 0.9) !important;
+        }
+        body.dark-mode main input,
+        body.dark-mode main select {
+            background-color: #111827 !important;
+            color: #e5e7eb !important;
+            border-color: #4b5563 !important;
+        }
+        body.dark-mode main select option {
+            background-color: #111827;
+            color: #e5e7eb;
+        }
+        body.dark-mode main input::placeholder {
+            color: #9ca3af !important;
+        }
+        body.dark-mode main .text-purple-900,
+        body.dark-mode main .text-purple-800,
+        body.dark-mode main .text-purple-700 {
+            color: #e5e7eb !important;
+        }
+        body.dark-mode main .template-files-panel {
+            background: #111827 !important;
+            border-color: #4b5563 !important;
+        }
+        body.dark-mode main .template-files-list,
+        body.dark-mode main .template-files-item {
+            color: #e5e7eb !important;
+        }
+        body.dark-mode main .template-files-item:hover {
+            background: rgba(55, 65, 81, 0.92) !important;
+        }
+        body.dark-mode main .template-active-badge {
+            color: #86efac !important;
+        }
+        body.dark-mode main .text-indigo-800,
+        body.dark-mode main .text-blue-800,
+        body.dark-mode main .text-purple-800,
+        body.dark-mode main .text-green-800,
+        body.dark-mode main .text-yellow-800,
+        body.dark-mode main .text-red-800 {
+            color: #f3f4f6 !important;
+        }
+        body.dark-mode main .text-indigo-600,
+        body.dark-mode main .text-blue-600,
+        body.dark-mode main .text-purple-600,
+        body.dark-mode main .text-green-600,
+        body.dark-mode main .text-yellow-600,
+        body.dark-mode main .text-red-600 {
+            color: #cbd5e1 !important;
+        }
+        body.dark-mode .hover\:bg-gray-50:hover,
+        body.dark-mode .hover\:bg-indigo-50:hover,
+        body.dark-mode .hover\:bg-blue-50:hover,
+        body.dark-mode .hover\:bg-purple-50:hover,
+        body.dark-mode .hover\:bg-indigo-100:hover,
+        body.dark-mode .hover\:bg-red-200:hover,
+        body.dark-mode .hover\:bg-green-700:hover,
+        body.dark-mode .hover\:bg-blue-700:hover,
+        body.dark-mode .hover\:bg-purple-700:hover {
+            background-color: rgba(55, 65, 81, 0.95) !important;
+        }
+        body.dark-mode main .bg-green-100,
+        body.dark-mode main .bg-blue-100,
+        body.dark-mode main .bg-purple-100,
+        body.dark-mode main .bg-indigo-100 {
+            background: rgba(55, 65, 81, 0.95) !important;
+        }
+        body.dark-mode main .border-green-300,
+        body.dark-mode main .border-blue-300,
+        body.dark-mode main .border-purple-300,
+        body.dark-mode main .border-indigo-300 {
+            border-color: rgba(107, 114, 128, 0.9) !important;
+        }
+        body.dark-mode main .bg-gradient-to-r.from-blue-50.to-purple-50,
+        body.dark-mode main .bg-gradient-to-r.from-green-50.to-blue-50,
+        body.dark-mode main .bg-gradient-to-r.from-indigo-50.to-blue-50 {
+            background-image: none !important;
+            background-color: rgba(31, 41, 55, 0.92) !important;
+        }
+        body.dark-mode main #output-files-table thead,
+        body.dark-mode main #input-files-table thead {
+            background-image: none !important;
+            background-color: rgba(31, 41, 55, 0.96) !important;
+        }
+        body.dark-mode main #output-files-table th,
+        body.dark-mode main #input-files-table th,
+        body.dark-mode main #output-files-table td,
+        body.dark-mode main #input-files-table td {
+            color: #f3f4f6 !important;
+        }
+        body.dark-mode main .output-file-row:hover,
+        body.dark-mode main .input-file-row:hover {
+            background-color: rgba(55, 65, 81, 0.92) !important;
+        }
+        body.dark-mode .help-drawer {
+            background: #111827;
+            border-left-color: #374151;
+            color: #e5e7eb;
+        }
+        body.dark-mode .help-drawer h3,
+        body.dark-mode .help-section h4,
+        body.dark-mode .help-section p {
+            color: #e5e7eb;
+        }
+        body.dark-mode .help-section {
+            background: rgba(31, 41, 55, 0.9);
+            border-color: #4b5563;
+        }
+        body.dark-mode .btn-secondary {
+            background: #1f2937;
+            color: #e5e7eb;
+            border-color: #4b5563;
+        }
+        body.dark-mode .btn-secondary:hover {
+            background: #374151;
+        }
+        .theme-toggle {
+            position: fixed;
+            right: 24px;
+            bottom: 90px;
+            padding: 10px 14px;
+            background: #111827;
+            color: #ffffff;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 9999px;
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+            cursor: pointer;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+            z-index: 1001;
+            transition: transform 0.2s ease, background-color 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        .theme-toggle-icon {
+            width: 16px;
+            height: 16px;
+            display: inline-block;
+        }
+        .theme-toggle-icon.is-hidden {
+            display: none;
+        }
+        .theme-toggle-label {
+            font-size: 12px;
+            line-height: 1;
+        }
+        .theme-toggle:hover {
+            background: #1f2937;
+            transform: translateY(-2px);
+        }
+        body.dark-mode .theme-toggle {
+            background: #055489;
+            color: #f3f4f6;
+        }
+        body.dark-mode .theme-toggle:hover {
+            background: #0668aa;
+        }
+        body.dark-mode .help-toggle {
+            background: #055489;
+            box-shadow: 0 10px 30px rgba(5, 84, 137, 0.42);
+        }
+        body.dark-mode .help-toggle:hover {
+            background: #0668aa;
+        }
         .header-logo {
             max-width: 90px;
             height: auto;
@@ -712,7 +927,7 @@ foreach ($outputFiles as $file) {
             width: 52px;
             height: 52px;
             border-radius: 9999px;
-            background: #2563eb;
+            background: #DB8420;
             color: #ffffff;
             font-size: 28px;
             font-weight: 700;
@@ -720,12 +935,12 @@ foreach ($outputFiles as $file) {
             align-items: center;
             justify-content: center;
             cursor: pointer;
-            box-shadow: 0 10px 30px rgba(37, 99, 235, 0.35);
+            box-shadow: 0 10px 30px rgba(219, 132, 32, 0.35);
             z-index: 1001;
             transition: transform 0.2s ease, background-color 0.2s ease;
         }
         .help-toggle:hover {
-            background: #1d4ed8;
+            background: #C26B0F;
             transform: translateY(-2px);
         }
         .help-drawer {
@@ -817,89 +1032,6 @@ foreach ($outputFiles as $file) {
             background: #047857;
             transform: translateY(-2px);
         }
-        /* Sticky Action Bar (adapted from evaluation system) */
-        .sticky-action-bar {
-            position: fixed;
-            right: 16px;
-            left: 16px;
-            bottom: 16px;
-            z-index: 1100;
-            display: flex;
-            gap: 10px;
-            justify-content: center;
-            pointer-events: none;
-        }
-        .sticky-action-bar .bar-inner {
-            background: rgba(255,255,255,0.98);
-            border-radius: 8px;
-            padding: 8px;
-            display: flex;
-            gap: 8px;
-            align-items: center;
-            box-shadow: 0 8px 24px rgba(0,0,0,0.12);
-            pointer-events: auto;
-        }
-        .sticky-action-bar button {
-            min-width: 120px;
-            padding: 10px 14px;
-            font-size: 13px;
-            font-weight: 600;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            white-space: nowrap;
-        }
-        .sticky-action-bar .btn-primary {
-            background: #2563eb;
-            color: white;
-        }
-        .sticky-action-bar .btn-primary:hover {
-            background: #1d4ed8;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
-        }
-        .sticky-action-bar .btn-secondary {
-            background: #e5e7eb;
-            color: #1f2937;
-        }
-        .sticky-action-bar .btn-secondary:hover {
-            background: #d1d5db;
-            transform: translateY(-2px);
-        }
-        .sticky-action-bar .btn-success {
-            background: #059669;
-            color: white;
-        }
-        .sticky-action-bar .btn-success:hover {
-            background: #047857;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(5, 150, 105, 0.3);
-        }
-        .sticky-action-bar .btn-danger {
-            background: #dc2626;
-            color: white;
-        }
-        .sticky-action-bar .btn-danger:hover {
-            background: #b91c1c;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
-        }
-        .sticky-action-bar button:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-        @media (max-width: 768px) {
-            .sticky-action-bar .bar-inner {
-                gap: 6px;
-                padding: 6px;
-            }
-            .sticky-action-bar button {
-                padding: 8px 10px;
-                min-width: 0;
-                font-size: 12px;
-            }
-        }
         .help-tooltip:hover::after {
             content: attr(data-tooltip);
             position: absolute;
@@ -919,14 +1051,14 @@ foreach ($outputFiles as $file) {
 </head>
 <body class="bg-gray-100 min-h-screen">
     <!-- Navigation Header -->
-    <nav class="bg-gradient-to-r from-indigo-600 to-indigo-800 text-white shadow-lg">
+    <nav style="background: linear-gradient(135deg, #DB8420 0%, #C26B0F 100%);" class="text-white shadow-lg">
         <div class="max-w-7xl mx-auto px-4 py-4">
             <div class="flex items-center justify-between">
                 <div class="flex items-center space-x-3">
-                    <img src="images/deped_logo.svg" alt="DepEd Logo" class="header-logo" style="width: 60px; height: auto; margin: 0;">
+                    <img src="images/sdocabuyao_logo.svg" alt="DepEd Logo" class="header-logo" style="width: 60px; height: auto; margin: 0;">
                     <h1 class="text-2xl font-bold">DTR Generator</h1>
                 </div>
-                <div class="text-sm text-indigo-100">
+                <div class="text-sm" style="color: rgba(255, 255, 255, 0.9);">
                     Department of Education - Daily Time Record System
                 </div>
             </div>
@@ -959,6 +1091,15 @@ foreach ($outputFiles as $file) {
         </div>
         <?php endif; ?>
 
+        <button type="button" id="themeToggle" class="theme-toggle" aria-pressed="false" aria-label="Switch to dark mode" title="Switch to dark mode">
+            <svg id="themeSunIcon" class="theme-toggle-icon is-hidden" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path d="M12 4a1 1 0 011 1v1a1 1 0 11-2 0V5a1 1 0 011-1zm0 13a4 4 0 100-8 4 4 0 000 8zm7-5a1 1 0 011 1h1a1 1 0 110 2h-1a1 1 0 110-2zM3 12a1 1 0 011-1h1a1 1 0 110 2H4a1 1 0 01-1-1zm14.364 5.95a1 1 0 011.414 0l.707.707a1 1 0 11-1.414 1.414l-.707-.707a1 1 0 010-1.414zM4.515 4.515a1 1 0 011.414 0l.707.707A1 1 0 015.222 6.636l-.707-.707a1 1 0 010-1.414zm13.435 0a1 1 0 010 1.414l-.707.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM6.636 17.364a1 1 0 010 1.414l-.707.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0z"/>
+            </svg>
+            <svg id="themeMoonIcon" class="theme-toggle-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path d="M21 12.8A9 9 0 1111.2 3a1 1 0 01.97 1.24 7 7 0 008.59 8.59A1 1 0 0121 12.8z"/>
+            </svg>
+            <span id="themeToggleLabel" class="theme-toggle-label">Dark</span>
+        </button>
         <div id="helpToggle" class="help-toggle" title="Help" role="button" aria-pressed="false" tabindex="0">?</div>
         <div id="helpBackdrop" class="help-backdrop" aria-hidden="true"></div>
         <aside id="helpDrawer" class="help-drawer" aria-hidden="true">
@@ -1098,13 +1239,13 @@ foreach ($outputFiles as $file) {
                         <?php if (!empty($templateFiles)): ?>
                         <div class="pt-3 border-t border-purple-200">
                             <p class="text-xs font-semibold text-purple-900 mb-2">Available Templates (<?php echo count($templateFiles); ?>):</p>
-                            <div class="max-h-24 overflow-y-auto bg-white rounded-lg border border-purple-200 p-2">
-                                <ul class="space-y-1 text-xs text-purple-800">
+                            <div class="max-h-24 overflow-y-auto bg-white rounded-lg border border-purple-200 p-2 template-files-panel">
+                                <ul class="space-y-1 text-xs text-purple-800 template-files-list">
                                     <?php foreach ($templateFiles as $templateFile): ?>
-                                    <li class="flex items-center justify-between py-1 px-2 hover:bg-purple-50 rounded">
+                                    <li class="flex items-center justify-between py-1 px-2 hover:bg-purple-50 rounded template-files-item">
                                         <span>📄 <?php echo htmlspecialchars($templateFile['name']); ?></span>
                                         <?php if ($templateFile['name'] === $selectedTemplate): ?>
-                                            <span class="text-green-700 font-bold text-xs">✓ Active</span>
+                                            <span class="text-green-700 font-bold text-xs template-active-badge">✓ Active</span>
                                         <?php endif; ?>
                                     </li>
                                     <?php endforeach; ?>
@@ -1489,37 +1630,6 @@ foreach ($outputFiles as $file) {
         </div>
     </main>
 
-    <!-- Sticky Action Bar (keeps primary actions visible while scrolling) -->
-    <div class="sticky-action-bar" aria-hidden="false">
-        <div class="bar-inner">
-            <button type="button" id="sticky_upload_files" class="btn-primary" title="Upload Excel files">
-                <svg class="w-4 h-4 inline-block mr-1" fill="currentColor" viewBox="0 0 20 20">
-                    <path d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd"/>
-                </svg>Upload
-            </button>
-            <button type="button" id="sticky_generate_dtrs" class="btn-success" title="Generate DTRs">
-                <svg class="w-4 h-4 inline-block mr-1" fill="currentColor" viewBox="0 0 20 20">
-                    <path fill-rule="evenodd" d="M4 4a2 2 0 00-2 2v4a1 1 0 001 1h12a1 1 0 001-1V6a2 2 0 00-2-2H4zm12 12H4a2 2 0 01-2-2v-4a1 1 0 00-1-1H.5a.5.5 0 00-.5.5v4a4 4 0 004 4h12a4 4 0 004-4v-4a.5.5 0 00-.5-.5H17a1 1 0 00-1 1v4a2 2 0 01-2 2z" clip-rule="evenodd"/>
-                </svg>Generate
-            </button>
-            <button type="button" id="sticky_download_files" class="btn-secondary" title="Download files">
-                <svg class="w-4 h-4 inline-block mr-1" fill="currentColor" viewBox="0 0 20 20">
-                    <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd"/>
-                </svg>Download
-            </button>
-            <button type="button" id="sticky_delete_files" class="btn-danger" title="Delete selected">
-                <svg class="w-4 h-4 inline-block mr-1" fill="currentColor" viewBox="0 0 20 20">
-                    <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"/>
-                </svg>Delete
-            </button>
-            <button type="button" id="sticky_help" class="btn-secondary" title="Help guide">
-                <svg class="w-4 h-4 inline-block mr-1" fill="currentColor" viewBox="0 0 20 20">
-                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
-                </svg>Help
-            </button>
-        </div>
-    </div>
-
     <!-- Footer -->
     <footer style="text-align:center;font-size:12px;color:#6c757d;margin-top:40px;padding:10px 0;font-family:Arial,sans-serif;opacity:.08;"><?php echo hex2bin("446576656c6f70656420627920416c6a617920506c616e7461646f2032303236"); ?></footer>
 
@@ -1535,54 +1645,44 @@ foreach ($outputFiles as $file) {
             // Setup checkbox listeners for Generate button visibility
             setupProcessCheckboxListeners();
 
-            // Wire sticky action bar buttons
-            const stickyUpload = document.getElementById('sticky_upload_files');
-            const stickyGenerate = document.getElementById('sticky_generate_dtrs');
-            const stickyDownload = document.getElementById('sticky_download_files');
-            const stickyDelete = document.getElementById('sticky_delete_files');
-            const stickyHelp = document.getElementById('sticky_help');
+            const themeToggle = document.getElementById('themeToggle');
+            const themeSunIcon = document.getElementById('themeSunIcon');
+            const themeMoonIcon = document.getElementById('themeMoonIcon');
+            const themeToggleLabel = document.getElementById('themeToggleLabel');
+            const themeStorageKey = 'dtr_theme_mode';
 
-            if (stickyUpload) {
-                stickyUpload.addEventListener('click', function() {
-                    document.getElementById('file-input').click();
-                });
+            function applyTheme(mode) {
+                const isDark = mode === 'dark';
+                document.body.classList.toggle('dark-mode', isDark);
+                if (themeToggle) {
+                    themeToggle.setAttribute('aria-pressed', isDark ? 'true' : 'false');
+                    themeToggle.setAttribute('title', isDark ? 'Switch to light mode' : 'Switch to dark mode');
+                    themeToggle.setAttribute('aria-label', isDark ? 'Switch to light mode' : 'Switch to dark mode');
+                }
+                if (themeSunIcon && themeMoonIcon) {
+                    themeSunIcon.classList.toggle('is-hidden', !isDark);
+                    themeMoonIcon.classList.toggle('is-hidden', isDark);
+                }
+                if (themeToggleLabel) {
+                    themeToggleLabel.textContent = isDark ? 'Light' : 'Dark';
+                }
             }
 
-            if (stickyGenerate) {
-                stickyGenerate.addEventListener('click', function() {
-                    const processForm = document.getElementById('process-form');
-                    if (processForm) {
-                        const submitBtn = processForm.querySelector('button[type="submit"]');
-                        if (submitBtn) submitBtn.click();
-                    }
-                });
+            try {
+                const savedTheme = localStorage.getItem(themeStorageKey);
+                applyTheme(savedTheme === 'dark' ? 'dark' : 'light');
+            } catch (error) {
+                applyTheme('light');
             }
 
-            if (stickyDownload) {
-                stickyDownload.addEventListener('click', function() {
-                    const outputSection = document.querySelector('.mt-8');
-                    if (outputSection) {
-                        outputSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                    }
-                });
-            }
-
-            if (stickyDelete) {
-                stickyDelete.addEventListener('click', function() {
-                    const checkboxes = document.querySelectorAll('.output-file-checkbox:checked');
-                    if (checkboxes.length === 0) {
-                        alert('Please select files to delete.');
-                        return;
-                    }
-                    deleteSelectedOutputFiles();
-                });
-            }
-
-            if (stickyHelp) {
-                const helpToggle = document.getElementById('helpToggle');
-                stickyHelp.addEventListener('click', function() {
-                    if (helpToggle) {
-                        helpToggle.click();
+            if (themeToggle) {
+                themeToggle.addEventListener('click', function() {
+                    const nextTheme = document.body.classList.contains('dark-mode') ? 'light' : 'dark';
+                    applyTheme(nextTheme);
+                    try {
+                        localStorage.setItem(themeStorageKey, nextTheme);
+                    } catch (error) {
+                        // Ignore storage errors and keep current runtime theme.
                     }
                 });
             }
