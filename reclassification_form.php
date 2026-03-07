@@ -883,6 +883,9 @@ function format_performance_requirements(array $rules): string
             .toolbar {
                 display: none;
             }
+            .home-link {
+                display: none;
+            }
             .result {
                 border: none;
                 background: #fff;
@@ -948,9 +951,30 @@ function format_performance_requirements(array $rules): string
             transform: translateY(-2px);
             box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
         }
+        .home-link {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: #055489;
+            color: #ffffff;
+            padding: 10px 16px;
+            border-radius: 6px;
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            transition: all 0.2s;
+            z-index: 1000;
+        }
+        .home-link:hover {
+            background: #044073;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+        }
     </style>
 </head>
 <body>
+<a href="home.php" class="home-link">Home</a>
 <?php if ($isAdmin): ?>
 <!-- <a href="reclassification_admin/" class="admin-link">[Admin Dashboard]</a> -->
 <?php endif; ?>

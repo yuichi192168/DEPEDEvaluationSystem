@@ -1063,6 +1063,14 @@ foreach ($outputFiles as $file) {
             z-index: 1000;
             width: 200px;
         }
+
+        @media print {
+            nav,
+            .theme-toggle,
+            a[href="home.php"] {
+                display: none !important;
+            }
+        }
     </style>
 </head>
 <body class="bg-gray-100 min-h-screen">
@@ -1074,8 +1082,11 @@ foreach ($outputFiles as $file) {
                     <img src="images/sdocabuyao_logo.svg" alt="DepEd Logo" class="header-logo" style="width: 60px; height: auto; margin: 0;">
                     <h1 class="text-2xl font-bold">DTR Generator</h1>
                 </div>
-                <div class="text-sm" style="color: rgba(255, 255, 255, 0.9);">
-                    Department of Education - Daily Time Record System
+                <div class="flex items-center gap-3">
+                    <a href="home.php" class="px-4 py-2 rounded-lg text-sm font-semibold" style="background: rgba(255, 255, 255, 0.2); color: #ffffff; border: 1px solid rgba(255, 255, 255, 0.35); text-decoration: none;">Home</a>
+                    <div class="text-sm" style="color: rgba(255, 255, 255, 0.9);">
+                        Department of Education - Daily Time Record System
+                    </div>
                 </div>
             </div>
         </div>

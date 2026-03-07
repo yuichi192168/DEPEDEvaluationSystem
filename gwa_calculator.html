@@ -4,6 +4,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>GWA Calculator - DepEd HRMPSB</title>
+    <!-- Favicon -->
+    <link rel="shortcut icon" href="images/favicon.ico" type="image/x-icon">
+    <link rel="icon" type="image/x-icon" href="images/favicon.ico">
+    <link rel="icon" type="image/png" sizes="32x32" href="images/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="images/favicon-16x16.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="images/apple-touch-icon.png">
+    <link rel="manifest" href="images/site.webmanifest">
+    <meta name="theme-color" content="#E04040">
+    <meta name="msapplication-TileColor" content="#E04040">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         * {
@@ -1530,9 +1539,34 @@
             }
         }
 
-        .theme-toggle {
+        .home-link {
             position: fixed;
             top: 20px;
+            left: 20px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: #055489;
+            color: #ffffff;
+            text-decoration: none;
+            padding: 10px 14px;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 700;
+            box-shadow: 0 6px 18px rgba(5, 84, 137, 0.35);
+            z-index: 10002;
+            transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+        }
+
+        .home-link:hover {
+            background: #044073;
+            transform: translateY(-1px);
+            box-shadow: 0 8px 22px rgba(5, 84, 137, 0.42);
+        }
+
+        .theme-toggle {
+            position: fixed;
+            top: 78px;
             left: 20px;
             width: 48px;
             height: 48px;
@@ -1697,12 +1731,32 @@
             background: #0f172a;
         }
 
+        body.dark-mode .home-link {
+            background: #0668aa;
+        }
+
+        body.dark-mode .home-link:hover {
+            background: #055489;
+        }
+
         body.dark-mode .theme-toggle {
             background: #0668aa;
+        }
+
+        @media print {
+            .home-link,
+            .theme-toggle {
+                display: none !important;
+            }
         }
     </style>
 </head>
 <body>
+    <a href="home.php" class="home-link" title="Back to Home">
+        <i class="fas fa-home" aria-hidden="true"></i>
+        Home
+    </a>
+
     <!-- Banner Container -->
     <div class="banner-container" id="bannerContainer"></div>
 

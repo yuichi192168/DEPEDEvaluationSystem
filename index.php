@@ -403,6 +403,27 @@ $positions = getAllPositions();
     }
 
     /* Theme Toggle Button */
+    .home-link {
+        position: fixed;
+        top: 18px;
+        left: 20px;
+        background: #055489;
+        color: #ffffff;
+        padding: 10px 14px;
+        border-radius: 999px;
+        text-decoration: none;
+        font-size: 13px;
+        font-weight: 700;
+        box-shadow: 0 6px 16px rgba(5, 84, 137, 0.3);
+        z-index: 1001;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .home-link:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 8px 20px rgba(5, 84, 137, 0.4);
+    }
+
     .theme-toggle {
         position: fixed;
         top: 18px;
@@ -446,11 +467,24 @@ $positions = getAllPositions();
     body.dark-mode .theme-toggle {
         background: #0668aa;
     }
+
+    body.dark-mode .home-link {
+        background: #0668aa;
+    }
+
+    @media print {
+        .home-link,
+        .theme-toggle {
+            display: none !important;
+        }
+    }
 </style>
     <link rel="stylesheet" href="css/banners.css">
     <link rel="stylesheet" href="css/form-validation.css">
 </head>
 <body>
+    <a href="home.php" class="home-link" aria-label="Return to Home">Home</a>
+
     <!-- Theme Toggle Button -->
     <button type="button" id="themeToggle" class="theme-toggle" aria-pressed="false" aria-label="Toggle dark mode" title="Toggle dark mode">
         <svg id="themeSunIcon" class="theme-toggle-icon is-hidden" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
