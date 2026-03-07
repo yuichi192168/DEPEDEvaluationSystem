@@ -1067,14 +1067,23 @@ foreach ($outputFiles as $file) {
 
             <!-- Search Output Files -->
             <div class="mb-4">
-                <form method="GET" class="flex gap-2">
-                    <input type="hidden" name="search" value="<?php echo htmlspecialchars($searchFiles); ?>">
-                    <input type="text" name="search_output" placeholder="Search generated files..." value="<?php echo htmlspecialchars($searchOutput); ?>" class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent">
-                    <button type="submit" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium">Search</button>
-                    <?php if ($searchOutput): ?>
-                    <a href="?<?php echo $searchFiles ? "search=".urlencode($searchFiles)."&" : ""; ?>" class="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50">Clear</a>
-                    <?php endif; ?>
-                </form>
+                <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <svg class="h-5 w-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd"/>
+                        </svg>
+                    </div>
+                    <input type="text" id="live-search-output" placeholder="Type to search generated files instantly..." class="w-full pl-10 pr-32 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 text-sm" autocomplete="off">
+                    <div id="search-counter" class="absolute inset-y-0 right-0 pr-3 flex items-center text-sm font-medium text-gray-600">
+                        <span id="search-results-count"></span>
+                    </div>
+                </div>
+                <p class="mt-2 text-xs text-gray-600 flex items-center gap-1">
+                    <svg class="w-4 h-4 text-blue-500" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+                    </svg>
+                    <span class="font-medium">Live Search:</span> Results update as you type. Search by employee name, schedule, or filename. Press ESC to clear.
+                </p>
             </div>
 
             <!-- File List or Empty State -->
@@ -1093,23 +1102,29 @@ foreach ($outputFiles as $file) {
                 
                 <!-- Batch Download Buttons -->
                 <?php if ($schedule74Count > 0 || $schedule85Count > 0): ?>
-                <div class="mb-4 p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border border-blue-200">
-                    <h3 class="font-semibold text-gray-800 mb-3">Batch Download by Schedule:</h3>
-                    <div class="flex flex-wrap gap-2">
-                        <?php if ($schedule74Count > 0): ?>
-                        <a href="?download_schedule=7-4&from=<?php echo $outputDir; ?>" class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition">
-                            <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                    <div class="mb-6 p-5 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border-2 border-blue-200 shadow-sm">
+                        <div class="flex items-center gap-2 mb-2">
+                            <svg class="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
                                 <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd"/>
                             </svg>
-                            Download All 7-4pm Staff (<?php echo $schedule74Count; ?> files)
+                            <h3 class="font-bold text-gray-900 text-base">Quick Download by Schedule</h3>
+                        </div>
+                        <p class="text-sm text-gray-700 mb-4">Download all DTR files for a specific work schedule in one ZIP file.</p>
+                        <div class="flex flex-wrap gap-3">
+                        <?php if ($schedule74Count > 0): ?>
+                            <a href="?download_schedule=7-4&from=<?php echo $outputDir; ?>" class="inline-flex items-center px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold transition shadow-sm hover:shadow-md">
+                                <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd"/>
+                            </svg>
+                                7:00 AM - 4:00 PM (<?php echo $schedule74Count; ?> files)
                         </a>
                         <?php endif; ?>
                         <?php if ($schedule85Count > 0): ?>
-                        <a href="?download_schedule=8-5&from=<?php echo $outputDir; ?>" class="inline-flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium transition">
-                            <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                            <a href="?download_schedule=8-5&from=<?php echo $outputDir; ?>" class="inline-flex items-center px-5 py-2.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-semibold transition shadow-sm hover:shadow-md">
+                                <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
                                 <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd"/>
                             </svg>
-                            Download All 8-5pm Staff (<?php echo $schedule85Count; ?> files)
+                                8:00 AM - 5:00 PM (<?php echo $schedule85Count; ?> files)
                         </a>
                         <?php endif; ?>
                     </div>
@@ -1117,55 +1132,99 @@ foreach ($outputFiles as $file) {
                 <?php endif; ?>
                 
                 <!-- Bulk Actions -->
-                <div class="mb-4 flex gap-2 items-center flex-wrap">
-                    <button type="button" onclick="toggleSelectAll('output-file-checkbox', true)" class="text-sm text-indigo-600 hover:text-indigo-800 font-medium">Select All</button>
-                    <span class="text-gray-300">|</span>
-                    <button type="button" onclick="toggleSelectAll('output-file-checkbox', false)" class="text-sm text-gray-600 hover:text-gray-800 font-medium">Clear All</button>
-                    <span class="text-gray-300">|</span>
-                    <button type="button" onclick="deleteSelectedOutputFiles()" class="px-3 py-1 bg-red-600 text-white text-sm rounded hover:bg-red-700 font-medium">Delete Selected</button>
+                    <div class="mb-5 p-4 bg-gray-50 rounded-lg flex gap-3 items-center flex-wrap border-2 border-gray-200">
+                        <span class="text-sm font-bold text-gray-800 flex items-center gap-1">
+                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M7 3a1 1 0 000 2h6a1 1 0 100-2H7zM4 7a1 1 0 011-1h10a1 1 0 110 2H5a1 1 0 01-1-1zM2 11a2 2 0 012-2h12a2 2 0 012 2v4a2 2 0 01-2 2H4a2 2 0 01-2-2v-4z"/>
+                            </svg>
+                            Bulk Actions:
+                        </span>
+                        <button type="button" onclick="toggleSelectAll('output-file-checkbox', true)" class="text-sm px-4 py-1.5 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 font-medium transition shadow-sm">Select All</button>
+                        <span class="text-gray-400">|</span>
+                        <button type="button" onclick="toggleSelectAll('output-file-checkbox', false)" class="text-sm px-4 py-1.5 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 font-medium transition">Clear Selection</button>
+                        <span class="text-gray-400">|</span>
+                        <button type="button" onclick="deleteSelectedOutputFiles()" class="text-sm px-4 py-1.5 bg-red-600 text-white rounded-md hover:bg-red-700 font-semibold transition shadow-sm inline-flex items-center gap-1">
+                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                            </svg>
+                            Delete Selected
+                        </button>
                 </div>
                 
                 <div class="overflow-x-auto">
-                    <table class="w-full text-sm">
-                        <thead class="bg-gray-50 border-b border-gray-200">
+                        <div id="no-search-results" class="hidden text-center py-16 bg-yellow-50 rounded-lg border-2 border-yellow-200">
+                            <svg class="mx-auto h-16 w-16 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                            </svg>
+                            <p class="mt-4 text-lg text-gray-800 font-bold">No matching files found</p>
+                            <p class="text-sm text-gray-600 mt-2">Try different search terms or press ESC to clear your search.</p>
+                        </div>
+                        <table class="w-full text-sm" id="output-files-table">
+                            <thead class="bg-gradient-to-r from-green-50 to-blue-50 border-b-2 border-green-300">
                             <tr>
-                                <th class="px-4 py-3 text-left font-semibold text-gray-700 w-12">
+                                    <th class="px-4 py-4 text-left font-bold text-gray-900 w-12">
                                     <input type="checkbox" onclick="toggleSelectAll('output-file-checkbox', this.checked)" class="h-4 w-4 text-indigo-600 rounded">
                                 </th>
-                                <th class="px-4 py-3 text-left font-semibold text-gray-700">Schedule</th>
-                                <th class="px-4 py-3 text-left font-semibold text-gray-700">Filename</th>
-                                <th class="px-4 py-3 text-left font-semibold text-gray-700">Size</th>
-                                <th class="px-4 py-3 text-left font-semibold text-gray-700">Date</th>
-                                <th class="px-4 py-3 text-right font-semibold text-gray-700">Actions</th>
+                                    <th class="px-4 py-4 text-left font-bold text-gray-900">Schedule</th>
+                                    <th class="px-4 py-4 text-left font-bold text-gray-900">Employee Name & File</th>
+                                    <th class="px-4 py-4 text-left font-bold text-gray-900">File Size</th>
+                                    <th class="px-4 py-4 text-left font-bold text-gray-900">Date Created</th>
+                                    <th class="px-4 py-4 text-right font-bold text-gray-900">Actions</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-200">
                             <?php foreach ($outputFiles as $file): ?>
-                            <tr class="hover:bg-gray-50">
-                                <td class="px-4 py-3">
+                                <tr class="hover:bg-blue-50 transition-colors output-file-row" data-filename="<?php echo strtolower(htmlspecialchars($file['name'])); ?>" data-schedule="<?php echo htmlspecialchars($file['schedule']); ?>">
+                                    <td class="px-4 py-4">
                                     <input type="checkbox" name="delete_files[]" value="<?php echo htmlspecialchars($file['name']); ?>" class="h-4 w-4 text-indigo-600 rounded output-file-checkbox">
                                 </td>
-                                <td class="px-4 py-3">
+                                    <td class="px-4 py-4">
                                     <?php if ($file['schedule'] === '7-4'): ?>
-                                    <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                        7-4pm
+                                        <span class="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-bold bg-blue-100 text-blue-800 border border-blue-300">
+                                            <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"/>
+                                            </svg>
+                                            7-4
                                     </span>
                                     <?php elseif ($file['schedule'] === '8-5'): ?>
-                                    <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-                                        8-5pm
+                                        <span class="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-bold bg-purple-100 text-purple-800 border border-purple-300">
+                                            <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"/>
+                                            </svg>
+                                            8-5
                                     </span>
                                     <?php else: ?>
-                                    <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                        <span class="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-bold bg-gray-100 text-gray-700 border border-gray-300">
                                         N/A
                                     </span>
                                     <?php endif; ?>
                                 </td>
-                                <td class="px-4 py-3 font-medium text-gray-800"><?php echo htmlspecialchars($file['name']); ?></td>
-                                <td class="px-4 py-3 text-gray-600"><?php echo formatFileSize($file['size']); ?></td>
-                                <td class="px-4 py-3 text-gray-600"><?php echo date('M d, Y H:i', $file['modified']); ?></td>
-                                <td class="px-4 py-3 text-right space-x-2">
-                                    <a href="?download=<?php echo urlencode($file['name']); ?>&from=<?php echo $outputDir; ?>" class="text-green-600 hover:text-green-800 font-medium text-sm">Download</a>
-                                    <a href="#" onclick="deleteSingleFile('<?php echo htmlspecialchars($file['name'], ENT_QUOTES); ?>', '<?php echo $outputDir; ?>'); return false;" class="text-red-600 hover:text-red-800 font-medium text-sm">Delete</a>
+                                    <td class="px-4 py-4">
+                                        <div class="font-semibold text-gray-900"><?php echo htmlspecialchars($file['name']); ?></div>
+                                        <div class="text-xs text-gray-500 mt-1 flex items-center gap-1">
+                                            <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                                                <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd"/>
+                                            </svg>
+                                            Excel DTR File
+                                        </div>
+                                    </td>
+                                    <td class="px-4 py-4 text-gray-800 font-semibold"><?php echo formatFileSize($file['size']); ?></td>
+                                    <td class="px-4 py-4 text-gray-700"><?php echo date('M d, Y H:i', $file['modified']); ?></td>
+                                    <td class="px-4 py-4 text-right">
+                                        <div class="flex gap-2 justify-end">
+                                            <a href="?download=<?php echo urlencode($file['name']); ?>&from=<?php echo $outputDir; ?>" class="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 font-semibold text-sm transition shadow-sm hover:shadow-md">
+                                                <svg class="w-4 h-4 mr-1.5" fill="currentColor" viewBox="0 0 20 20">
+                                                    <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd"/>
+                                                </svg>
+                                                Download
+                                            </a>
+                                            <button onclick="deleteSingleFile('<?php echo htmlspecialchars($file['name'], ENT_QUOTES); ?>', '<?php echo $outputDir; ?>'); return false;" class="inline-flex items-center px-4 py-2 bg-red-100 text-red-700 rounded-md hover:bg-red-200 font-semibold text-sm transition">
+                                                <svg class="w-4 h-4 mr-1.5" fill="currentColor" viewBox="0 0 20 20">
+                                                    <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                                                </svg>
+                                                Delete
+                                            </button>
+                                        </div>
                                 </td>
                             </tr>
                             <?php endforeach; ?>
@@ -1183,6 +1242,9 @@ foreach ($outputFiles as $file) {
     <script>
         // Toggle guide visibility
         document.addEventListener('DOMContentLoaded', function() {
+                // Setup live search for output files
+                setupLiveSearch();
+            
             const guideBtn = document.getElementById('guide-toggle');
             const guide = document.getElementById('guide');
             
@@ -1475,6 +1537,61 @@ foreach ($outputFiles as $file) {
                 setTimeout(() => alertDiv.remove(), 500);
             }, 5000);
         }
+
+            // Live search for output files (instant filtering as you type)
+            function setupLiveSearch() {
+                const searchInput = document.getElementById('live-search-output');
+                const outputTable = document.getElementById('output-files-table');
+                const noResultsDiv = document.getElementById('no-search-results');
+                const searchCounter = document.getElementById('search-results-count');
+            
+                if (!searchInput || !outputTable) return;
+            
+                searchInput.addEventListener('input', function() {
+                    const searchTerm = this.value.toLowerCase().trim();
+                    const rows = outputTable.querySelectorAll('.output-file-row');
+                    let visibleCount = 0;
+                
+                    rows.forEach(function(row) {
+                        const filename = row.getAttribute('data-filename') || '';
+                        const schedule = row.getAttribute('data-schedule') || '';
+                    
+                        const matches = filename.includes(searchTerm) || schedule.includes(searchTerm);
+                    
+                        if (matches || searchTerm === '') {
+                            row.style.display = '';
+                            visibleCount++;
+                        } else {
+                            row.style.display = 'none';
+                        }
+                    });
+                
+                    // Update counter display
+                    if (searchTerm) {
+                        searchCounter.textContent = visibleCount + ' of ' + rows.length;
+                    } else {
+                        searchCounter.textContent = '';
+                    }
+                
+                    // Show/hide no results message
+                    if (visibleCount === 0 && searchTerm !== '') {
+                        noResultsDiv.classList.remove('hidden');
+                        outputTable.classList.add('hidden');
+                    } else {
+                        noResultsDiv.classList.add('hidden');
+                        outputTable.classList.remove('hidden');
+                    }
+                });
+            
+                // Clear search on Escape key
+                searchInput.addEventListener('keydown', function(e) {
+                    if (e.key === 'Escape') {
+                        this.value = '';
+                        this.dispatchEvent(new Event('input'));
+                        this.blur(); // Remove focus
+                    }
+                });
+            }
 
         // Refresh input file list dynamically
         function refreshInputFileList(files) {
