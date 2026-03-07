@@ -933,7 +933,7 @@ foreach ($outputFiles as $file) {
         </div>
     </nav>
 
-    <main class="max-w-7xl mx-auto px-4 py-8">
+    <main class="w-full mx-auto px-6 lg:px-8 py-8">
         <!-- Alert Messages -->
         <?php if ($message): ?>
         <div class="mb-6 p-4 rounded-lg flex items-start gap-3 <?php 
@@ -1014,10 +1014,8 @@ foreach ($outputFiles as $file) {
         </div>
 
         <!-- Main Content Area -->
-        <div class="grid lg:grid-cols-3 gap-8">
-            <!-- Left Column: File Management -->
-            <div class="lg:col-span-2 space-y-6">
-                <!-- Upload Files Section -->
+        <div class="space-y-6">
+            <!-- Upload Files Section -->
                 <div class="bg-white rounded-lg shadow-md p-6 mb-6">
                     <h2 class="text-xl font-bold text-gray-800 mb-4">0. Upload Excel Files</h2>
                     
@@ -1055,87 +1053,233 @@ foreach ($outputFiles as $file) {
                 </div>
 
                 <!-- Available Files Section -->
-                <div class="bg-white rounded-lg shadow-md p-6">
-                    <div class="flex items-center justify-between mb-4">
-                        <h2 class="text-xl font-bold text-gray-800">1. Select Files to Process</h2>
-                        <span class="bg-indigo-100 text-indigo-800 text-sm px-3 py-1 rounded-full"><?php echo count($displayFiles); ?> available</span>
+                <div class="bg-white rounded-lg shadow-md p-8">
+                    <div class="flex items-center justify-between mb-6">
+                        <h2 class="text-2xl font-bold text-gray-800">1. Select Files to Process</h2>
+                        <span class="bg-indigo-100 text-indigo-800 text-sm font-semibold px-4 py-2 rounded-full"><?php echo count($displayFiles); ?> available</span>
                     </div>
 
-                    <!-- Search Box -->
-                    <div class="mb-4">
-                        <form method="GET" class="flex gap-2">
-                            <input type="text" name="search" placeholder="Search files..." value="<?php echo htmlspecialchars($searchFiles); ?>" class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
-                            <button type="submit" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium">Search</button>
-                            <?php if ($searchFiles): ?>
-                            <a href="?" class="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50">Clear</a>
-                            <?php endif; ?>
-                        </form>
-                    </div>
-
-                    <!-- File List -->
                     <?php if (empty($displayFiles)): ?>
-                    <div class="text-center py-12 bg-gray-50 rounded-lg">
-                        <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div class="text-center py-16 bg-gray-50 rounded-lg">
+                        <svg class="mx-auto h-16 w-16 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                         </svg>
-                        <p class="mt-4 text-gray-700 font-medium">No files available</p>
-                        <p class="text-sm text-gray-600">Upload Excel files to the <code class="bg-gray-200 px-2 py-1 rounded">excel-files</code> folder</p>
+                        <p class="mt-4 text-gray-700 font-medium text-lg">No files available</p>
+                        <p class="text-sm text-gray-600 mt-2">Upload Excel files to the <code class="bg-gray-200 px-2 py-1 rounded">excel-files</code> folder</p>
                     </div>
                     <?php else: ?>
-                    <form method="POST" class="space-y-2 max-h-96 overflow-y-auto" id="process-form">
+                    <form method="POST" id="process-form">
                         <input type="hidden" name="action" value="batch_process">
 
-                        <div class="mb-4 p-3 bg-purple-50 border border-purple-200 rounded-lg">
-                            <label for="selected-template" class="block text-sm font-semibold text-purple-900 mb-2">Template for Selected Month</label>
-                            <select id="selected-template" name="selected_template" class="w-full px-3 py-2 border border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent">
-                                <?php if (file_exists(__DIR__ . DIRECTORY_SEPARATOR . $defaultTemplate)): ?>
-                                <option value="<?php echo htmlspecialchars(basename($defaultTemplate)); ?>" <?php echo $selectedTemplate === basename($defaultTemplate) ? 'selected' : ''; ?>>
-                                    <?php echo htmlspecialchars(basename($defaultTemplate)); ?> (Default)
-                                </option>
-                                <?php endif; ?>
-                                <?php foreach ($templateFiles as $templateFile): ?>
-                                <?php if ($templateFile['name'] === basename($defaultTemplate)) continue; ?>
-                                <option value="<?php echo htmlspecialchars($templateFile['name']); ?>" <?php echo $selectedTemplate === $templateFile['name'] ? 'selected' : ''; ?>>
-                                    <?php echo htmlspecialchars($templateFile['name']); ?>
-                                </option>
-                                <?php endforeach; ?>
-                            </select>
-                            <p class="text-xs text-purple-700 mt-2">Upload monthly templates in the panel on the right, then select one here before generating DTRs.</p>
-                        </div>
-                        
-                        <div class="space-y-2">
-                            <?php foreach ($displayFiles as $file): ?>
-                            <label class="flex items-start p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
-                                <input type="checkbox" name="files[]" value="<?php echo htmlspecialchars($file['name']); ?>" class="mt-1 h-4 w-4 text-indigo-600 rounded process-file-checkbox" data-valid="<?php echo $file['valid'] ? '1' : '0'; ?>">
-                                <div class="ml-3 flex-1">
-                                    <p class="font-medium text-gray-800"><?php echo htmlspecialchars($file['name']); ?></p>
-                                    <p class="text-sm text-gray-600">
-                                        <?php if ($file['valid']): ?>
-                                        <span><?php echo $file['employees']; ?> employees</span> | 
-                                        <?php else: ?>
-                                        <span class="text-red-600">Not readable</span> | 
-                                        <?php endif; ?>
-                                        <span><?php echo formatFileSize($file['size']); ?></span>
-                                    </p>
-                                    <?php if (!$file['valid']): ?>
-                                    <p class="text-xs text-red-600 mt-1"><?php echo htmlspecialchars($file['error'] ?? 'Unable to read file'); ?></p>
+                        <!-- Template Selection & Upload Box -->
+                        <div class="mb-8 p-6 bg-purple-50 rounded-xl border-2 border-purple-200 shadow-sm">
+                            <h3 class="text-base font-bold text-purple-900 mb-4 flex items-center">
+                                <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                    <path d="M9 2a2 2 0 00-2 2v8a2 2 0 002 2h6a2 2 0 002-2V6.414A2 2 0 0016.414 5L14 2.586A2 2 0 0012.586 2H9z"/>
+                                    <path d="M3 8a2 2 0 012-2v10h8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z"/>
+                                </svg>
+                                DTR Template Management
+                            </h3>
+                            
+                            <!-- Active Template Selection -->
+                            <div class="mb-4">
+                                <label for="selected-template" class="block text-sm font-semibold text-purple-900 mb-2">Active Template for Selected Month</label>
+                                <select id="selected-template" name="selected_template" class="w-full px-4 py-3 text-base border border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white">
+                                    <?php if (file_exists(__DIR__ . DIRECTORY_SEPARATOR . $defaultTemplate)): ?>
+                                    <option value="<?php echo htmlspecialchars(basename($defaultTemplate)); ?>" <?php echo $selectedTemplate === basename($defaultTemplate) ? 'selected' : ''; ?>>
+                                        <?php echo htmlspecialchars(basename($defaultTemplate)); ?> (Default)
+                                    </option>
                                     <?php endif; ?>
+                                    <?php foreach ($templateFiles as $templateFile): ?>
+                                    <?php if ($templateFile['name'] === basename($defaultTemplate)) continue; ?>
+                                    <option value="<?php echo htmlspecialchars($templateFile['name']); ?>" <?php echo $selectedTemplate === $templateFile['name'] ? 'selected' : ''; ?>>
+                                        <?php echo htmlspecialchars($templateFile['name']); ?>
+                                    </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+
+                            <!-- Upload New Template -->
+                            <div class="border-t-2 border-purple-200 pt-4">
+                                <label class="block text-sm font-semibold text-purple-900 mb-2">Upload New Monthly Template</label>
+                            </div>
+                        </div>
+    
+                        <!-- Template Upload Form (Outside main process form) -->
+                        <form method="POST" enctype="multipart/form-data" class="mb-8 -mt-8">
+                            <div class="bg-purple-50 rounded-b-xl border-2 border-t-0 border-purple-200 p-6 pt-0">
+                                <div class="flex gap-3">
+                                    <input type="hidden" name="action" value="upload_template">
+                                    <input type="file" name="template_file" accept=".xlsx" required class="flex-1 text-sm text-purple-900 border border-purple-300 rounded-lg p-2 bg-white file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-purple-100 file:text-purple-700 hover:file:bg-purple-200">
+                                    <button type="submit" class="px-5 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium whitespace-nowrap shadow-sm">
+                                        <svg class="w-4 h-4 inline-block mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd"/>
+                                        </svg>
+                                        Upload
+                                    </button>
                                 </div>
-                            </label>
-                            <?php endforeach; ?>
+                                <!-- Available Templates List -->
+                                <?php if (!empty($templateFiles)): ?>
+                                <div class="mt-4 pt-3 border-t border-purple-200">
+                                    <p class="text-xs font-semibold text-purple-900 mb-2">Available Templates (<?php echo count($templateFiles); ?>):</p>
+                                    <div class="max-h-24 overflow-y-auto bg-white rounded-lg border border-purple-200 p-2">
+                                        <ul class="space-y-1 text-xs text-purple-800">
+                                            <?php foreach ($templateFiles as $templateFile): ?>
+                                            <li class="flex items-center justify-between py-1 px-2 hover:bg-purple-50 rounded">
+                                                <span>📄 <?php echo htmlspecialchars($templateFile['name']); ?></span>
+                                                <?php if ($templateFile['name'] === $selectedTemplate): ?>
+                                                    <span class="text-green-700 font-bold text-xs">✓ Active</span>
+                                                <?php endif; ?>
+                                            </li>
+                                            <?php endforeach; ?>
+                                        </ul>
+                                    </div>
+                                </div>
+                                <?php endif; ?>
+                            </div>
+                        </form>
+
+                        <!-- Search Input Files -->
+                        <div class="mb-6">
+                            <div class="relative">
+                                <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                    <svg class="h-5 w-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd"/>
+                                    </svg>
+                                </div>
+                                <input type="text" id="live-search-input" placeholder="Type to search input files instantly..." class="w-full pl-12 pr-36 py-4 text-base border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" autocomplete="off">
+                                <div id="search-input-counter" class="absolute inset-y-0 right-0 pr-4 flex items-center text-sm font-semibold text-gray-600">
+                                    <span id="search-input-results-count"></span>
+                                </div>
+                            </div>
+                            <p class="mt-3 text-sm text-gray-600 flex items-center gap-2">
+                                <svg class="w-5 h-5 text-blue-500" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+                                </svg>
+                                <span><span class="font-semibold">Live Search:</span> Results update as you type. Search by filename or employee count. Press ESC to clear.</span>
+                            </p>
                         </div>
 
-                        <!-- Select All / Clear / Delete -->
-                        <div class="flex gap-2 pt-4 border-t border-gray-200 flex-wrap">
-                            <button type="button" onclick="toggleSelectAll('process-file-checkbox', true)" class="text-sm text-indigo-600 hover:text-indigo-800 font-medium">Select All</button>
-                            <span class="text-gray-300">|</span>
-                            <button type="button" onclick="toggleSelectAll('process-file-checkbox', false)" class="text-sm text-gray-600 hover:text-gray-800 font-medium">Clear All</button>
-                            <span class="text-gray-300">|</span>
-                            <button type="button" onclick="deleteSelectedInputFiles()" class="text-sm text-red-600 hover:text-red-800 font-medium">Delete Selected</button>
+                        <!-- Bulk Actions -->
+                        <div class="mb-6 p-5 bg-gray-50 rounded-xl flex gap-4 items-center flex-wrap border-2 border-gray-200">
+                            <span class="text-base font-bold text-gray-800 flex items-center gap-2">
+                                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                    <path d="M7 3a1 1 0 000 2h6a1 1 0 100-2H7zM4 7a1 1 0 011-1h10a1 1 0 110 2H5a1 1 0 01-1-1zM2 11a2 2 0 012-2h12a2 2 0 012 2v4a2 2 0 01-2 2H4a2 2 0 01-2-2v-4z"/>
+                                </svg>
+                                Bulk Actions:
+                            </span>
+                            <button type="button" onclick="toggleSelectAll('process-file-checkbox', true)" class="text-sm px-5 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-semibold transition shadow-sm">Select All</button>
+                            <span class="text-gray-400">|</span>
+                            <button type="button" onclick="toggleSelectAll('process-file-checkbox', false)" class="text-sm px-5 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-semibold transition">Clear Selection</button>
+                            <span class="text-gray-400">|</span>
+                            <button type="button" onclick="deleteSelectedInputFiles()" class="text-sm px-5 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-semibold transition shadow-sm inline-flex items-center gap-2">
+                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                                </svg>
+                                Delete Selected
+                            </button>
                         </div>
 
-                        <!-- Generate Button (hidden - action available in sticky bar) -->
-                        <button type="submit" style="display: none;">Generate DTRs</button>
+                        <!-- File List Table -->
+                        <div class="overflow-x-auto mb-6">
+                            <div id="no-search-input-results" class="hidden text-center py-20 bg-yellow-50 rounded-xl border-2 border-yellow-200">
+                                <svg class="mx-auto h-20 w-20 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                                </svg>
+                                <p class="mt-5 text-xl text-gray-800 font-bold">No matching files found</p>
+                                <p class="text-sm text-gray-600 mt-3">Try different search terms or press ESC to clear your search.</p>
+                            </div>
+                            <table class="w-full" id="input-files-table">
+                                <thead class="bg-gradient-to-r from-indigo-50 to-blue-50 border-b-2 border-indigo-300">
+                                <tr>
+                                    <th class="px-6 py-5 text-left font-bold text-gray-900 w-14">
+                                        <input type="checkbox" onclick="toggleSelectAll('process-file-checkbox', this.checked)" class="h-4 w-4 text-indigo-600 rounded">
+                                    </th>
+                                    <th class="px-6 py-5 text-left font-bold text-gray-900 w-32">Status</th>
+                                    <th class="px-6 py-5 text-left font-bold text-gray-900">File Name</th>
+                                    <th class="px-6 py-5 text-left font-bold text-gray-900 w-44">Employee Count</th>
+                                    <th class="px-6 py-5 text-left font-bold text-gray-900 w-32">File Size</th>
+                                    <th class="px-6 py-5 text-right font-bold text-gray-900 w-36">Actions</th>
+                                </tr>
+                                </thead>
+                                <tbody class="divide-y divide-gray-200">
+                                    <?php foreach ($displayFiles as $file): ?>
+                                    <tr class="hover:bg-indigo-50 transition-colors input-file-row" data-filename="<?php echo strtolower(htmlspecialchars($file['name'])); ?>">
+                                        <td class="px-6 py-5">
+                                            <input type="checkbox" name="files[]" value="<?php echo htmlspecialchars($file['name']); ?>" class="h-4 w-4 text-indigo-600 rounded process-file-checkbox" data-valid="<?php echo $file['valid'] ? '1' : '0'; ?>">
+                                        </td>
+                                        <td class="px-6 py-5">
+                                            <?php if ($file['valid']): ?>
+                                                <span class="inline-flex items-center px-3 py-2 rounded-full text-xs font-bold bg-green-100 text-green-800 border border-green-300">
+                                                    <svg class="w-3.5 h-3.5 mr-1.5" fill="currentColor" viewBox="0 0 20 20">
+                                                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                                                    </svg>
+                                                    Ready
+                                                </span>
+                                            <?php else: ?>
+                                                <span class="inline-flex items-center px-3 py-2 rounded-full text-xs font-bold bg-red-100 text-red-800 border border-red-300">
+                                                    <svg class="w-3.5 h-3.5 mr-1.5" fill="currentColor" viewBox="0 0 20 20">
+                                                        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+                                                    </svg>
+                                                    Invalid
+                                                </span>
+                                            <?php endif; ?>
+                                        </td>
+                                        <td class="px-6 py-5">
+                                            <div class="font-semibold text-gray-900 text-base"><?php echo htmlspecialchars($file['name']); ?></div>
+                                            <div class="text-xs text-gray-500 mt-2 flex items-center gap-1.5">
+                                                <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+                                                    <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd"/>
+                                                </svg>
+                                                Excel File
+                                            </div>
+                                            <?php if (!$file['valid']): ?>
+                                            <div class="text-xs text-red-600 mt-2 bg-red-50 px-3 py-2 rounded border border-red-200">
+                                                <strong>Error:</strong> <?php echo htmlspecialchars($file['error'] ?? 'Unable to read file'); ?>
+                                            </div>
+                                            <?php endif; ?>
+                                        </td>
+                                        <td class="px-6 py-5">
+                                            <?php if ($file['valid']): ?>
+                                                <span class="inline-flex items-center px-4 py-2 rounded-full text-sm font-semibold bg-blue-100 text-blue-800">
+                                                    <?php echo $file['employees']; ?> employees
+                                                </span>
+                                            <?php else: ?>
+                                                <span class="text-gray-500 text-sm">N/A</span>
+                                            <?php endif; ?>
+                                        </td>
+                                        <td class="px-6 py-5 text-gray-800 font-semibold text-base"><?php echo formatFileSize($file['size']); ?></td>
+                                        <td class="px-6 py-5 text-right">
+                                            <div class="flex gap-2 justify-end">
+                                                <button type="button" onclick="deleteSingleInputFile('<?php echo htmlspecialchars($file['name'], ENT_QUOTES); ?>');" class="inline-flex items-center px-4 py-2.5 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 font-semibold text-sm transition shadow-sm">
+                                                    <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                                        <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                                                    </svg>
+                                                    Delete
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Generate Button (visible only when file(s) selected) -->
+                        <div class="flex flex-col sm:flex-row gap-4 pt-6 border-t-2 border-gray-200">
+                            <button type="submit" id="generate-btn" class="px-8 py-3.5 bg-green-600 text-white rounded-xl hover:bg-green-700 font-bold transition shadow-md hover:shadow-lg inline-flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed text-base" disabled>
+                                <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M4 4a2 2 0 00-2 2v4a1 1 0 001 1h12a1 1 0 001-1V6a2 2 0 00-2-2H4zm12 12H4a2 2 0 01-2-2v-4a1 1 0 00-1-1H.5a.5.5 0 00-.5.5v4a4 4 0 004 4h12a4 4 0 004-4v-4a.5.5 0 00-.5-.5H17a1 1 0 00-1 1v4a2 2 0 01-2 2z" clip-rule="evenodd"/>
+                                </svg>
+                                Generate DTRs
+                            </button>
+                            <p class="text-sm text-gray-600 flex items-center gap-2">
+                                <svg class="w-5 h-5 text-amber-500" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+                                </svg>
+                                <span>Select at least one file above to generate DTRs</span>
+                            </p>
+                        </div>
                     </form>
                     
                     <!-- Hidden form for bulk delete input files -->
@@ -1169,50 +1313,6 @@ foreach ($outputFiles as $file) {
                     </div>
                 </div>
                 <?php endif; ?>
-            </div>
-
-            <!-- Right Column: Info & Results Summary -->
-            <div class="space-y-6">
-                <!-- Recent Results -->
-                <?php if (!empty($_SESSION['batch_results']) && isset($_SESSION['batch_results']['success'])): ?>
-                <div class="bg-green-50 border border-green-200 rounded-lg p-6">
-                    <h3 class="font-bold text-green-900 mb-3">Latest Result</h3>
-                    <div class="space-y-2 text-sm">
-                        <p class="text-green-800"><strong>Time:</strong> <?php echo isset($_SESSION['last_batch_time']) ? $_SESSION['last_batch_time'] : 'N/A'; ?></p>
-                        <p class="text-green-800"><strong>Files:</strong> <?php echo $_SESSION['batch_results']['success']; ?> successful</p>
-                        <p class="text-green-800"><strong>Employees:</strong> <?php echo isset($_SESSION['batch_results']['total_employees']) ? $_SESSION['batch_results']['total_employees'] : 0; ?> total</p>
-                    </div>
-                </div>
-                <?php endif; ?>
-
-                <!-- Template Info -->
-                <div class="bg-purple-50 border border-purple-200 rounded-lg p-6">
-                    <h3 class="font-bold text-purple-900 mb-3">Monthly Templates</h3>
-                    <p class="text-sm text-purple-800 mb-3">Active: <strong><?php echo htmlspecialchars($selectedTemplate); ?></strong></p>
-                    <form method="POST" enctype="multipart/form-data" class="space-y-3">
-                        <input type="hidden" name="action" value="upload_template">
-                        <input type="file" name="template_file" accept=".xlsx" required class="block w-full text-sm text-purple-900 border border-purple-300 rounded-lg p-2 bg-white">
-                        <button type="submit" class="w-full px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium">Upload Monthly Template</button>
-                    </form>
-                    <div class="mt-4">
-                        <p class="text-xs text-purple-700 font-semibold mb-1">Available uploaded templates</p>
-                        <?php if (empty($templateFiles)): ?>
-                        <p class="text-xs text-purple-700">No uploaded templates yet.</p>
-                        <?php else: ?>
-                        <ul class="space-y-1 text-xs text-purple-800 max-h-28 overflow-y-auto">
-                            <?php foreach ($templateFiles as $templateFile): ?>
-                            <li>
-                                <?php echo htmlspecialchars($templateFile['name']); ?>
-                                <?php if ($templateFile['name'] === $selectedTemplate): ?>
-                                    <span class="text-green-700 font-semibold">(Active)</span>
-                                <?php endif; ?>
-                            </li>
-                            <?php endforeach; ?>
-                        </ul>
-                        <?php endif; ?>
-                    </div>
-                </div>
-            </div>
         </div>
 
         <!-- Generated Files Section -->
@@ -1430,8 +1530,14 @@ foreach ($outputFiles as $file) {
     <script>
         // Initialize UI interactions
         document.addEventListener('DOMContentLoaded', function() {
+            // Setup live search for input files
+            setupLiveSearchInput();
+
             // Setup live search for output files
             setupLiveSearch();
+
+            // Setup checkbox listeners for Generate button visibility
+            setupProcessCheckboxListeners();
 
             // Wire sticky action bar buttons
             const stickyUpload = document.getElementById('sticky_upload_files');
@@ -1727,6 +1833,15 @@ foreach ($outputFiles as $file) {
             });
         }
 
+        // Delete single input file with confirmation
+        function deleteSingleInputFile(filename) {
+            if (!confirm('Delete this file?')) {
+                return;
+            }
+            
+            deleteSingleFile(filename, 'excel-files');
+        }
+
         // Delete selected input files with AJAX
         function deleteSelectedInputFiles() {
             const checkboxes = document.querySelectorAll('.process-file-checkbox:checked');
@@ -1831,6 +1946,87 @@ foreach ($outputFiles as $file) {
                 setTimeout(() => alertDiv.remove(), 500);
             }, 5000);
         }
+
+            // Update Generate button visibility based on checkbox selection
+            function updateGenerateButtonState() {
+                const generateBtn = document.getElementById('generate-btn');
+                const checkboxes = document.querySelectorAll('.process-file-checkbox');
+                const selectedCheckboxes = document.querySelectorAll('.process-file-checkbox:checked');
+                
+                if (!generateBtn) return;
+                
+                // Enable Generate button only if at least one file is selected
+                if (selectedCheckboxes.length > 0) {
+                    generateBtn.disabled = false;
+                } else {
+                    generateBtn.disabled = true;
+                }
+            }
+
+            // Setup checkbox listeners for Generate button state
+            function setupProcessCheckboxListeners() {
+                const checkboxes = document.querySelectorAll('.process-file-checkbox');
+                checkboxes.forEach(function(checkbox) {
+                    checkbox.addEventListener('change', updateGenerateButtonState);
+                });
+                
+                // Initial state
+                updateGenerateButtonState();
+            }
+
+            // Live search for input files (instant filtering as you type)
+            function setupLiveSearchInput() {
+                const searchInput = document.getElementById('live-search-input');
+                const inputTable = document.getElementById('input-files-table');
+                const noResultsDiv = document.getElementById('no-search-input-results');
+                const searchCounter = document.getElementById('search-input-results-count');
+            
+                if (!searchInput || !inputTable) return;
+            
+                searchInput.addEventListener('input', function() {
+                    const searchTerm = this.value.toLowerCase().trim();
+                    const rows = inputTable.querySelectorAll('.input-file-row');
+                    let visibleCount = 0;
+                
+                    rows.forEach(function(row) {
+                        const filename = row.getAttribute('data-filename') || '';
+                    
+                        const matches = filename.includes(searchTerm);
+                    
+                        if (matches || searchTerm === '') {
+                            row.style.display = '';
+                            visibleCount++;
+                        } else {
+                            row.style.display = 'none';
+                        }
+                    });
+                
+                    // Update counter display
+                    if (searchTerm) {
+                        searchCounter.textContent = visibleCount + ' of ' + rows.length;
+                    } else {
+                        searchCounter.textContent = '';
+                    }
+                
+                    // Show/hide no results message
+                    if (visibleCount === 0 && searchTerm !== '') {
+                        noResultsDiv.classList.remove('hidden');
+                        inputTable.classList.add('hidden');
+                    } else {
+                        noResultsDiv.classList.add('hidden');
+                        inputTable.classList.remove('hidden');
+                    }
+                });
+            
+                // Clear search on Escape key
+                searchInput.addEventListener('keydown', function(e) {
+                    if (e.key === 'Escape') {
+                        this.value = '';
+                        this.dispatchEvent(new Event('input'));
+                        this.blur(); // Remove focus
+                    }
+                });
+            }
 
             // Live search for output files (instant filtering as you type)
             function setupLiveSearch() {
