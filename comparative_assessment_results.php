@@ -15,6 +15,7 @@ session_start();
 // Debug: Check if files exist
 $required_files = [
     'includes/banners.php',
+    'includes/favicon.php',
     'classes/ComparativeAssessmentReport.php',
     'classes/DBConnection.php',
     'config/evaluation_criteria.php',
@@ -31,6 +32,7 @@ foreach ($required_files as $file) {
 }
 
 require_once 'includes/banners.php';
+require_once 'includes/favicon.php';
 require_once 'classes/ComparativeAssessmentReport.php';
 require_once 'classes/DBConnection.php';
 require_once 'config/evaluation_criteria.php';
@@ -232,6 +234,7 @@ if (count($positions) > 0) {
     echo "<!-- DEBUG: First position: " . htmlspecialchars(json_encode($positions[0])) . " -->\n";
 }
 ?>
+<hr>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -239,6 +242,7 @@ if (count($positions) > 0) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Comparative Assessment Result (CAR) - DepEd HRMPSB</title>
     <!-- Favicon -->
+    <?php require_once(__DIR__ . '/includes/favicon.php'); ?>
     <?php
 
     $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') ? 'https://' : 'http://';
