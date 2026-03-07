@@ -27,6 +27,7 @@ $currentUserRole = $isAuthenticated ? $currentUser['role'] : 'guest';
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <?php require_once(__DIR__ . '/../includes/favicon.php'); ?>
     <title>Reclassification Admin Dashboard - DepEd HRMPSB</title>
     <style>
         * {

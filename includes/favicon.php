@@ -15,7 +15,7 @@
 
 // Simple path detection based on current directory
 $currentFile = $_SERVER['SCRIPT_NAME'];
-$inAdminFolder = strpos($currentFile, '/admin/') !== false;
+$inAdminFolder = strpos($currentFile, '/admin/') !== false || strpos($currentFile, '/reclassification_admin/') !== false;
 $faviconPath = $inAdminFolder ? '../images/' : 'images/';
 $manifestPath = $inAdminFolder ? '../images/' : 'images/';
 // Cache busting - force browser to reload favicon
