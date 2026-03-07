@@ -917,6 +917,12 @@ function format_performance_requirements(array $rules): string
                 grid-template-columns: 1fr;
                 justify-items: center;
             }
+            tr.form-type-row {
+                display: none;
+            }
+            td.form-type-label {
+                display: none;
+            }
         }
         .admin-link {
             position: fixed;
@@ -970,8 +976,8 @@ function format_performance_requirements(array $rules): string
 
 <form method="post">
     <table class="info-table">
-        <tr>
-            <td class="label-cell">Form Type:</td>
+        <tr class="form-type-row">
+            <td class="label-cell form-type-label">Form Type:</td>
             <td>
                 <select id="form_type" name="form_type" class="line-input" required>
                     <option value="form1" <?php echo selected("form1", $formType); ?>>Form 1 (Teacher II-VII, MT I)</option>
