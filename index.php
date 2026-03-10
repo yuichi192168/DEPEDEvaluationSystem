@@ -32,7 +32,7 @@ $positions = getAllPositions();
     
     body {
         font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        background: linear-gradient(135deg, #E04040 0%, #E06060 100%);
+        background: linear-gradient(135deg, #055489 0%, #0668aa 100%);
         padding: 20px;
         min-height: 100vh;
     }
@@ -65,11 +65,11 @@ $positions = getAllPositions();
         padding: 20px;
         background: #E0E0E0;
         border-radius: 8px;
-        border-left: 4px solid #E04040;
+        border-left: 4px solid #055489;
     }
     
     .form-section h2 {
-        color: #E04040;
+        color: #055489;
         margin-bottom: 20px;
         font-size: 20px;
     }
@@ -102,7 +102,7 @@ $positions = getAllPositions();
     select {
         width: 100%;
         padding: 10px;
-        border: 2px solid #C0A0A0;
+        border: 2px solid #cbd5e1;
         border-radius: 5px;
         font-size: 14px;
         transition: border-color 0.3s;
@@ -111,7 +111,7 @@ $positions = getAllPositions();
     input:focus,
     select:focus {
         outline: none;
-        border-color: #E04040;
+        border-color: #055489;
     }
     
     .help-text {
@@ -124,7 +124,7 @@ $positions = getAllPositions();
     .level-display {
         display: inline-block;
         padding: 4px 8px;
-        background: #E06060;
+        background: #0668aa;
         color: #ffffff;
         border-radius: 4px;
         font-weight: bold;
@@ -150,17 +150,17 @@ $positions = getAllPositions();
     }
     
     .btn-primary {
-        background: linear-gradient(135deg, #E04040 0%, #E06060 100%);
+        background: linear-gradient(135deg, #055489 0%, #0668aa 100%);
         color: #ffffff;
     }
     
     .btn-primary:hover {
         transform: translateY(-2px);
-        box-shadow: 0 5px 15px rgba(224, 64, 64, 0.4);
+        box-shadow: 0 5px 15px rgba(5, 84, 137, 0.4);
     }
     
     .btn-secondary {
-        background: #C0A0A0;
+        background: #cbd5e1;
         color: #ffffff;
     }
     
@@ -180,33 +180,33 @@ $positions = getAllPositions();
         text-decoration: none;
         display: inline-block;
         text-align: center;
-        background: linear-gradient(135deg, #E04040 0%, #E06060 100%);
+        background: linear-gradient(135deg, #055489 0%, #0668aa 100%);
         color: #ffffff;
         min-width: 150px;
     }
     
     a.btn-primary:hover {
         transform: translateY(-2px);
-        box-shadow: 0 5px 15px rgba(224, 64, 64, 0.4);
+        box-shadow: 0 5px 15px rgba(5, 84, 137, 0.4);
     }
     
     .info-box {
-        background: #E0C0C0;
-        border-left: 4px solid #E04040;
+        background: #cbd5e1;
+        border-left: 4px solid #055489;
         padding: 15px;
         margin-bottom: 20px;
         border-radius: 5px;
     }
     
     .info-box strong {
-        color: #E04040;
+        color: #055489;
     }
     
     .live-preview {
         margin-top: 30px;
         padding: 20px;
         background: #ffffff;
-        border: 2px solid #E04040;
+        border: 2px solid #055489;
         border-radius: 8px;
         display: none;
     }
@@ -216,7 +216,7 @@ $positions = getAllPositions();
     }
     
     .live-preview h3 {
-        color: #E04040;
+        color: #055489;
         margin-bottom: 15px;
     }
     
@@ -240,8 +240,8 @@ $positions = getAllPositions();
     }
     
     .baseline-info {
-        background: #E0C0A0;
-        border-left: 4px solid #E06060;
+        background: #cbd5e1;
+        border-left: 4px solid #0668aa;
         padding: 10px;
         margin-top: 10px;
         border-radius: 4px;
@@ -249,7 +249,7 @@ $positions = getAllPositions();
     }
     
     .baseline-info strong {
-        color: #7A2E2E;
+        color: #044073;
     }
     
     @media (max-width: 768px) {

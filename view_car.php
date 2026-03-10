@@ -161,7 +161,7 @@ while ($row = $positionsResult->fetch_assoc()) {
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #E04040 0%, #E06060 100%);
+            background: linear-gradient(135deg, #055489 0%, #E06060 100%);
             padding: 20px;
             min-height: 100vh;
         }
@@ -190,10 +190,10 @@ while ($row = $positionsResult->fetch_assoc()) {
             padding: 20px;
             background: #E0E0E0;
             border-radius: 8px;
-            border-left: 4px solid #E04040;
+            border-left: 4px solid #055489;
         }
         .form-section h2 {
-            color: #E04040;
+            color: #055489;
             margin-bottom: 20px;
             font-size: 20px;
         }
@@ -211,7 +211,7 @@ while ($row = $positionsResult->fetch_assoc()) {
         select {
             width: 100%;
             padding: 10px;
-            border: 2px solid #C0A0A0;
+            border: 2px solid #cbd5e1;
             border-radius: 5px;
             font-size: 14px;
             transition: border-color 0.3s;
@@ -219,7 +219,7 @@ while ($row = $positionsResult->fetch_assoc()) {
         input:focus,
         select:focus {
             outline: none;
-            border-color: #E04040;
+            border-color: #055489;
         }
         .hrmpsb-members {
             margin-top: 20px;
@@ -252,7 +252,7 @@ while ($row = $positionsResult->fetch_assoc()) {
             transition: all 0.3s;
         }
         .btn-primary {
-            background: linear-gradient(135deg, #E04040 0%, #E06060 100%);
+            background: linear-gradient(135deg, #055489 0%, #E06060 100%);
             color: #ffffff;
         }
         .btn-primary:hover {
@@ -265,28 +265,28 @@ while ($row = $positionsResult->fetch_assoc()) {
         .position-item {
             padding: 10px;
             background: #ffffff;
-            border: 1px solid #C0A0A0;
+            border: 1px solid #cbd5e1;
             border-radius: 5px;
             margin-bottom: 10px;
             cursor: pointer;
             transition: all 0.3s;
         }
         .position-item:hover {
-            border-color: #E04040;
+            border-color: #055489;
             background: #F0F0F0;
         }
         .position-item strong {
-            color: #E04040;
+            color: #055489;
         }
         .info-box {
-            background: #E0C0C0;
-            border-left: 4px solid #E04040;
+            background: #cbd5e1;
+            border-left: 4px solid #055489;
             padding: 15px;
             margin-bottom: 20px;
             border-radius: 5px;
         }
         .info-box strong {
-            color: #E04040;
+            color: #055489;
         }
     </style>
 </head>

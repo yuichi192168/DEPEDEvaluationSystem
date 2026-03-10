@@ -366,7 +366,7 @@ input.invalid:focus {
     right: 18px;
     top: 18px;
     z-index: 1300;
-    background: #E04040;
+    background: #055489;
     color: #fff;
     border-radius: 50%;
     width: 44px;
@@ -376,7 +376,7 @@ input.invalid:focus {
     justify-content:center;
     font-weight:700;
     cursor:pointer;
-    box-shadow: 0 6px 18px rgba(224,64,64,0.2);
+    box-shadow: 0 6px 18px rgba(5, 84, 137, 0.2);
 }
 .help-drawer {
     position: fixed;
