@@ -701,14 +701,14 @@ foreach ($outputFiles as $file) {
         .help-tooltip { position: relative; }
         body {
             background-color: #055489;
-            background-image: linear-gradient(rgba(5, 84, 137, 0.62), rgba(5, 84, 137, 0.62)), url('images/sdocabuyao-cover.svg');
+            background-image: linear-gradient(rgba(5, 84, 137, 0.92), rgba(5, 84, 137, 0.92));
             background-size: cover;
             background-position: center;
             background-repeat: no-repeat;
             background-attachment: fixed;
         }
         body.dark-mode {
-            background-image: linear-gradient(rgba(15, 23, 42, 0.78), rgba(15, 23, 42, 0.78)), url('images/sdocabuyao-cover.svg');
+            background-image: linear-gradient(rgba(15, 23, 42, 0.92), rgba(15, 23, 42, 0.92));
             color: #e5e7eb;
         }
         main .bg-white.rounded-lg.shadow-md {

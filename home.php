@@ -35,7 +35,7 @@ session_start();
         }
 
         .wrap {
-            max-width: 1180px;
+            max-width: 100%;
             margin: 0 auto;
         }
 
@@ -62,23 +62,23 @@ session_start();
 
         .apps-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            grid-template-columns: repeat(4, minmax(0, 1fr));
             gap: 20px;
         }
 
         .app-card {
             display: flex;
             flex-direction: column;
-            align-items: center;
-            text-align: center;
+            align-items: stretch;
+            text-align: left;
             text-decoration: none;
             background: var(--card-bg);
             border: 1px solid var(--border);
             border-radius: 18px;
-            padding: 40px 24px;
+            padding: 16px;
             box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06);
             transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
-            min-height: 320px;
+            min-height: 0;
         }
 
         .app-card:hover,
@@ -90,26 +90,30 @@ session_start();
         }
 
         .app-icon {
-            width: 140px;
-            height: 140px;
-            border-radius: 20px;
+            width: 100%;
+            height: 180px;
+            border-radius: 12px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 38px;
-            font-weight: 900;
-            letter-spacing: 0.4px;
-            margin-bottom: 20px;
-            color: #ffffff;
-            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
-            box-shadow: 0 8px 20px rgba(5, 84, 137, 0.25);
+            margin-bottom: 16px;
+            background: #e7f0fa;
+            box-shadow: 0 6px 14px rgba(5, 84, 137, 0.16);
+            overflow: hidden;
+        }
+
+        .app-icon img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
         }
 
         .app-title {
             color: var(--text-main);
             font-size: 1.3rem;
             font-weight: 700;
-            margin-bottom: 10px;
+            margin-bottom: 8px;
         }
 
         .app-desc {
@@ -120,10 +124,16 @@ session_start();
         }
 
         .app-cta {
-            margin-top: 16px;
+            margin-top: 14px;
             color: var(--primary);
             font-size: 0.9rem;
             font-weight: 700;
+        }
+
+        @media (max-width: 1200px) {
+            .apps-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
         }
 
         @media (max-width: 640px) {
@@ -137,15 +147,18 @@ session_start();
             }
 
             .app-card {
-                padding: 32px 20px;
-                min-height: 280px;
+                padding: 14px;
+                text-align: left;
             }
 
             .app-icon {
-                width: 110px;
-                height: 110px;
-                border-radius: 16px;
-                font-size: 32px;
+                width: 100%;
+                height: 160px;
+                border-radius: 10px;
+            }
+
+            .apps-grid {
+                grid-template-columns: 1fr;
             }
         }
     </style>
@@ -153,34 +166,42 @@ session_start();
 <body>
     <main class="wrap">
         <section class="hero" aria-label="Dashboard Intro">
-            <h1>DepEd HRMPSB Systems Dashboard</h1>
+            <h1>DepEd Systems Dashboard</h1>
             <p>Select a tool below to open the system. Large cards are provided for simple and quick navigation.</p>
         </section>
 
         <section class="apps-grid" aria-label="System Launchers">
             <a class="app-card" href="index.php">
-                <div class="app-icon" aria-hidden="true">EV</div>
+                <div class="app-icon" aria-hidden="true">
+                    <img src="images/deped_evaluation_dashboard.png" alt="Evaluation System dashboard preview">
+                </div>
                 <div class="app-title">Evaluation System</div>
                 <div class="app-desc">Process qualification criteria, compute scores, and generate individual evaluation outputs.</div>
                 <div class="app-cta">Open System</div>
             </a>
 
             <a class="app-card" href="reclassification_form.php">
-                <div class="app-icon" aria-hidden="true">RC</div>
+                <div class="app-icon" aria-hidden="true">
+                    <img src="images/reclassification_form_dashboard.png" alt="Reclassification dashboard preview">
+                </div>
                 <div class="app-title">Reclassification</div>
                 <div class="app-desc">Evaluate teaching positions and manage RFTP form-based reclassification records.</div>
                 <div class="app-cta">Open System</div>
             </a>
 
             <a class="app-card" href="dtr_generator_redesigned.php">
-                <div class="app-icon" aria-hidden="true">DTR</div>
+                <div class="app-icon" aria-hidden="true">
+                    <img src="images/dtr_generator_dashboard.png" alt="DTR Generator dashboard preview">
+                </div>
                 <div class="app-title">DTR Generator</div>
                 <div class="app-desc">Upload attendance files and generate DTR outputs for download and archiving.</div>
                 <div class="app-cta">Open System</div>
             </a>
 
             <a class="app-card" href="gwa_calculator.html">
-                <div class="app-icon" aria-hidden="true">GWA</div>
+                <div class="app-icon" aria-hidden="true">
+                    <img src="images/gwa_calculator_dashboard.png" alt="GWA Calculator dashboard preview">
+                </div>
                 <div class="app-title">GWA Calculator</div>
                 <div class="app-desc">Compute grade weighted averages, save applicant records, and compare GWA history.</div>
                 <div class="app-cta">Open System</div>
