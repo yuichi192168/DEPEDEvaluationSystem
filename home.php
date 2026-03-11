@@ -6,7 +6,7 @@ session_start();
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DepEd Tools Home</title>
+    <title>DepEd MERIT System</title>
     <?php require_once(__DIR__ . '/includes/favicon.php'); ?>
     <style>
         :root {
@@ -46,6 +46,7 @@ session_start();
             padding: 28px 24px;
             box-shadow: 0 12px 28px rgba(5, 84, 137, 0.28);
             margin-bottom: 24px;
+            text-align: center;
         }
 
         .hero h1 {
@@ -166,8 +167,9 @@ session_start();
 <body>
     <main class="wrap">
         <section class="hero" aria-label="Dashboard Intro">
-            <h1>DepEd Systems Dashboard</h1>
-            <p>Select a tool below to open the system. Large cards are provided for simple and quick navigation.</p>
+            <h1>DepEd MERIT System</h1>
+            <p><strong>MERIT</strong> - Monitoring and Evaluation for Reclassification, IES, and Timekeeping</p>
+            <p>Select a module below to open the system. Large cards are provided for simple and quick navigation.</p>
         </section>
 
         <section class="apps-grid" aria-label="System Launchers">
