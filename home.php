@@ -182,7 +182,7 @@ session_start();
             <p>
                 <span class="merit-letter">M</span>onitoring
                 <span class="merit-letter">E</span>valuation for
-                <span class="merit-letter">R</span>eclassificatio,
+                <span class="merit-letter">R</span>eclassification,
                 <span class="merit-letter">I</span>ES, and
                 <span class="merit-letter">T</span>imekeeping
             </p>
