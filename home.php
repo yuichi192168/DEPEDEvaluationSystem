@@ -61,6 +61,17 @@ session_start();
             line-height: 1.5;
         }
 
+        .merit-letter {
+            display: inline-block;
+            font-weight: 800;
+            color: #fff;
+            background: rgba(0, 0, 0, 0.22);
+            border: 1px solid rgba(255, 255, 255, 0.45);
+            border-radius: 6px;
+            padding: 0 6px;
+            margin-right: 2px;
+        }
+
         .apps-grid {
             display: grid;
             grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -168,7 +179,13 @@ session_start();
     <main class="wrap">
         <section class="hero" aria-label="Dashboard Intro">
             <h1>DepEd MERIT System</h1>
-            <p><strong>MERIT</strong> - Monitoring and Evaluation for Reclassification, IES, and Timekeeping</p>
+            <p>
+                <span class="merit-letter">M</span>onitoring
+                <span class="merit-letter">E</span>valuation for
+                <span class="merit-letter">R</span>eclassificatio,
+                <span class="merit-letter">I</span>ES, and
+                <span class="merit-letter">T</span>imekeeping
+            </p>
             <p>Select a module below to open the system. Large cards are provided for simple and quick navigation.</p>
         </section>
 
