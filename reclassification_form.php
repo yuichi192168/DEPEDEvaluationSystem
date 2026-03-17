@@ -131,10 +131,10 @@ $performanceRules = [
         "ncoi_o" => 0,
     ],
     "Teacher IV" => [
-        "coi_vs" => 21,
-        "ncoi_vs" => 16,
-        "coi_o" => 0,
-        "ncoi_o" => 0,
+        "coi_vs" => 0,
+        "ncoi_vs" => 0,
+        "coi_o" => 21,
+        "ncoi_o" => 16,
     ],
     "Teacher V" => [
         "coi_vs" => 0,
@@ -382,6 +382,31 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && $positionApplied !== "" && $errorMe
         $meetsNcoiO = $ncoiO >= $rules["ncoi_o"];
 
         $passed = $meetsCoiVs && $meetsNcoiVs && $meetsCoiO && $meetsNcoiO;
+
+        // Teacher IV specific: cross-compensate excess VS scores between COI and NCOI categories
+        if ($positionApplied === "Teacher IV" && !$passed) {
+            $reqCoiVs  = $rules["coi_vs"];   // 21
+            $reqNcoiVs = $rules["ncoi_vs"];  // 16
+            $adjCoiVs  = $coiVs;
+            $adjNcoiVs = $ncoiVs;
+            // Excess NCOI covers COI deficit
+            if ($adjCoiVs < $reqCoiVs && $adjNcoiVs > $reqNcoiVs) {
+                $transfer  = min($reqCoiVs - $adjCoiVs, $adjNcoiVs - $reqNcoiVs);
+                $adjCoiVs  += $transfer;
+                $adjNcoiVs -= $transfer;
+            }
+            // Excess COI covers NCOI deficit
+            if ($adjNcoiVs < $reqNcoiVs && $adjCoiVs > $reqCoiVs) {
+                $transfer  = min($reqNcoiVs - $adjNcoiVs, $adjCoiVs - $reqCoiVs);
+                $adjNcoiVs += $transfer;
+                $adjCoiVs  -= $transfer;
+            }
+            if ($adjCoiVs >= $reqCoiVs && $adjNcoiVs >= $reqNcoiVs) {
+                $passed       = true;
+                $meetsCoiVs   = true;
+                $meetsNcoiVs  = true;
+            }
+        }
 
         $result = [
             "passed" => $passed,
@@ -1778,11 +1803,32 @@ function format_performance_requirements(array $rules): string
         const coiO = toNumber(document.getElementById("coi_o").value);
         const ncoiO = toNumber(document.getElementById("ncoi_o").value);
 
-        const passed =
+        let passed =
             coiVs >= rules.coi_vs &&
             ncoiVs >= rules.ncoi_vs &&
             coiO >= rules.coi_o &&
             ncoiO >= rules.ncoi_o;
+
+        // Teacher IV: cross-compensate excess VS scores between COI and NCOI
+        if (!passed && positionSelect.value === "Teacher IV") {
+            const reqCoiVs  = rules.coi_vs;   // 21
+            const reqNcoiVs = rules.ncoi_vs;  // 16
+            let adjCoiVs  = coiVs;
+            let adjNcoiVs = ncoiVs;
+            if (adjCoiVs < reqCoiVs && adjNcoiVs > reqNcoiVs) {
+                const transfer = Math.min(reqCoiVs - adjCoiVs, adjNcoiVs - reqNcoiVs);
+                adjCoiVs  += transfer;
+                adjNcoiVs -= transfer;
+            }
+            if (adjNcoiVs < reqNcoiVs && adjCoiVs > reqCoiVs) {
+                const transfer = Math.min(reqNcoiVs - adjNcoiVs, adjCoiVs - reqCoiVs);
+                adjNcoiVs += transfer;
+                adjCoiVs  -= transfer;
+            }
+            if (adjCoiVs >= reqCoiVs && adjNcoiVs >= reqNcoiVs) {
+                passed = true;
+            }
+        }
 
         return passed ? "PASSED" : "FAILED";
     };

@@ -38,7 +38,7 @@ $currentUserRole = $isAuthenticated ? $currentUser['role'] : 'guest';
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background-color: #055489;
-            background-image: linear-gradient(rgba(5, 84, 137, 0.62), rgba(5, 84, 137, 0.62)), url('../images/sdocabuyao-cover.svg');
+            /* background-image: linear-gradient(rgba(5, 84, 137, 0.62), rgba(5, 84, 137, 0.62)), url('../images/sdocabuyao-cover.svg'); */
             background-size: cover;
             background-position: center;
             background-repeat: no-repeat;
