@@ -105,6 +105,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <link rel="stylesheet" href="../css/design-system.css">
     <link rel="stylesheet" href="../css/admin-enhanced.css">
     <style>
+        :root {
+            --admin-primary: #055489;
+            --admin-primary-light: #0668aa;
+            --primary-red: #055489;
+            --primary-red-light: #0668aa;
+            --primary-red-dark: #044073;
+        }
+
         body {
             background: linear-gradient(135deg, var(--admin-primary) 0%, var(--admin-primary-light) 100%);
             min-height: 100vh;
@@ -210,7 +218,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         .form-control-login:focus {
             outline: none;
             border-color: var(--admin-primary);
-            box-shadow: 0 0 0 3px rgba(200, 48, 48, 0.1);
+            box-shadow: 0 0 0 3px rgba(5, 84, 137, 0.15);
             background-color: var(--bg-primary);
             color: var(--text-primary);
         }
@@ -232,7 +240,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             border: 1px solid rgba(220, 53, 69, 0.3);
             font-size: var(--font-size-sm);
             line-height: var(--line-height-relaxed);
-        }
         }
 
         .error-icon {

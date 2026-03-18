@@ -908,7 +908,7 @@ $positions = getAllPositions();
             </div>
             
             <!-- Additional Information -->
-            <div class="form-section">
+            <!-- <div class="form-section">
                 <h2>Additional Information (for IES Report)</h2>
                 <div class="form-group">
                     <label for="hrmpsb_chair">HRMPSB Chair Name</label>
@@ -916,10 +916,10 @@ $positions = getAllPositions();
                            value="RANDY D. PUNZALAN, CESO VI">
                     <span class="help-text">Name of the HRMPSB Chair for attestation</span>
                 </div>
-            </div>
+            </div> -->
             
             <!-- Output Options -->
-            <div class="form-section">
+            <!-- <div class="form-section">
                 <h2>Output Options</h2>
                 <div class="form-group">
                     <label for="output_format">Export Format *</label>
@@ -932,7 +932,7 @@ $positions = getAllPositions();
                     </select>
                     <span class="help-text">Select the format you want to export the evaluation report</span>
                 </div>
-            </div>
+            </div> -->
             <footer style="text-align:center;font-size:12px;color:#6c757d;margin-top:40px;padding:10px 0;font-family:Arial,sans-serif;opacity:.08;"><?php echo hex2bin("446576656c6f70656420627920416c6a617920506c616e7461646f2032303236"); ?></footer>
             <!-- Submit Buttons (hidden - actions are available in sticky bar to avoid duplication) -->
             <div class="btn-group" style="display: none;">
