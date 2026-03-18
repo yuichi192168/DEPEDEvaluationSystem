@@ -350,6 +350,7 @@ $ppstCounts = compute_ppst_counts($ppstIndicators, $ncoiLookup);
 $activeOrder = $formType === "form2" ? $form2Order : $form1Order;
 $positionRanks = array_flip($activeOrder);
 $errorMessage = null;
+$lastSavedApplicantSnapshot = null;
 
 $result = null;
 if ($_SERVER["REQUEST_METHOD"] === "POST" && $positionApplied !== "") {
@@ -489,6 +490,42 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && $positionApplied !== "" && $errorMe
             }
         }
     }
+}
+
+if ($_SERVER["REQUEST_METHOD"] === "POST" && $errorMessage === null && $result !== null) {
+    $lastSavedApplicantSnapshot = [
+        "id" => 0,
+        "name" => post_value("name"),
+        "current_position" => $currentPosition,
+        "position_applied" => $positionApplied,
+        "station" => post_value("station"),
+        "item_number" => post_value("item_number"),
+        "result" => $result["passed"] ? "PASSED" : "FAILED",
+        "performance_payload" => [
+            "form_type" => post_value("form_type"),
+            "sg_salary" => post_value("sg_salary"),
+            "level" => post_value("level"),
+            "app_education" => post_value("app_education"),
+            "app_training" => post_value("app_training"),
+            "app_experience" => post_value("app_experience"),
+            "app_eligibility" => post_value("app_eligibility"),
+            "app_competency" => post_value("app_competency"),
+            "qs_remark_education" => post_value("qs_remark_education"),
+            "qs_remark_training" => post_value("qs_remark_training"),
+            "qs_remark_experience" => post_value("qs_remark_experience"),
+            "qs_remark_eligibility" => post_value("qs_remark_eligibility"),
+            "qs_remark_competency" => post_value("qs_remark_competency"),
+            "coi_vs" => $coiVs,
+            "ncoi_vs" => $ncoiVs,
+            "coi_o" => $coiO,
+            "ncoi_o" => $ncoiO,
+            "total_vs" => $totalVs,
+            "total_o" => $totalO,
+            "ppst_counts" => $ppstCounts,
+            "action_date" => post_value("action_date"),
+            "region_date" => post_value("region_date"),
+        ],
+    ];
 }
 
 function selected(string $value, string $current): string
@@ -1460,6 +1497,8 @@ function format_performance_requirements(array $rules): string
     const currentUserId = <?php echo (int)($currentUser['id'] ?? 0); ?>;
     const currentUserRole = <?php echo json_encode((string)($currentUser['role'] ?? 'guest')); ?>;
     const isAdminUser = currentUserRole === "admin";
+    const lastSavedApplicantKey = "rftpLastSavedApplicant";
+    const initialLastSavedApplicant = <?php echo json_encode($lastSavedApplicantSnapshot, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
     const evaluationRecordIdInput = document.getElementById("evaluation_record_id");
     let evaluationRecords = [];
     let editingEvaluationId = evaluationRecordIdInput && evaluationRecordIdInput.value ? parseInt(evaluationRecordIdInput.value, 10) : 0;
@@ -1780,6 +1819,26 @@ function format_performance_requirements(array $rules): string
         localStorage.setItem(draftKey, JSON.stringify(data));
     };
 
+    const saveLastSavedApplicant = (record) => {
+        if (!record || typeof record !== "object") {
+            return;
+        }
+        localStorage.setItem(lastSavedApplicantKey, JSON.stringify(record));
+    };
+
+    const getLastSavedApplicant = () => {
+        const raw = localStorage.getItem(lastSavedApplicantKey);
+        if (!raw) {
+            return null;
+        }
+        try {
+            const parsed = JSON.parse(raw);
+            return parsed && typeof parsed === "object" ? parsed : null;
+        } catch (error) {
+            return null;
+        }
+    };
+
     const restoreDraft = () => {
         const stored = localStorage.getItem(draftKey);
         if (!stored) {
@@ -1792,6 +1851,10 @@ function format_performance_requirements(array $rules): string
             return;
         }
     };
+
+    if (initialLastSavedApplicant && typeof initialLastSavedApplicant === "object") {
+        saveLastSavedApplicant(initialLastSavedApplicant);
+    }
 
     const getPerformanceResult = () => {
         const rules = performanceRules[positionSelect.value];
@@ -1954,15 +2017,24 @@ function format_performance_requirements(array $rules): string
         updatePerformanceFromPpst();
         updateTotals();
         updateActionTables();
+        saveLastSavedApplicant(record);
     };
 
-    const autofillLastApplicant = () => {
-        if (!evaluationRecords.length) {
+    const autofillLastApplicant = async () => {
+        let last = evaluationRecords.length ? evaluationRecords[0] : null;
+        if (!last) {
+            last = await fetchLatestEvaluationRecord();
+        }
+        if (!last) {
+            last = getLastSavedApplicant();
+        }
+        if (!last) {
+            alert("No saved applicant record found to autofill.");
             return;
         }
-        const last = evaluationRecords[0];
         applyRecordToForm(last);
         setEditingState(isAdminUser ? Number(last.id) : 0);
+        clearValidationHints();
         saveDraft();
     };
 
@@ -2348,12 +2420,28 @@ function format_performance_requirements(array $rules): string
     };
 
     const filterApplicants = () => {
+        if (!applicantsSearch) {
+            return;
+        }
         const term = applicantsSearch.value.trim().toLowerCase();
         const rows = Array.from(document.querySelectorAll("#applicants-body tr"));
         rows.forEach((row) => {
             const text = row.textContent.toLowerCase();
             row.style.display = text.includes(term) ? "" : "none";
         });
+    };
+
+    const fetchLatestEvaluationRecord = async () => {
+        try {
+            const response = await fetch("api/performance_evaluations_list.php", { credentials: "same-origin" });
+            const data = await response.json();
+            if (!data.success || !Array.isArray(data.records) || data.records.length === 0) {
+                return null;
+            }
+            return data.records[0];
+        } catch (error) {
+            return null;
+        }
     };
 
     [...vsInputs, ...oInputs].forEach((input) => {
@@ -2449,10 +2537,17 @@ function format_performance_requirements(array $rules): string
         updateQsFields();
         updateActionTables();
     });
-    applicantsSearch.addEventListener("input", filterApplicants);
-    autofillLastButton.addEventListener("click", autofillLastApplicant);
+    if (applicantsSearch) {
+        applicantsSearch.addEventListener("input", filterApplicants);
+    }
+    if (autofillLastButton) {
+        autofillLastButton.addEventListener("click", () => {
+            autofillLastApplicant();
+        });
+    }
 
-    applicantsTable.addEventListener("click", async (event) => {
+    if (applicantsTable) {
+        applicantsTable.addEventListener("click", async (event) => {
         const target = event.target;
         if (!(target instanceof HTMLElement) || !isAdminUser) {
             return;
@@ -2487,22 +2582,35 @@ function format_performance_requirements(array $rules): string
                 alert(error.message || "Failed to delete record.");
             }
         }
-    });
+        });
+    }
 
-    clearFormButton.addEventListener("click", () => {
+    if (clearFormButton) {
+        clearFormButton.addEventListener("click", () => {
         if (!confirm("Clear the form? This will not delete applicants.")) {
             return;
         }
         form.reset();
+        localStorage.removeItem(draftKey);
         setEditingState(0);
+        updateFormScope();
+        updatePositionOptions();
         updateAppliedOptions();
+        updatePerformanceTable();
         updateQsFields();
         clearPerformance();
         clearValidationHints();
+        updateTotals();
+        updateActionTables();
         saveDraft();
-    });
-    printButton.addEventListener("click", () => window.print());
-    exportButton.addEventListener("click", exportExcel);
+        });
+    }
+    if (printButton) {
+        printButton.addEventListener("click", () => window.print());
+    }
+    if (exportButton) {
+        exportButton.addEventListener("click", exportExcel);
+    }
 
     updateFormScope();
     updatePositionOptions();
