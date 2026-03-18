@@ -220,6 +220,53 @@ function resolveTemplatePath($selectedTemplate, $templateFolder, $fallbackTempla
     throw new Exception('No valid template found. Upload a .xlsx template to continue.');
 }
 
+function validateTemplateCompatibility($templateRelativePath) {
+    $issues = [];
+    $templatePath = __DIR__ . DIRECTORY_SEPARATOR . $templateRelativePath;
+
+    if (!file_exists($templatePath)) {
+        return ['Template file is missing: ' . $templateRelativePath];
+    }
+
+    try {
+        $reader = \PhpOffice\PhpSpreadsheet\IOFactory::createReaderForFile($templatePath);
+        $reader->setReadDataOnly(true);
+        $spreadsheet = $reader->load($templatePath);
+        $sheet = $spreadsheet->getActiveSheet();
+
+        if (!$sheet) {
+            $issues[] = 'Template has no active worksheet.';
+        } else {
+            $maxRow = (int)$sheet->getHighestRow();
+            $maxCol = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::columnIndexFromString($sheet->getHighestColumn());
+
+            if ($maxRow < 49) {
+                $issues[] = 'Template must include DTR rows up to row 49 (days 1-31 section).';
+            }
+
+            if ($maxCol < 9) {
+                $issues[] = 'Template must include columns up to at least I (for official hours text).';
+            }
+
+            $requiredCells = ['A13', 'A14', 'I14'];
+            foreach ($requiredCells as $cellRef) {
+                try {
+                    $sheet->getCell($cellRef);
+                } catch (Exception $e) {
+                    $issues[] = 'Missing required template cell: ' . $cellRef;
+                }
+            }
+        }
+
+        $spreadsheet->disconnectWorksheets();
+        unset($spreadsheet);
+    } catch (Exception $e) {
+        $issues[] = 'Template cannot be read by PhpSpreadsheet: ' . $e->getMessage();
+    }
+
+    return $issues;
+}
+
 // Initialize variables
 $message = '';
 $messageType = 'info';
@@ -413,6 +460,9 @@ if (isset($_GET['uploaded'])) {
     $messageType = 'success';
 }
 
+$latestBatchResults = isset($_SESSION['batch_results']) && is_array($_SESSION['batch_results']) ? $_SESSION['batch_results'] : null;
+$latestBatchTime = $_SESSION['last_batch_time'] ?? null;
+
 // Get files
 $excelFolderFiles = getExcelFilesFromFolder('excel-files', $autoConvertXlsFiles, $deleteOriginalXlsAfterConversion);
 $outputFiles = getOutputFiles($outputDir);
@@ -429,6 +479,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             $selectedTemplate = basename($activeTemplatePath);
             $_SESSION['selected_template'] = $selectedTemplate;
 
+            $templateIssues = validateTemplateCompatibility($activeTemplatePath);
+            if (!empty($templateIssues)) {
+                throw new Exception('Template compatibility check failed: ' . implode(' ', $templateIssues));
+            }
+
             $selectedFiles = isset($_POST['files']) ? array_filter((array)$_POST['files']) : [];
             
             if (empty($selectedFiles)) {
@@ -439,37 +494,81 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 'success' => 0,
                 'failed' => 0,
                 'total_employees' => 0,
+                'template' => $selectedTemplate,
                 'files' => []
             ];
-            
-            ob_start();
+
             foreach ($selectedFiles as $file) {
                 $safeFile = basename($file);
                 $fullPath = 'excel-files' . DIRECTORY_SEPARATOR . $safeFile;
                 
-                if (!file_exists($fullPath)) continue;
+                if (!file_exists($fullPath)) {
+                    $batchResults['failed']++;
+                    $batchResults['files'][$safeFile] = [
+                        'ok' => false,
+                        'message' => 'Input file not found in excel-files folder.',
+                        'diagnostics' => ''
+                    ];
+                    continue;
+                }
                 
+                ob_start();
                 try {
                     $generator = new DTRGenerator($fullPath, $activeTemplatePath, $outputDir);
                     $generator->loadSourceData();
-                    $empCount = $generator->getEmployeeCount();
-                    $generator->generateDTRs();
+                    $loadedEmployees = (int)$generator->getEmployeeCount();
+
+                    if ($loadedEmployees <= 0) {
+                        throw new Exception('No valid attendance rows found in source file. Ensure it contains attendance data with Name and Date columns, not a DTR template file.');
+                    }
+
+                    $generatedCount = (int)$generator->generateDTRs();
+                    $generatorOutput = trim((string)ob_get_clean());
+                    
+                    if ($generatedCount <= 0) {
+                        $diagnosticHint = $generatorOutput !== ''
+                            ? (' Generator output: ' . preg_replace('/\s+/', ' ', $generatorOutput))
+                            : '';
+                        throw new Exception('No DTR files were generated. The selected template may be incompatible with expected DTR cells/structure.' . $diagnosticHint);
+                    }
                     
                     $batchResults['success']++;
-                    $batchResults['total_employees'] += $empCount;
-                    $batchResults['files'][$safeFile] = "✓ Processed $empCount employees";
+                    $batchResults['total_employees'] += $generatedCount;
+                    $batchResults['files'][$safeFile] = [
+                        'ok' => true,
+                        'message' => "Generated $generatedCount DTR file(s)",
+                        'diagnostics' => $generatorOutput
+                    ];
                 } catch (Exception $e) {
+                    $generatorOutput = trim((string)ob_get_clean());
                     $batchResults['failed']++;
-                    $batchResults['files'][$safeFile] = "✗ " . $e->getMessage();
+                    $batchResults['files'][$safeFile] = [
+                        'ok' => false,
+                        'message' => $e->getMessage(),
+                        'diagnostics' => $generatorOutput
+                    ];
                 }
             }
-            ob_end_clean();
             
             $_SESSION['batch_results'] = $batchResults;
             $_SESSION['last_batch_time'] = date('Y-m-d H:i:s');
+            $latestBatchResults = $batchResults;
+            $latestBatchTime = $_SESSION['last_batch_time'];
+
+            if ($batchResults['success'] === 0) {
+                $failedMessages = [];
+                foreach ($batchResults['files'] as $filename => $resultMeta) {
+                    $failedMessages[] = $filename . ': ' . ($resultMeta['message'] ?? 'Unknown error');
+                }
+                $failedDetails = implode('; ', $failedMessages);
+                throw new Exception('Generation failed for all selected files. ' . $failedDetails);
+            }
             
             $message = "Processing complete! Successfully generated DTRs for {$batchResults['success']} file(s) with {$batchResults['total_employees']} total employees using template {$selectedTemplate}.";
             $messageType = 'success';
+
+            // Reload output files so newly generated DTRs appear immediately in section 2.
+            $outputFiles = getOutputFiles($outputDir);
         }
     } catch (Exception $e) {
         $message = $e->getMessage();
@@ -1095,7 +1194,7 @@ foreach ($outputFiles as $file) {
     <main class="w-full mx-auto px-6 lg:px-8 py-8">
         <!-- Alert Messages -->
         <?php if ($message): ?>
-        <div class="mb-6 p-4 rounded-lg flex items-start gap-3 <?php 
+        <div id="status-banner" data-message-type="<?php echo htmlspecialchars($messageType); ?>" class="mb-6 p-4 rounded-lg flex items-start gap-3 <?php 
             echo $messageType === 'success' ? 'bg-green-50 border border-green-200' : 
                  ($messageType === 'error' ? 'bg-red-50 border border-red-200' : 'bg-blue-50 border border-blue-200');
         ?>">
@@ -1295,9 +1394,8 @@ foreach ($outputFiles as $file) {
                                 </option>
                                 <?php endif; ?>
                                 <?php foreach ($templateFiles as $templateFile): ?>
-                                <?php if ($templateFile['name'] === basename($defaultTemplate)) continue; ?>
                                 <option value="<?php echo htmlspecialchars($templateFile['name']); ?>" <?php echo $selectedTemplate === $templateFile['name'] ? 'selected' : ''; ?>>
-                                    <?php echo htmlspecialchars($templateFile['name']); ?>
+                                    <?php echo htmlspecialchars($templateFile['name']); ?><?php echo $templateFile['name'] === basename($defaultTemplate) ? ' (Default)' : ''; ?>
                                 </option>
                                 <?php endforeach; ?>
                             </select>
@@ -1586,16 +1684,36 @@ foreach ($outputFiles as $file) {
                                     <th class="px-4 py-4 text-left font-bold text-gray-900 w-12">
                                     <input type="checkbox" onclick="toggleSelectAll('output-file-checkbox', this.checked)" class="h-4 w-4 text-indigo-600 rounded">
                                 </th>
-                                    <th class="px-4 py-4 text-left font-bold text-gray-900">Schedule</th>
-                                    <th class="px-4 py-4 text-left font-bold text-gray-900">Employee Name & File</th>
-                                    <th class="px-4 py-4 text-left font-bold text-gray-900">File Size</th>
-                                    <th class="px-4 py-4 text-left font-bold text-gray-900">Date Created</th>
+                                    <th class="px-4 py-4 text-left font-bold text-gray-900">
+                                        <button type="button" class="output-sort-btn inline-flex items-center gap-1 hover:text-green-700" data-sort-key="schedule">
+                                            <span>Schedule</span>
+                                            <span class="sort-indicator text-xs text-gray-500"></span>
+                                        </button>
+                                    </th>
+                                    <th class="px-4 py-4 text-left font-bold text-gray-900">
+                                        <button type="button" class="output-sort-btn inline-flex items-center gap-1 hover:text-green-700" data-sort-key="name">
+                                            <span>Employee Name &amp; File</span>
+                                            <span class="sort-indicator text-xs text-gray-500"></span>
+                                        </button>
+                                    </th>
+                                    <th class="px-4 py-4 text-left font-bold text-gray-900">
+                                        <button type="button" class="output-sort-btn inline-flex items-center gap-1 hover:text-green-700" data-sort-key="size">
+                                            <span>File Size</span>
+                                            <span class="sort-indicator text-xs text-gray-500"></span>
+                                        </button>
+                                    </th>
+                                    <th class="px-4 py-4 text-left font-bold text-gray-900">
+                                        <button type="button" class="output-sort-btn inline-flex items-center gap-1 hover:text-green-700" data-sort-key="date">
+                                            <span>Date Created</span>
+                                            <span class="sort-indicator text-xs text-gray-500"></span>
+                                        </button>
+                                    </th>
                                     <th class="px-4 py-4 text-right font-bold text-gray-900">Actions</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-200">
                             <?php foreach ($outputFiles as $file): ?>
-                                <tr class="hover:bg-blue-50 transition-colors output-file-row" data-filename="<?php echo strtolower(htmlspecialchars($file['name'])); ?>" data-schedule="<?php echo htmlspecialchars($file['schedule']); ?>">
+                                <tr class="hover:bg-blue-50 transition-colors output-file-row" data-filename="<?php echo strtolower(htmlspecialchars($file['name'])); ?>" data-schedule="<?php echo htmlspecialchars($file['schedule']); ?>" data-size="<?php echo (int)$file['size']; ?>" data-modified="<?php echo (int)$file['modified']; ?>">
                                     <td class="px-4 py-4">
                                     <input type="checkbox" name="delete_files[]" value="<?php echo htmlspecialchars($file['name']); ?>" class="h-4 w-4 text-indigo-600 rounded output-file-checkbox">
                                 </td>
@@ -1655,6 +1773,35 @@ foreach ($outputFiles as $file) {
             </form>
             <?php endif; ?>
         </div>
+
+        <?php if (!empty($latestBatchResults['files'])): ?>
+        <div class="mt-8 p-4 rounded-lg border border-gray-200 bg-white">
+            <div class="flex items-center justify-between mb-3">
+                <h3 class="text-base font-bold text-gray-900">Latest Generation Diagnostics</h3>
+                <span class="text-xs text-gray-600"><?php echo htmlspecialchars((string)($latestBatchTime ?? '')); ?></span>
+            </div>
+            <p class="text-sm text-gray-700 mb-3">
+                Template: <strong><?php echo htmlspecialchars((string)($latestBatchResults['template'] ?? $selectedTemplate)); ?></strong>
+                | Success: <strong class="text-green-700"><?php echo (int)($latestBatchResults['success'] ?? 0); ?></strong>
+                | Failed: <strong class="text-red-700"><?php echo (int)($latestBatchResults['failed'] ?? 0); ?></strong>
+            </p>
+            <div class="space-y-2 max-h-72 overflow-y-auto">
+                <?php foreach ($latestBatchResults['files'] as $fileName => $resultMeta): ?>
+                    <?php
+                        $isOk = !empty($resultMeta['ok']);
+                        $resultMessage = is_array($resultMeta) ? ($resultMeta['message'] ?? '') : (string)$resultMeta;
+                        $diagnostics = is_array($resultMeta) ? trim((string)($resultMeta['diagnostics'] ?? '')) : '';
+                    ?>
+                    <details class="rounded-md border <?php echo $isOk ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'; ?> p-3">
+                        <summary class="cursor-pointer text-sm font-semibold <?php echo $isOk ? 'text-green-800' : 'text-red-800'; ?>">
+                            <?php echo $isOk ? '✓' : '✗'; ?> <?php echo htmlspecialchars((string)$fileName); ?> - <?php echo htmlspecialchars($resultMessage); ?>
+                        </summary>
+                        <div class="mt-2 text-xs text-gray-700 whitespace-pre-wrap bg-white border border-gray-200 rounded p-2"><?php echo htmlspecialchars($diagnostics !== '' ? $diagnostics : 'No additional diagnostics.'); ?></div>
+                    </details>
+                <?php endforeach; ?>
+            </div>
+        </div>
+        <?php endif; ?>
     </main>
 
     <!-- Footer -->
@@ -1663,11 +1810,30 @@ foreach ($outputFiles as $file) {
     <script>
         // Initialize UI interactions
         document.addEventListener('DOMContentLoaded', function() {
+            const statusBanner = document.getElementById('status-banner');
+            if (statusBanner) {
+                const messageType = statusBanner.getAttribute('data-message-type');
+                if (messageType === 'success' || messageType === 'error') {
+                    setTimeout(function() {
+                        statusBanner.style.transition = 'opacity 0.5s ease';
+                        statusBanner.style.opacity = '0';
+                        setTimeout(function() {
+                            if (statusBanner && statusBanner.parentNode) {
+                                statusBanner.parentNode.removeChild(statusBanner);
+                            }
+                        }, 500);
+                    }, 5000);
+                }
+            }
+
             // Setup live search for input files
             setupLiveSearchInput();
 
             // Setup live search for output files
             setupLiveSearch();
+
+            // Setup output table sorting
+            setupOutputTableSorting();
 
             // Setup checkbox listeners for Generate button visibility
             setupProcessCheckboxListeners();
@@ -1777,6 +1943,7 @@ foreach ($outputFiles as $file) {
 
         // Store selected files globally
         let selectedFilesArray = [];
+        let outputSortState = { key: null, direction: 'asc' };
 
         // Handle file selection for upload
         function handleFileSelect(event) {
@@ -1892,6 +2059,10 @@ foreach ($outputFiles as $file) {
             document.querySelectorAll('.' + className).forEach(function(checkbox) {
                 checkbox.checked = checked;
             });
+
+            if (className === 'process-file-checkbox') {
+                updateGenerateButtonState();
+            }
         }
 
         // Handle upload form submission with AJAX
@@ -2208,66 +2379,71 @@ foreach ($outputFiles as $file) {
 
         // Refresh input file list dynamically
         function refreshInputFileList(files) {
-            const processForm = document.getElementById('process-form');
-            if (!processForm) return;
-            
-            // Find the file list container
-            const fileListContainer = processForm.querySelector('.space-y-2');
-            if (!fileListContainer) return;
-            
-            // Clear current list
-            fileListContainer.innerHTML = '';
-            
-            if (files.length === 0) {
-                processForm.parentElement.innerHTML = `
-                    <div class="text-center py-12 bg-gray-50 rounded-lg">
-                        <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                        </svg>
-                        <p class="mt-4 text-gray-700 font-medium">No files available</p>
-                        <p class="text-sm text-gray-600">Upload Excel files to the <code class="bg-gray-200 px-2 py-1 rounded">excel-files</code> folder</p>
-                    </div>`;
+            const table = document.getElementById('input-files-table');
+            if (!table) {
+                window.location.reload();
                 return;
             }
-            
-            // Rebuild file list
-            files.forEach(file => {
-                const label = document.createElement('label');
-                label.className = 'flex items-start p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer';
-                
-                const validText = file.valid ? 
-                    `<span>${file.employees} employees</span> | ` : 
-                    '<span class="text-red-600">Not readable</span> | ';
-                const errorText = !file.valid && file.error ? 
-                    `<p class="text-xs text-red-600 mt-1">${escapeHtml(file.error)}</p>` : '';
-                
-                label.innerHTML = `
-                    <input type="checkbox" name="files[]" value="${escapeHtml(file.name)}" 
-                           class="mt-1 h-4 w-4 text-indigo-600 rounded process-file-checkbox" 
-                           data-valid="${file.valid ? '1' : '0'}">
-                    <div class="ml-3 flex-1">
-                        <p class="font-medium text-gray-800">${escapeHtml(file.name)}</p>
-                        <p class="text-sm text-gray-600">
-                            ${validText}<span>${formatFileSize(file.size)}</span>
-                        </p>
-                        ${errorText}
-                    </div>
-                `;
-                
-                fileListContainer.appendChild(label);
-            });
-            
-            // Update stats
-            const validFiles = files.filter(f => f.valid);
-            const invalidFiles = files.filter(f => !f.valid);
-            const totalEmployees = validFiles.reduce((sum, f) => sum + f.employees, 0);
-            
-            // Update section badge (find by looking for the badge near the file list)
-            const availableFilesBadge = processForm.closest('.bg-white').querySelector('.bg-indigo-100');
-            if (availableFilesBadge) {
-                availableFilesBadge.textContent = files.length + ' available';
+
+            const tbody = table.querySelector('tbody');
+            if (!tbody) {
+                window.location.reload();
+                return;
             }
-            
+
+            tbody.innerHTML = '';
+
+            files.forEach(file => {
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-indigo-50 transition-colors input-file-row';
+                tr.setAttribute('data-filename', String(file.name || '').toLowerCase());
+
+                const isValid = !!file.valid;
+                const statusBadge = isValid
+                    ? '<span class="inline-flex items-center px-3 py-2 rounded-full text-xs font-bold bg-green-100 text-green-800 border border-green-300">Ready</span>'
+                    : '<span class="inline-flex items-center px-3 py-2 rounded-full text-xs font-bold bg-red-100 text-red-800 border border-red-300">Invalid</span>';
+
+                const safeName = escapeHtml(String(file.name || ''));
+                const safeErr = escapeHtml(String(file.error || 'Unable to read file'));
+                const employeeText = isValid
+                    ? `<span class="inline-flex items-center px-4 py-2 rounded-full text-sm font-semibold bg-blue-100 text-blue-800">${Number(file.employees || 0)} employees</span>`
+                    : '<span class="text-gray-500 text-sm">N/A</span>';
+
+                tr.innerHTML = `
+                    <td class="px-6 py-5">
+                        <input type="checkbox" name="files[]" value="${safeName}" class="h-4 w-4 text-indigo-600 rounded process-file-checkbox" data-valid="${isValid ? '1' : '0'}">
+                    </td>
+                    <td class="px-6 py-5">${statusBadge}</td>
+                    <td class="px-6 py-5">
+                        <div class="font-semibold text-gray-900 text-base">${safeName}</div>
+                        <div class="text-xs text-gray-500 mt-2">Excel File</div>
+                        ${isValid ? '' : `<div class="text-xs text-red-600 mt-2 bg-red-50 px-3 py-2 rounded border border-red-200"><strong>Error:</strong> ${safeErr}</div>`}
+                    </td>
+                    <td class="px-6 py-5">${employeeText}</td>
+                    <td class="px-6 py-5 text-gray-800 font-semibold text-base">${formatFileSize(Number(file.size || 0))}</td>
+                    <td class="px-6 py-5 text-right">
+                        <div class="flex gap-2 justify-end">
+                            <button type="button" onclick="deleteSingleInputFile('${String(file.name || '').replace(/'/g, "\\'")}')" class="inline-flex items-center px-4 py-2.5 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 font-semibold text-sm transition shadow-sm">Delete</button>
+                        </div>
+                    </td>
+                `;
+
+                tbody.appendChild(tr);
+            });
+
+            const validFiles = files.filter(f => !!f.valid);
+            const invalidFiles = files.filter(f => !f.valid);
+            const totalEmployees = validFiles.reduce((sum, f) => sum + Number(f.employees || 0), 0);
+
+            const processCard = document.getElementById('process-form') ? document.getElementById('process-form').closest('.bg-white') : null;
+            if (processCard) {
+                const badge = processCard.querySelector('.bg-indigo-100');
+                if (badge) {
+                    badge.textContent = files.length + ' available';
+                }
+            }
+
+            setupProcessCheckboxListeners();
             updateDashboardStats(validFiles.length, totalEmployees, invalidFiles.length);
         }
 
@@ -2295,7 +2471,11 @@ foreach ($outputFiles as $file) {
             // Rebuild file list
             files.forEach(file => {
                 const tr = document.createElement('tr');
-                tr.className = 'hover:bg-gray-50';
+                tr.className = 'hover:bg-blue-50 transition-colors output-file-row';
+                tr.setAttribute('data-filename', String(file.name || '').toLowerCase());
+                tr.setAttribute('data-schedule', String(file.schedule || 'Unknown'));
+                tr.setAttribute('data-size', String(Number(file.size || 0)));
+                tr.setAttribute('data-modified', String(Number(file.modified || 0)));
                 
                 let scheduleBadge = '';
                 if (file.schedule === '7-4') {
@@ -2329,6 +2509,8 @@ foreach ($outputFiles as $file) {
                 
                 tbody.appendChild(tr);
             });
+
+            setupOutputTableSorting();
             
             // Update file count badge
             const outputSection = document.querySelector('#output-files-form').closest('.bg-white');
@@ -2342,6 +2524,111 @@ foreach ($outputFiles as $file) {
             if (dashboardCards[2]) {
                 const countElement = dashboardCards[2].querySelector('.text-3xl');
                 if (countElement) countElement.textContent = files.length;
+            }
+        }
+
+        function getOutputSortValue(row, key) {
+            if (!row) return '';
+
+            if (key === 'schedule') {
+                const schedule = String(row.getAttribute('data-schedule') || '').trim();
+                const scheduleOrder = { '7-4': 1, '8-5': 2 };
+                return Object.prototype.hasOwnProperty.call(scheduleOrder, schedule) ? scheduleOrder[schedule] : 99;
+            }
+
+            if (key === 'name') {
+                return String(row.getAttribute('data-filename') || '').toLowerCase();
+            }
+
+            if (key === 'size') {
+                return Number(row.getAttribute('data-size') || 0);
+            }
+
+            if (key === 'date') {
+                return Number(row.getAttribute('data-modified') || 0);
+            }
+
+            return '';
+        }
+
+        function updateOutputSortIndicators() {
+            const sortButtons = document.querySelectorAll('.output-sort-btn');
+            sortButtons.forEach(function(button) {
+                const indicator = button.querySelector('.sort-indicator');
+                if (!indicator) return;
+
+                if (button.getAttribute('data-sort-key') === outputSortState.key) {
+                    indicator.textContent = outputSortState.direction === 'asc' ? '▲' : '▼';
+                } else {
+                    indicator.textContent = '';
+                }
+            });
+        }
+
+        function applyOutputTableSort() {
+            const outputTable = document.getElementById('output-files-table');
+            if (!outputTable || !outputSortState.key) {
+                updateOutputSortIndicators();
+                return;
+            }
+
+            const tbody = outputTable.querySelector('tbody');
+            if (!tbody) {
+                updateOutputSortIndicators();
+                return;
+            }
+
+            const rows = Array.from(tbody.querySelectorAll('.output-file-row'));
+            const directionFactor = outputSortState.direction === 'asc' ? 1 : -1;
+
+            rows.sort(function(a, b) {
+                const aValue = getOutputSortValue(a, outputSortState.key);
+                const bValue = getOutputSortValue(b, outputSortState.key);
+
+                if (typeof aValue === 'string' || typeof bValue === 'string') {
+                    return String(aValue).localeCompare(String(bValue)) * directionFactor;
+                }
+
+                if (aValue === bValue) return 0;
+                return (aValue > bValue ? 1 : -1) * directionFactor;
+            });
+
+            rows.forEach(function(row) {
+                tbody.appendChild(row);
+            });
+
+            updateOutputSortIndicators();
+        }
+
+        function setupOutputTableSorting() {
+            const sortButtons = document.querySelectorAll('.output-sort-btn');
+            if (!sortButtons.length) return;
+
+            sortButtons.forEach(function(button) {
+                if (button.getAttribute('data-sort-bound') === '1') {
+                    return;
+                }
+
+                button.setAttribute('data-sort-bound', '1');
+                button.addEventListener('click', function() {
+                    const key = button.getAttribute('data-sort-key');
+                    if (!key) return;
+
+                    if (outputSortState.key === key) {
+                        outputSortState.direction = outputSortState.direction === 'asc' ? 'desc' : 'asc';
+                    } else {
+                        outputSortState.key = key;
+                        outputSortState.direction = 'asc';
+                    }
+
+                    applyOutputTableSort();
+                });
+            });
+
+            if (outputSortState.key) {
+                applyOutputTableSort();
+            } else {
+                updateOutputSortIndicators();
             }
         }
 

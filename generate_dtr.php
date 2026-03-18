@@ -491,7 +491,7 @@ class DTRGenerator
         
         if (empty($this->logData)) {
             echo "No data to process. Load source data first.\n";
-            return false;
+            return 0;
         }
         
         echo "\nGenerating DTR files...\n";
@@ -503,10 +503,11 @@ class DTRGenerator
             $templateSpreadsheet->getActiveSheet()->setAutoFilter(null);
         } catch (Exception $e) {
             echo "Error loading template: " . $e->getMessage() . "\n";
-            return false;
+            return 0;
         }
         
         $count = 0;
+        $generationErrors = [];
         foreach ($this->logData as $employeeName => $data) {
             try {
                 // Pass the template to avoid reloading from disk
@@ -519,16 +520,26 @@ class DTRGenerator
                     gc_collect_cycles();
                 }
             } catch (Exception $e) {
-                echo "✗ Error generating DTR for $employeeName: " . $e->getMessage() . "\n";
+                $errorMsg = "Error generating DTR for $employeeName: " . $e->getMessage();
+                $generationErrors[] = $errorMsg;
+                echo "✗ {$errorMsg}\n";
             }
         }
         
         // Clean up template
         $templateSpreadsheet->disconnectWorksheets();
         unset($templateSpreadsheet);
+
+        if ($count === 0 && !empty($generationErrors)) {
+            $previewErrors = array_slice($generationErrors, 0, 3);
+            throw new Exception(
+                "Failed to generate DTR files for all employees. " .
+                implode(' | ', $previewErrors)
+            );
+        }
         
         echo "\nCompleted! Generated $count DTR files in {$this->outputDir}/\n";
-        return true;
+        return $count;
     }
 
     /**
@@ -549,12 +560,12 @@ class DTRGenerator
     
     /**
      * Generate DTR for a single employee
-     * @param Spreadsheet $templateSpreadsheet The pre-loaded template to clone
+     * @param Spreadsheet $templateSpreadsheet The pre-loaded template to copy
      */
     private function generateSingleDTR($employeeName, $employeeData, $templateSpreadsheet)
     {
-        // Clone template instead of loading from disk (HUGE performance boost)
-        $template = clone $templateSpreadsheet;
+        // PhpSpreadsheet no longer supports cloning Spreadsheet directly.
+        $template = $templateSpreadsheet->copy();
         $sheet = $template->getActiveSheet();
         
         // Detect and update official hours based on schedule
