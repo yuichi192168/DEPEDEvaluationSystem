@@ -4,6 +4,7 @@ This master handbook compiles three user manuals into one document:
 1. DepEd HRMPSB Evaluation System
 2. Reclassification Form for Teaching Positions (RFTP)
 3. DTR Generator
+4. GWA Calculator
 
 **Document Version:** 1.1  
 **Last Updated:** March 19, 2026  
@@ -26,7 +27,8 @@ This master handbook compiles three user manuals into one document:
 1. Part I - DepEd HRMPSB Evaluation System
 2. Part II - Reclassification Form for Teaching Positions (RFTP)
 3. Part III - DTR Generator
-4. Release Checklist
+4. Part IV - GWA Calculator
+5. Release Checklist
 
 ### Quick Access URLs (Localhost)
 
@@ -34,6 +36,7 @@ This master handbook compiles three user manuals into one document:
 2. Admin Login: `http://localhost/DEPEDEvaluationSystem/admin/login.php`
 3. Reclassification Module: `http://localhost/DEPEDEvaluationSystem/reclassification_form.php`
 4. DTR Generator: `http://localhost/DEPEDEvaluationSystem/dtr_generator_redesigned.php`
+5. GWA Calculator: `http://localhost/DEPEDEvaluationSystem/gwa_calculator.html`
 
 ---
 
@@ -1333,6 +1336,285 @@ Before final release, replace screenshot placeholders with actual images and kee
 
 ---
 
+# Part IV - GWA Calculator
+
+# GWA Calculator
+## User Manual
+
+---
+
+## Title Page
+
+**System Name:** GWA Calculator  
+**Module/File:** `gwa_calculator.html`  
+**Version:** 1.0  
+**Author / Developer:** Aljay Plantado  
+**Year:** 2026  
+
+---
+
+## Introduction
+
+### Brief Description of the System
+The GWA Calculator is a web-based utility that helps users compute the General Weighted Average (GWA) from entered subjects, units, and grades. It provides immediate computation and supports quick review of academic standing.
+
+### Purpose of the System
+This module is designed to:
+1. Capture subject-level grade entries.
+2. Compute weighted average based on units and grades.
+3. Display a clear GWA result instantly.
+4. Help users verify grade computations before submission or reporting.
+
+### Who This Manual Is For
+This manual is for:
+1. Applicants preparing academic credentials.
+2. HR evaluators validating GWA computations.
+3. School/division staff assisting in qualification checks.
+4. Beginner users who need a simple grade calculator guide.
+
+---
+
+## System Overview
+
+### Main Features
+1. Add multiple subject rows for encoding.
+2. Enter subject name, number of units, and grade per row.
+3. Automatic weighted total computation.
+4. Instant GWA display after calculation.
+5. Input reset/clear functionality for new calculations.
+
+### User Roles
+1. **User / Evaluator**
+   - Opens the calculator page.
+   - Encodes subjects, units, and grades.
+   - Computes and reviews GWA output.
+
+2. **Admin / Support (Optional)**
+   - Assists users in verifying input and browser compatibility.
+   - Maintains deployment access to the module.
+
+---
+
+## System Requirements
+
+### Browser Requirements
+Use any modern browser:
+1. Google Chrome
+2. Microsoft Edge
+3. Mozilla Firefox
+4. Safari
+
+### Internet Requirements
+1. **For local setup (XAMPP):** Internet is not required after setup.
+2. **For hosted setup:** Stable internet is recommended.
+
+### Device Compatibility
+1. Desktop/Laptop (recommended for easier data entry).
+2. Tablet (supported).
+3. Mobile phone (supported for light use).
+
+---
+
+## Getting Started
+
+### How to Access the System
+1. Start Apache in XAMPP.
+2. Open your browser.
+3. Go to:  
+   `http://localhost/DEPEDEvaluationSystem/gwa_calculator.html`
+
+**Screenshot: Open GWA Calculator Page**  
+`[Insert Screenshot Here: Browser showing gwa_calculator.html loaded]`  
+**Caption:** Figure 1. Opening the GWA Calculator page.
+
+### Login Instructions
+1. No login is required for this module in the current setup.
+2. Access depends on local deployment availability.
+
+### Account Creation (If Applicable)
+1. No account creation flow is required for this module.
+2. If authentication is added in the future, follow admin policy.
+
+---
+
+## Dashboard Overview
+
+### What Users Can See
+1. Calculator title/header.
+2. Subject entry rows or table.
+3. Units and grade input fields.
+4. Compute button for GWA calculation.
+5. Result section showing computed GWA.
+6. Clear/Reset action for starting over.
+
+**Screenshot: GWA Calculator Interface**  
+`[Insert Screenshot Here: Full GWA calculator layout with inputs and result area]`  
+**Caption:** Figure 2. Main GWA Calculator interface.
+
+---
+
+## Step by Step Instructions for Each Feature
+
+## Feature: Enter Subject Records
+### Purpose
+To provide required grade components for weighted average computation.
+
+### Steps
+1. Open the GWA Calculator page.
+2. Enter each subject name (if field is available).
+3. Enter corresponding number of units.
+4. Enter corresponding grade value.
+5. Repeat for all subjects.
+
+**Screenshot: Subject Data Entry**  
+`[Insert Screenshot Here: Filled subject rows with units and grades]`  
+**Caption:** Figure 3. Encoding subjects, units, and grades.
+
+## Feature: Compute GWA
+### Purpose
+To calculate and display the General Weighted Average.
+
+### Steps
+1. Confirm all required fields are filled correctly.
+2. Click **Calculate GWA** (or equivalent compute button).
+3. Review the computed GWA in the result section.
+4. Verify result against source grades if needed.
+
+**Screenshot: Computed GWA Result**  
+`[Insert Screenshot Here: Computed GWA output after clicking calculate]`  
+**Caption:** Figure 4. Displayed GWA result after computation.
+
+## Feature: Clear or Reset Entries
+### Purpose
+To remove current values and perform a fresh computation.
+
+### Steps
+1. Click **Clear** or **Reset**.
+2. Confirm all fields are emptied.
+3. Enter new records for another applicant/student.
+
+**Screenshot: Clear/Reset Action**  
+`[Insert Screenshot Here: Reset button action and cleared form state]`  
+**Caption:** Figure 5. Clearing all calculator inputs for a new entry.
+
+---
+
+## Common Tasks
+
+## Task 1: Compute One Applicant's GWA
+1. Open `gwa_calculator.html`.
+2. Enter all subjects with units and grades.
+3. Click **Calculate GWA**.
+4. Record the final GWA result.
+
+**Screenshot: Single GWA Computation Workflow**  
+`[Insert Screenshot Here: Example workflow from data entry to result]`  
+**Caption:** Figure 6. Typical single GWA calculation flow.
+
+## Task 2: Recompute After Correcting a Grade
+1. Identify incorrect grade entry.
+2. Update the grade value.
+3. Recalculate GWA.
+4. Confirm updated result.
+
+**Screenshot: Grade Correction and Recalculation**  
+`[Insert Screenshot Here: Corrected grade and updated GWA result]`  
+**Caption:** Figure 7. Recomputing GWA after editing an input value.
+
+## Task 3: Start a New Computation
+1. Click **Clear/Reset**.
+2. Confirm form is empty.
+3. Enter a new set of subjects and grades.
+
+**Screenshot: New Computation Setup**  
+`[Insert Screenshot Here: Cleared form ready for next entry]`  
+**Caption:** Figure 8. Preparing the calculator for a new GWA computation.
+
+---
+
+## Troubleshooting
+
+## Common Issue: GWA Result Does Not Appear
+Possible solutions:
+1. Check that required fields are not blank.
+2. Ensure numeric values are entered for units and grades.
+3. Re-click the compute button after reviewing all inputs.
+
+## Common Issue: Computed GWA Looks Incorrect
+Possible solutions:
+1. Verify each unit value is correct.
+2. Check if grade format follows expected scale.
+3. Recompute after correcting data entry mistakes.
+
+## Common Issue: Page Does Not Open
+Possible solutions:
+1. Confirm Apache is running in XAMPP.
+2. Verify URL path is correct.
+3. Try another supported browser.
+
+## Common Issue: Inputs Cannot Be Edited
+Possible solutions:
+1. Refresh the page.
+2. Clear browser cache and retry.
+3. Ensure no browser extension is blocking scripts.
+
+---
+
+## Frequently Asked Questions (FAQ)
+
+## 1. Do I need to log in to use the GWA Calculator?
+No. The module is accessible directly in the current setup.
+
+## 2. Can I compute multiple subjects in one run?
+Yes. Enter all required subjects before calculating.
+
+## 3. Is the calculation automatic while typing?
+Depending on implementation, you may need to click the compute button to refresh the result.
+
+## 4. Can I use this on mobile?
+Yes, but desktop/laptop is recommended for easier entry and review.
+
+## 5. What if I entered a wrong grade?
+Edit the input and compute again.
+
+---
+
+## Contact or Support Information
+
+Before reporting an issue, prepare:
+1. Screenshot of the calculator page and entered values.
+2. Expected result vs computed result.
+3. Browser and date/time of issue.
+4. Steps performed before issue occurred.
+
+Suggested support channels:
+1. HRMPSB System Administrator
+2. Division ICT Support Team
+3. Internal Helpdesk
+
+**Support Template**
+- Subject: `GWA Calculator Issue - [Short Description]`
+- Include: browser, screenshot, input values, expected result, and reproduction steps.
+
+---
+
+## Document Notes
+
+This manual is written in beginner-friendly language and is suitable for:
+1. PDF conversion
+2. Word conversion
+3. Web documentation publishing
+
+Before final release, replace screenshot placeholders with actual screenshots and keep figure captions directly below each image.
+
+### Section Change Log (Part IV)
+
+1. Added a complete user manual section for the GWA Calculator module.
+2. Included workflows for data entry, calculation, correction, and reset.
+3. Added module-specific troubleshooting and FAQ for common user issues.
+
+---
+
 ## Release Checklist
 
 Use this checklist before publishing the handbook to staff:
@@ -1348,5 +1630,6 @@ Use this checklist before publishing the handbook to staff:
 
 ## Revision History
 
-1. **v1.1 (2026-03-19):** Added document control metadata, quick access links, section-level change logs, and release checklist.
-2. **v1.0 (2026):** Initial consolidated master handbook for Part I, Part II, and Part III.
+1. **v1.2 (2026-03-19):** Added Part IV (GWA Calculator) with full user manual coverage; updated contents and quick links.
+2. **v1.1 (2026-03-19):** Added document control metadata, quick access links, section-level change logs, and release checklist.
+3. **v1.0 (2026):** Initial consolidated master handbook for Part I, Part II, and Part III.
