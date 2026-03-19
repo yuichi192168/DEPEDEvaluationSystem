@@ -5,6 +5,20 @@ This master handbook compiles three user manuals into one document:
 2. Reclassification Form for Teaching Positions (RFTP)
 3. DTR Generator
 
+**Document Version:** 1.1  
+**Last Updated:** March 19, 2026  
+**Maintainer:** HRMPSB System Administrator
+
+---
+
+## How to Use This Handbook
+
+1. Use the table of contents to jump to the module you are working on.
+2. Follow the **Step by Step Instructions** per feature.
+3. Use **Common Tasks** for quick day-to-day workflows.
+4. Check **Troubleshooting** and **FAQ** before filing support tickets.
+5. Replace all screenshot placeholders before final publication.
+
 ---
 
 ## Table of Contents
@@ -12,6 +26,14 @@ This master handbook compiles three user manuals into one document:
 1. Part I - DepEd HRMPSB Evaluation System
 2. Part II - Reclassification Form for Teaching Positions (RFTP)
 3. Part III - DTR Generator
+4. Release Checklist
+
+### Quick Access URLs (Localhost)
+
+1. Main System: `http://localhost/DEPEDEvaluationSystem/`
+2. Admin Login: `http://localhost/DEPEDEvaluationSystem/admin/login.php`
+3. Reclassification Module: `http://localhost/DEPEDEvaluationSystem/reclassification_form.php`
+4. DTR Generator: `http://localhost/DEPEDEvaluationSystem/dtr_generator_redesigned.php`
 
 ---
 
@@ -430,6 +452,12 @@ This manual is written in beginner-friendly language and is suitable for:
 3. Web documentation publishing
 
 When finalizing this manual for release, replace all screenshot placeholders with actual system screenshots and keep the figure captions below each image.
+
+### Section Change Log (Part I)
+
+1. Standardized wording for beginner-friendly instructions.
+2. Confirmed key URLs and admin access flow.
+3. Retained screenshot placeholders for controlled documentation release.
 
 
 ---
@@ -889,6 +917,12 @@ This manual is written in simple, beginner-friendly language and is ready for:
 
 Before official release, replace screenshot placeholders with actual screenshots and keep captions directly below each image.
 
+### Section Change Log (Part II)
+
+1. Preserved current reclassification workflow and position path guidance.
+2. Kept troubleshooting and FAQ entries aligned for non-technical users.
+3. Retained screenshot placeholder format for consistent publishing.
+
 
 ---
 
@@ -1290,3 +1324,29 @@ This manual is written in clear, beginner-friendly language and is suitable for:
 3. Website documentation
 
 Before final release, replace screenshot placeholders with actual images and keep figure captions directly below each screenshot.
+
+### Section Change Log (Part III)
+
+1. Maintained upload-process-download workflow instructions.
+2. Kept template and batch download guidance explicit for monthly operations.
+3. Retained troubleshooting focus for file quality and output generation issues.
+
+---
+
+## Release Checklist
+
+Use this checklist before publishing the handbook to staff:
+
+1. Replace every `[Insert Screenshot Here: ...]` placeholder with actual screenshots.
+2. Verify all localhost URLs match the deployment path.
+3. Validate admin credentials policy and remove obsolete defaults from distributed copies (if required by policy).
+4. Export and proofread PDF and Word versions.
+5. Confirm figure numbering and captions are still correct after edits.
+6. Have one evaluator and one admin perform a dry run using this handbook.
+
+---
+
+## Revision History
+
+1. **v1.1 (2026-03-19):** Added document control metadata, quick access links, section-level change logs, and release checklist.
+2. **v1.0 (2026):** Initial consolidated master handbook for Part I, Part II, and Part III.
