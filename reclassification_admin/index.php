@@ -267,7 +267,7 @@ $currentUserRole = $isAuthenticated ? $currentUser['role'] : 'guest';
             transition: all 0.2s;
         }
         .action-btn-edit {
-            background: #E3D2C4;
+            background: #bfdbfe;
             color: #055489;
         }
         .action-btn-edit:hover {
@@ -533,7 +533,7 @@ $currentUserRole = $isAuthenticated ? $currentUser['role'] : 'guest';
         }
         body.dark-mode .action-btn-edit {
             background: #3f2a1a;
-            color: #f5c58f;
+            color: #ddd6fe;
         }
         body.dark-mode .action-btn-edit:hover {
             background: #5a3a22;

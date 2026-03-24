@@ -409,8 +409,8 @@ function positionGroupLabel($group) {
         }
 
         .badge-group-teaching {
-            background: #d4edda;
-            color: #155724;
+            background: #d1ecf1;
+            color: #0c5460;
         }
 
         .badge-group-non-teaching-level-i {
@@ -419,23 +419,23 @@ function positionGroupLabel($group) {
         }
 
         .badge-group-non-teaching-level-ii {
-            background: #ffe8a1;
-            color: #7a5b00;
+            background: #d1ecf1;
+            color: #0c5460;
         }
 
         .badge-group-related-teaching {
-            background: #e7d9f9;
-            color: #4b1f7a;
+            background: #d1ecf1;
+            color: #0c5460;
         }
 
         .badge-group-higher-teaching {
-            background: #f8d7da;
-            color: #721c24;
+            background: #d1ecf1;
+            color: #0c5460;
         }
 
         .badge-group-school-administration {
-            background: #fff3cd;
-            color: #856404;
+            background: #d1ecf1;
+            color: #0c5460;
         }
 
         .badge-archived {

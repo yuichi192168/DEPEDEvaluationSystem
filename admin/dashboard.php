@@ -573,8 +573,8 @@ $totalPages = ceil($totalCount / $itemsPerPage);
         }
 
         .badge-group-teaching {
-            background: #d4edda;
-            color: #155724;
+            background: #d1ecf1;
+            color: #0c5460;
         }
 
         .badge-group-non-teaching-level-i {
@@ -583,23 +583,23 @@ $totalPages = ceil($totalCount / $itemsPerPage);
         }
 
         .badge-group-non-teaching-level-ii {
-            background: #ffe8a1;
-            color: #7a5b00;
+            background: #d1ecf1;
+            color: #0c5460;
         }
 
         .badge-group-related-teaching {
-            background: #e7d9f9;
-            color: #4b1f7a;
+            background: #d1ecf1;
+            color: #0c5460;
         }
 
         .badge-group-higher-teaching {
-            background: #f8d7da;
-            color: #721c24;
+            background: #d1ecf1;
+            color: #0c5460;
         }
 
         .badge-group-school-administration {
-            background: #fff3cd;
-            color: #856404;
+            background: #d1ecf1;
+            color: #0c5460;
         }
 
         /* Responsive Design */
@@ -717,33 +717,33 @@ $totalPages = ceil($totalCount / $itemsPerPage);
         }
 
         .badge-group-teaching {
-            background: #e3f2fd;
-            color: #1976d2;
+            background: #bfdbfe;
+            color: #055489;
         }
 
         .badge-group-non-teaching-level-i {
-            background: #e0f7fa;
-            color: #006064;
+            background: #bfdbfe;
+            color: #055489;
         }
 
         .badge-group-non-teaching-level-ii {
-            background: #fff3e0;
-            color: #f57c00;
+            background: #bfdbfe;
+            color: #055489;
         }
 
         .badge-group-related-teaching {
-            background: #ede7f6;
-            color: #5e35b1;
+            background: #bfdbfe;
+            color: #055489;
         }
 
         .badge-group-higher-teaching {
-            background: #f3e5f5;
-            color: #7b1fa2;
+            background: #bfdbfe;
+            color: #055489;
         }
 
         .badge-group-school-administration {
-            background: #fff8e1;
-            color: #8d6e63;
+            background: #bfdbfe;
+            color: #055489;
         }
 
         /* Modal Styles */
@@ -1111,8 +1111,8 @@ $totalPages = ceil($totalCount / $itemsPerPage);
         }
 
         body.dark-mode .badge-group-teaching {
-            background: #1e3a2f;
-            color: #a7f3d0;
+            background: #bfdbfe;
+            color: #055489;
         }
 
         body.dark-mode .badge-group-non-teaching-level-i {
@@ -1121,23 +1121,23 @@ $totalPages = ceil($totalCount / $itemsPerPage);
         }
 
         body.dark-mode .badge-group-non-teaching-level-ii {
-            background: #3f3418;
-            color: #fde68a;
+            background: #153344;
+            color: #bae6fd;
         }
 
         body.dark-mode .badge-group-related-teaching {
-            background: #312e81;
-            color: #ddd6fe;
+            background: #153344;
+            color: #bae6fd;
         }
 
         body.dark-mode .badge-group-higher-teaching {
-            background: #4c1d95;
-            color: #e9d5ff;
+            background: #153344;
+            color: #bae6fd;
         }
 
         body.dark-mode .badge-group-school-administration {
-            background: #3f2d22;
-            color: #fed7aa;
+            background: #153344;
+            color: #bae6fd;
         }
 
         body.dark-mode .history-item {

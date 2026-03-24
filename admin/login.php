@@ -489,9 +489,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </a>
         </div>
 
-        <div class="footer-credits">
+        <!-- <div class="footer-credits">
             <p>© 2026 DepEd HRMPSB Evaluation System | Admin Portal</p>
-        </div>
+        </div> -->
     </div>
 
     <script>
