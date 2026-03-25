@@ -16,6 +16,9 @@ class FormValidator {
         ];
         this.validationRules = {};
         this.isValid = false;
+        this._appCodeEditedManually = false;
+        this._duplicateCheckDebounce = null;
+        this._autoGenerateInFlight = false;
         this.init();
     }
 
@@ -88,9 +91,91 @@ class FormValidator {
         if (appCodeEl) {
             let deb = null;
             appCodeEl.addEventListener('input', () => {
+                this._appCodeEditedManually = true;
                 if (deb) clearTimeout(deb);
-                deb = setTimeout(() => this.checkDuplicateApplication(appCodeEl.value), 600);
+                deb = setTimeout(() => this.checkDuplicateCombination(), 450);
             });
+        }
+
+        const applicantNameEl = document.getElementById('applicant_name');
+        if (applicantNameEl) {
+            applicantNameEl.addEventListener('input', () => this.scheduleDuplicateCombinationCheck(450));
+            applicantNameEl.addEventListener('change', () => this.scheduleDuplicateCombinationCheck(0));
+        }
+
+        const positionSelectors = ['position_key', 'position_group_select', 'position_applied'];
+        positionSelectors.forEach(id => {
+            const el = document.getElementById(id);
+            if (!el) return;
+            el.addEventListener('change', () => this.generateAndSetApplicationCode(true));
+            el.addEventListener('input', () => this.scheduleAutoCodeGeneration());
+        });
+    }
+
+    scheduleAutoCodeGeneration(delay = 300) {
+        if (this._autoCodeTimer) clearTimeout(this._autoCodeTimer);
+        this._autoCodeTimer = setTimeout(() => this.generateAndSetApplicationCode(true), delay);
+    }
+
+    scheduleDuplicateCombinationCheck(delay = 300) {
+        if (this._duplicateCheckDebounce) clearTimeout(this._duplicateCheckDebounce);
+        this._duplicateCheckDebounce = setTimeout(() => this.checkDuplicateCombination(), delay);
+    }
+
+    extractPositionGroupName() {
+        const posKeyEl = document.getElementById('position_key');
+        const selectedKey = posKeyEl ? posKeyEl.value : '';
+
+        if (selectedKey && selectedKey !== 'custom' && typeof positions !== 'undefined' && positions[selectedKey] && positions[selectedKey].position_group) {
+            return String(positions[selectedKey].position_group);
+        }
+
+        const groupSelect = document.getElementById('position_group_select');
+        if (groupSelect && groupSelect.selectedIndex > 0) {
+            const option = groupSelect.options[groupSelect.selectedIndex];
+            if (option && option.textContent) return option.textContent.trim();
+        }
+
+        const groupLevelEl = document.getElementById('job_group_sg_level');
+        const groupLevelVal = groupLevelEl ? String(groupLevelEl.value || '') : '';
+        const match = groupLevelVal.match(/Group\s+(.+?)\s*\/\s*Salary\s*Grade/i);
+        if (match && match[1]) return match[1].trim();
+
+        return '';
+    }
+
+    async generateAndSetApplicationCode(force = false) {
+        if (this._autoGenerateInFlight) return;
+
+        const appCodeEl = document.getElementById('application_code');
+        const positionTitleEl = document.getElementById('position_applied');
+        if (!appCodeEl || !positionTitleEl) return;
+
+        const positionGroupName = this.extractPositionGroupName();
+        const positionTitle = (positionTitleEl.value || '').trim();
+
+        if (!positionGroupName || !positionTitle) return;
+        if (!force && this._appCodeEditedManually && appCodeEl.value.trim() !== '') return;
+
+        this._autoGenerateInFlight = true;
+        try {
+            const params = new URLSearchParams({
+                position_group_name: positionGroupName,
+                position_title: positionTitle,
+                year: String(new Date().getFullYear())
+            });
+            const resp = await fetch(`api/generate_application_code.php?${params.toString()}`);
+            const json = await resp.json();
+            if (json && json.success && json.application_code) {
+                appCodeEl.value = json.application_code;
+                appCodeEl.dispatchEvent(new Event('input'));
+                appCodeEl.dispatchEvent(new Event('change'));
+                this._appCodeEditedManually = false;
+            }
+        } catch (e) {
+            console.warn('Auto code generation failed', e);
+        } finally {
+            this._autoGenerateInFlight = false;
         }
     }
 
@@ -176,7 +261,7 @@ class FormValidator {
         let errorElement = document.getElementById(errorId);
 
         const rule = this.validationRules[fieldId];
-        if (!rule) return;
+        const defaultMessage = (rule && rule.message) ? rule.message : 'Please check this field';
 
         if (!errorElement) {
             const field = document.getElementById(fieldId);
@@ -188,7 +273,7 @@ class FormValidator {
             wrapper.appendChild(errorElement);
         }
 
-        errorElement.textContent = rule.message;
+        errorElement.textContent = defaultMessage;
         errorElement.style.display = 'block';
     }
 
@@ -539,7 +624,9 @@ class FormValidator {
         const modal = document.getElementById('confirmationModal');
         const checklist = document.getElementById('confirmationChecklist');
         const text = document.getElementById('confirmationText');
-        if (!modal || !checklist || !text) return;
+        const positionInfo = document.getElementById('confirmationPositionInfo');
+        const applicantInfo = document.getElementById('confirmationApplicantInfo');
+        if (!modal || !checklist || !text || !positionInfo || !applicantInfo) return;
 
         // Fill text
         text.textContent = `You are about to ${actionLabel}. Please review the checklist below before continuing.`;
@@ -560,6 +647,38 @@ class FormValidator {
             li.appendChild(label);
             checklist.appendChild(li);
         });
+
+        const read = (id) => {
+            const el = document.getElementById(id);
+            return el ? String(el.value || '').trim() : '';
+        };
+        const safe = (v) => v ? escapeHtml(v) : '<em>Not set</em>';
+        const buildSummaryTable = (rows) => {
+            const body = rows.map(([label, value]) => {
+                return `<tr><th scope="row">${escapeHtml(label)}</th><td>${safe(value)}</td></tr>`;
+            }).join('');
+            return `<table class="confirmation-table"><tbody>${body}</tbody></table>`;
+        };
+
+        positionInfo.innerHTML = buildSummaryTable([
+            ['Position Group', this.extractPositionGroupName()],
+            ['Position Applied', read('position_applied')],
+            ['Job Group / SG', read('job_group_sg_level')],
+            ['Application Code', read('application_code')],
+            ['Applicant Name', read('applicant_name')],
+            ['Total Preview Score', (document.getElementById('totalScore') || {}).textContent || '']
+        ]);
+
+        applicantInfo.innerHTML = buildSummaryTable([
+            ['Education Level', read('applicant_education_dropdown')],
+            ['Training Level', read('applicant_training_dropdown')],
+            ['Experience Level', read('applicant_experience_dropdown')],
+            ['Performance', read('applicant_performance')],
+            ['Outstanding Accomplishments', read('applicant_outstanding_accomplishments')],
+            ['Application of Education', read('applicant_application_of_education')],
+            ['Application of L&D', read('applicant_application_of_ld')],
+            ['Potential', read('applicant_potential')]
+        ]);
 
         // Show modal and wire confirm/cancel
         modal.classList.add('active');
@@ -620,6 +739,11 @@ class FormValidator {
                 this.showBanner('error', 'Please fix validation errors before proceeding');
                 return;
             }
+            await this.generateAndSetApplicationCode(true);
+            const duplicateFound = await this.checkDuplicateCombination(true);
+            if (duplicateFound) {
+                return;
+            }
             this.showConfirmationModal('generate the Evaluation Report', () => {
                 // Submit the form
                 this.saveDraftToLocalStorage(); // final local save before submit
@@ -636,6 +760,11 @@ class FormValidator {
             const valid = await this.validateFieldsServer();
             if (!valid) {
                 this.showBanner('error', 'Please fix validation errors before proceeding');
+                return;
+            }
+            await this.generateAndSetApplicationCode(true);
+            const duplicateFound = await this.checkDuplicateCombination(true);
+            if (duplicateFound) {
                 return;
             }
             this.showConfirmationModal('generate the Comparative Assessment (CAR)', () => {
@@ -742,21 +871,56 @@ class FormValidator {
         }
     }
 
-    async checkDuplicateApplication(code) {
-        if (!code || code.trim() === '') return;
+    async checkDuplicateCombination(showBanner = false) {
+        const codeEl = document.getElementById('application_code');
+        const nameEl = document.getElementById('applicant_name');
+        if (!codeEl || !nameEl) return false;
+
+        const code = codeEl.value.trim();
+        const applicantName = nameEl.value.trim();
+        if (!code) return false;
+
         try {
-            const resp = await fetch(`api/check_duplicate_application.php?application_code=${encodeURIComponent(code)}`);
+            const params = new URLSearchParams({
+                application_code: code,
+                applicant_name: applicantName
+            });
+            const resp = await fetch(`api/check_duplicate_application.php?${params.toString()}`);
             const json = await resp.json();
-            if (json && json.success && json.exists) {
+
+            if (json && json.success && json.name_code_exists) {
+                this.showFieldError('application_code');
+                const errEl = document.getElementById('application_code_error');
+                if (errEl) errEl.textContent = 'Duplicate applicant name and application code found';
+                nameEl.classList.add('invalid');
+                codeEl.classList.add('invalid');
+
+                nameEl.focus();
+                nameEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+                if (showBanner) {
+                    this.showBanner('error', 'Duplicate found: Applicant Name and Application Code already exist.');
+                }
+                return true;
+            }
+
+            if (json && json.success && json.code_exists) {
                 this.showFieldError('application_code');
                 const errEl = document.getElementById('application_code_error');
                 if (errEl) errEl.textContent = 'Application code already exists';
+                codeEl.classList.add('invalid');
+                if (showBanner) {
+                    this.showBanner('warning', 'Application code already exists. A new code will be generated.');
+                }
             } else {
                 this.clearFieldError('application_code');
+                codeEl.classList.remove('invalid');
+                nameEl.classList.remove('invalid');
             }
         } catch (e) {
             // ignore remote check failures
         }
+        return false;
     }
 
     async validateFieldsServer() {
@@ -806,6 +970,8 @@ document.addEventListener('DOMContentLoaded', () => {
     window.formValidator = new FormValidator('evaluationForm');
     // Restore draft if present
     try { window.formValidator.restoreDraftFromLocalStorage(); } catch (e) { /* ignore */ }
+    // Auto-generate application code from selected position context
+    try { window.formValidator.generateAndSetApplicationCode(true); } catch (e) { /* ignore */ }
     // Start periodic autosave
     try { window.formValidator.startAutoSave(15000); } catch (e) { /* ignore */ }
     // Attach handlers for new action buttons and help drawer

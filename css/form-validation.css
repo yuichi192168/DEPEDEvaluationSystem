@@ -319,22 +319,110 @@ input.invalid:focus {
 .modal-overlay.active { display: flex; }
 .modal {
     background: #fff;
-    border-radius: 8px;
-    padding: 18px;
-    width: 90%;
-    max-width: 640px;
+    border-radius: 10px;
+    padding: 20px;
+    width: min(96vw, 1100px);
+    max-width: 1100px;
+    max-height: 88vh;
     box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+    display: flex;
+    flex-direction: column;
 }
 .modal h3 { margin-bottom: 8px; color: #333; }
-.modal .modal-body { max-height: 50vh; overflow: auto; margin-bottom: 12px; color: #444; }
+.modal .modal-body {
+    flex: 1;
+    min-height: 0;
+    max-height: 72vh;
+    overflow: auto;
+    margin-bottom: 12px;
+    color: #444;
+    padding-right: 2px;
+}
 .modal .modal-actions { display:flex; gap:8px; justify-content:flex-end; }
 .modal .btn-cancel { background: #ccc; color:#222; padding:8px 12px; border-radius:4px; }
-.modal .btn-confirm { background: linear-gradient(90deg,#28a745,#28a745); color:#fff; padding:8px 12px; border-radius:4px; }
+.modal .btn-confirm { background: linear-gradient(135deg, #055489 0%, #0668aa 100%); color:#fff; padding:8px 12px; border-radius:4px; }
 .modal .checklist { list-style:none; padding:0; margin:0 0 8px 0; }
 .modal .checklist li { display:flex; gap:8px; align-items:center; padding:6px 0; border-bottom:1px dashed #eee; }
 .modal .checklist li .dot { width:14px; height:14px; border-radius:50%; display:inline-block; }
-.modal .checklist li.complete .dot { background:#28a745; }
+.modal .checklist li.complete .dot { background:#055489; }
 .modal .checklist li.incomplete .dot { background:#dc3545; }
+.modal .checklist li.complete span:last-child { color:#055489; font-weight:600; }
+.confirmation-summary {
+    margin: 10px 0 12px;
+    border: 1px solid #e8edf3;
+    border-radius: 6px;
+    background: #fafcff;
+    padding: 12px;
+}
+.confirmation-block + .confirmation-block {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px dashed #d7e0ea;
+}
+.confirmation-block h4 {
+    margin: 0 0 10px;
+    color: #055489;
+    font-size: 14px;
+}
+.summary-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px 12px;
+}
+.summary-item {
+    font-size: 12px;
+    color: #374151;
+}
+.summary-item strong {
+    color: #111827;
+}
+.confirmation-table {
+    width: 100%;
+    border-collapse: collapse;
+    border: 1px solid #d7e0ea;
+    border-radius: 6px;
+    overflow: hidden;
+    background: #ffffff;
+}
+.confirmation-table th,
+.confirmation-table td {
+    padding: 10px 12px;
+    font-size: 13px;
+    border-bottom: 1px solid #e8edf3;
+    vertical-align: top;
+}
+.confirmation-table tr:last-child th,
+.confirmation-table tr:last-child td {
+    border-bottom: none;
+}
+.confirmation-table th {
+    width: 34%;
+    background: #f1f6fb;
+    color: #055489;
+    font-weight: 700;
+    text-align: left;
+}
+.confirmation-table td {
+    color: #1f2937;
+}
+
+@media (max-width: 900px) {
+    .modal {
+        width: 96vw;
+        max-height: 90vh;
+        padding: 16px;
+    }
+
+    .modal .modal-body {
+        max-height: 74vh;
+    }
+
+    .confirmation-table th,
+    .confirmation-table td {
+        padding: 8px 10px;
+        font-size: 12px;
+    }
+}
 
 /* Sticky Action Bar (fixed bottom) */
 .sticky-action-bar {
@@ -490,11 +578,42 @@ body.dark-mode .modal .btn-cancel {
 }
 
 body.dark-mode .modal .btn-confirm {
-    background: linear-gradient(90deg, #055489, #0668aa);
+    background: linear-gradient(135deg, #055489 0%, #0668aa 100%);
 }
 
 body.dark-mode .modal .checklist li {
     border-bottom-color: #475569;
+}
+body.dark-mode .confirmation-summary {
+    background: #0f172a;
+    border-color: #334155;
+}
+body.dark-mode .confirmation-block + .confirmation-block {
+    border-top-color: #334155;
+}
+body.dark-mode .confirmation-block h4 {
+    color: #60a5fa;
+}
+body.dark-mode .summary-item {
+    color: #cbd5e1;
+}
+body.dark-mode .summary-item strong {
+    color: #f8fafc;
+}
+body.dark-mode .confirmation-table {
+    background: #111827;
+    border-color: #334155;
+}
+body.dark-mode .confirmation-table th,
+body.dark-mode .confirmation-table td {
+    border-bottom-color: #334155;
+}
+body.dark-mode .confirmation-table th {
+    background: #1f2937;
+    color: #93c5fd;
+}
+body.dark-mode .confirmation-table td {
+    color: #e5e7eb;
 }
 
 /* Sticky action bar dark mode */

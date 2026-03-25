@@ -24,16 +24,30 @@ if (!isset($errors['contact_number']) && isset($post['contact_number'])) {
     }
 }
 
-// NEW: Check if applicant name already exists (duplicate applicant check)
-if (!isset($errors['applicant_name']) && !empty($post['applicant_name'])) {
+// Duplicate validation: block only when applicant name + application code already exists
+if (!isset($errors['applicant_name']) && !empty($post['applicant_name']) && !empty($post['application_code'])) {
     $conn = DBConnection::getConnection();
     if ($conn) {
-        $name = $conn->real_escape_string(trim($post['applicant_name']));
-        $sql = "SELECT id FROM applicants WHERE LOWER(TRIM(name)) = LOWER('$name') LIMIT 1";
-        $res = $conn->query($sql);
+        $applicantName = trim($post['applicant_name']);
+        $applicationCode = trim($post['application_code']);
+
+        $stmt = $conn->prepare(
+            "SELECT car.id
+             FROM comparative_assessment_results car
+             INNER JOIN applicants a ON a.id = car.applicant_id
+             WHERE car.application_code = ?
+               AND LOWER(TRIM(a.name)) = LOWER(TRIM(?))
+             LIMIT 1"
+        );
+        $stmt->bind_param('ss', $applicationCode, $applicantName);
+        $stmt->execute();
+        $res = $stmt->get_result();
+
         if ($res && $res->num_rows > 0) {
-            $errors['applicant_name'] = 'An applicant with this name already exists in the system';
+            $errors['applicant_name'] = 'Duplicate applicant name and application code found';
+            $errors['application_code'] = 'Duplicate applicant name and application code found';
         }
+        $stmt->close();
     }
 }
 

@@ -583,6 +583,7 @@ $positions = getAllPositions();
                     <div class="form-group">
                         <label for="application_code">Application Code</label>
                         <input type="text" id="application_code" name="application_code">
+                        <span class="helper-text">Auto-generated from Position Group and Position Title (you may adjust if needed).</span>
                     </div>
                 </div>
                 <div class="form-row">
@@ -949,6 +950,16 @@ $positions = getAllPositions();
                     <h3 id="confirmationTitle">Confirm Action</h3>
                     <div class="modal-body">
                         <p id="confirmationText">Please confirm this action.</p>
+                        <div id="confirmationSummary" class="confirmation-summary" aria-live="polite">
+                            <div class="confirmation-block">
+                                <h4>Position Information</h4>
+                                <div id="confirmationPositionInfo" class="summary-grid"></div>
+                            </div>
+                            <div class="confirmation-block">
+                                <h4>Applicant Qualifications</h4>
+                                <div id="confirmationApplicantInfo" class="summary-grid"></div>
+                            </div>
+                        </div>
                         <ul class="checklist" id="confirmationChecklist"></ul>
                     </div>
                     <div class="modal-actions">
@@ -1294,6 +1305,11 @@ $positions = getAllPositions();
 
             // Update Position Applied For exactly as stored
             if (appliedInput) appliedInput.value = pos.position_name;
+
+            // Auto-generate application code immediately after position is resolved
+            if (window.formValidator && typeof window.formValidator.generateAndSetApplicationCode === 'function') {
+                window.formValidator.generateAndSetApplicationCode(true);
+            }
             
             // Trigger validation update for dynamically filled fields
             if (window.formValidator) {
@@ -1708,7 +1724,7 @@ $positions = getAllPositions();
         </div>
     </aside>
 
-    <script src="js/form-validation.js"></script>
+    <script src="js/form-validation.js?v=<?php echo @filemtime(__DIR__ . '/js/form-validation.js'); ?>"></script>
     <script>
         // Register service worker (if available)
         if ('serviceWorker' in navigator) {

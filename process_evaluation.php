@@ -79,18 +79,6 @@ $errors = [];
 if (empty($applicantName)) $errors[] = 'Applicant name is required';
 if (empty($positionApplied)) $errors[] = 'Position applied for is required';
 
-// Check for duplicate application code (if provided)
-if (!empty($applicationCode)) {
-    $stmt = $conn->prepare("SELECT id FROM comparative_assessment_results WHERE application_code = ? LIMIT 1");
-    $stmt->bind_param("s", $applicationCode);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    if ($result->num_rows > 0) {
-        $errors[] = "Application Code '{$applicationCode}' already exists. Please use a unique code.";
-    }
-    $stmt->close();
-}
-
 // Check applicant status - prevent evaluating archived applicants
 if (!empty($applicantName)) {
     $stmt = $conn->prepare("SELECT id, archive_status FROM applicants WHERE name = ? LIMIT 1");
@@ -173,6 +161,76 @@ function convertRatingToWeightedPoints($rating, $weight, $maxRating = 5) {
     return $maxRating > 0 ? ($r / $maxRating) * $w : 0;
 }
 
+function isRomanNumeral($token) {
+    return preg_match('/^[IVXLCDM]+$/i', $token) === 1;
+}
+
+function normalizeToken($token) {
+    $token = trim((string)$token);
+    if ($token === '') return '';
+    $token = preg_replace('/[^A-Za-z0-9]/', '', $token);
+    return strtoupper($token);
+}
+
+function buildPositionGroupInitials($group) {
+    $group = strtoupper(trim((string)$group));
+    $map = [
+        'NON-TEACHING LEVEL I' => 'NT',
+        'NON-TEACHING LEVEL II' => 'NT',
+        'SCHOOL ADMINISTRATION POSITION' => 'SA',
+        'RELATED TEACHING POSITION' => 'RT',
+        'TEACHING POSITIONS' => 'TP',
+        'HIGHER TEACHING POSITIONS' => 'HT'
+    ];
+    if (isset($map[$group])) return $map[$group];
+
+    $tokens = preg_split('/[\s\-\/]+/', $group);
+    $skip = ['POSITION', 'POSITIONS', 'LEVEL'];
+    $initials = '';
+    foreach ($tokens as $token) {
+        $token = normalizeToken($token);
+        if ($token === '' || in_array($token, $skip, true) || isRomanNumeral($token)) continue;
+        $initials .= substr($token, 0, 1);
+    }
+    return $initials !== '' ? $initials : 'PG';
+}
+
+function buildPositionTitleInitials($title) {
+    $tokens = preg_split('/[\s\-\/]+/', strtoupper(trim((string)$title)));
+    $initials = '';
+    foreach ($tokens as $token) {
+        $token = normalizeToken($token);
+        if ($token === '') continue;
+        $initials .= isRomanNumeral($token) ? $token : substr($token, 0, 1);
+    }
+    return $initials !== '' ? $initials : 'POS';
+}
+
+function generateNextApplicationCode($conn, $positionGroupName, $positionTitle) {
+    $groupCode = buildPositionGroupInitials($positionGroupName);
+    $titleCode = buildPositionTitleInitials($positionTitle);
+    $year = date('Y');
+    $prefix = $groupCode . '-' . $titleCode . '-' . $year . '-';
+
+    $like = $prefix . '%';
+    $stmt = $conn->prepare("SELECT application_code FROM comparative_assessment_results WHERE application_code LIKE ?");
+    $stmt->bind_param('s', $like);
+    $stmt->execute();
+    $res = $stmt->get_result();
+
+    $maxSeq = 0;
+    while ($row = $res->fetch_assoc()) {
+        $code = (string)($row['application_code'] ?? '');
+        if (preg_match('/^' . preg_quote($prefix, '/') . '(\d{3,})$/', $code, $m)) {
+            $seq = intval($m[1]);
+            if ($seq > $maxSeq) $maxSeq = $seq;
+        }
+    }
+    $stmt->close();
+
+    return $prefix . str_pad((string)($maxSeq + 1), 3, '0', STR_PAD_LEFT);
+}
+
 // Calculate levels
 $appEduLevel = convertEducationToLevel($applicantEducationDegree, $applicantEducationMastersUnits, $applicantEducationDoctoralUnits);
 $baseEduLevel = convertEducationToLevel($baselineEducationDegree, $baselineEducationMastersUnits, $baselineEducationDoctoralUnits);
@@ -214,6 +272,10 @@ if (empty($positionGroupName) && $positionGroup !== '') {
 $category = null;
 if ($positionGroupName === 'NON-TEACHING LEVEL I') {
     $category = 'non_general_services';
+}
+
+if (empty($applicationCode)) {
+    $applicationCode = generateNextApplicationCode($conn, $positionGroupName, $positionApplied);
 }
 
 $criteriaConfig = getEvaluationCriteria($positionGroupName, $salaryGrade, $category);
@@ -320,6 +382,26 @@ try {
         $applicantId = $conn->insert_id;
     }
     $stmt->close();
+
+    // Prevent duplicate applicant name + application code on other records
+    if (!empty($applicationCode)) {
+        $stmt = $conn->prepare(
+            "SELECT car.id
+             FROM comparative_assessment_results car
+             INNER JOIN applicants a ON a.id = car.applicant_id
+             WHERE car.application_code = ?
+               AND LOWER(TRIM(a.name)) = LOWER(TRIM(?))
+               AND NOT (car.applicant_id = ? AND car.position_id = ?)
+             LIMIT 1"
+        );
+        $stmt->bind_param('ssii', $applicationCode, $applicantName, $applicantId, $positionId);
+        $stmt->execute();
+        $dupRes = $stmt->get_result();
+        if ($dupRes && $dupRes->num_rows > 0) {
+            throw new Exception('Duplicate applicant name and application code found. Please review Applicant Name and Application Code.');
+        }
+        $stmt->close();
+    }
     
     // Save or update applicant qualifications
     $stmt = $conn->prepare("SELECT id FROM applicant_qualifications WHERE applicant_id = ? LIMIT 1");
@@ -401,10 +483,10 @@ try {
             status = ?,
             updated_at = NOW()
             WHERE id = ?");
-        $posGroup = $applicant['position_group'] ?? 'NON-TEACHING LEVEL I';
+        $posGroup = !empty($positionGroupName) ? $positionGroupName : 'NON-TEACHING LEVEL I';
         $notes = "Evaluation updated from form";
         $evaluationStatus = 'pending';
-        $stmt->bind_param("isddssi", 
+        $stmt->bind_param("isdssi", 
             $positionId,
             $posGroup,
             $totalScore,
@@ -415,7 +497,7 @@ try {
         $stmt->execute();
     } else {
         // Insert new evaluation
-        $posGroup = $applicant['position_group'] ?? 'NON-TEACHING LEVEL I';
+        $posGroup = !empty($positionGroupName) ? $positionGroupName : 'NON-TEACHING LEVEL I';
         $stmt = $conn->prepare("INSERT INTO evaluations 
             (applicant_id, position_id, position_group, total_score, evaluation_date, notes, status, created_at)
             VALUES (?, ?, ?, ?, CURDATE(), ?, ?, NOW())");
