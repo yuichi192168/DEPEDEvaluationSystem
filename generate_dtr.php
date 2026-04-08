@@ -112,9 +112,15 @@ class DTRGenerator
             $normalized[$index] = strtolower(trim((string)$value));
         }
 
-        $findColumn = function (array $keywords) use ($normalized) {
+        $findColumn = function (array $exactLabels, array $containsKeywords = []) use ($normalized) {
             foreach ($normalized as $index => $label) {
-                foreach ($keywords as $keyword) {
+                if (in_array($label, $exactLabels, true)) {
+                    return $index;
+                }
+            }
+
+            foreach ($normalized as $index => $label) {
+                foreach ($containsKeywords as $keyword) {
                     if ($label !== '' && strpos($label, $keyword) !== false) {
                         return $index;
                     }
@@ -124,13 +130,13 @@ class DTRGenerator
         };
 
         return [
-            'name' => $findColumn(['name', 'employee']) ?? 0,
-            'date' => $findColumn(['date']) ?? 1,
-            'timetable' => $findColumn(['timetable', 'schedule', 'shift']) ?? 2,
-            'clock_in' => $findColumn(['clock in', 'time in', 'in']) ?? 3,
-            'clock_out' => $findColumn(['clock out', 'time out', 'out']) ?? 4,
-            'department' => $findColumn(['department', 'office', 'unit']) ?? 5,
-            'remarks' => $findColumn(['remarks', 'remark', 'note', 'status'])
+            'name' => $findColumn(['name', 'employee name', 'employee'], ['name', 'employee']) ?? 0,
+            'date' => $findColumn(['date'], ['date']) ?? 1,
+            'timetable' => $findColumn(['timetable', 'schedule', 'shift'], ['timetable', 'schedule', 'shift']) ?? 2,
+            'clock_in' => $findColumn(['in', 'time in', 'clock in', 'arrival'], ['time in', 'clock in', 'arrival', ' in']) ?? 3,
+            'clock_out' => $findColumn(['out', 'time out', 'clock out', 'departure'], ['time out', 'clock out', 'departure', ' out']) ?? 4,
+            'department' => $findColumn(['department', 'office', 'unit'], ['department', 'office', 'unit']) ?? 5,
+            'remarks' => $findColumn(['remarks', 'remark', 'note', 'status'], ['remarks', 'remark', 'note', 'status'])
         ];
     }
 
@@ -413,6 +419,9 @@ class DTRGenerator
         
         $sheet = $spreadsheet->getActiveSheet();
         $isHeaderRow = true;
+        $isSecondHeaderRow = false;
+        $headerRow1Values = [];
+        $twoRowHeaderMap = null;
         $sourceColumns = [
             'name' => 0,
             'date' => 1,
@@ -439,8 +448,68 @@ class DTRGenerator
             }
 
             if ($isHeaderRow) {
+                $headerRow1Values = $rowValues;
                 $sourceColumns = $this->detectSourceColumns($rowValues);
                 $isHeaderRow = false;
+                $isSecondHeaderRow = true;
+                continue;
+            }
+
+            // Support two-row headers such as: R1 AM/PM, R2 In/Out.
+            if ($isSecondHeaderRow) {
+                $isSecondHeaderRow = false;
+
+                $firstHeader = array_map(function ($v) {
+                    return strtolower(trim((string)$v));
+                }, $headerRow1Values);
+                $secondHeader = array_map(function ($v) {
+                    return strtolower(trim((string)$v));
+                }, $rowValues);
+
+                // Propagate grouped headers (e.g., AM in C with blank D from merged cells).
+                $propagatedFirstHeader = [];
+                $lastGroupHeader = '';
+                foreach ($firstHeader as $idx => $h1) {
+                    if ($h1 !== '') {
+                        $lastGroupHeader = $h1;
+                        $propagatedFirstHeader[$idx] = $h1;
+                    } else {
+                        $propagatedFirstHeader[$idx] = $lastGroupHeader;
+                    }
+                }
+
+                $twoRowHeaderMap = [
+                    'am_in' => null,
+                    'am_out' => null,
+                    'pm_in' => null,
+                    'pm_out' => null,
+                    'remarks' => null
+                ];
+
+                foreach ($propagatedFirstHeader as $idx => $h1) {
+                    $h2 = $secondHeader[$idx] ?? '';
+
+                    if (($h1 === 'am' || strpos($h1, 'am') !== false) && $h2 === 'in') {
+                        $twoRowHeaderMap['am_in'] = $idx;
+                    } elseif (($h1 === 'am' || strpos($h1, 'am') !== false) && $h2 === 'out') {
+                        $twoRowHeaderMap['am_out'] = $idx;
+                    } elseif (($h1 === 'pm' || strpos($h1, 'pm') !== false) && $h2 === 'in') {
+                        $twoRowHeaderMap['pm_in'] = $idx;
+                    } elseif (($h1 === 'pm' || strpos($h1, 'pm') !== false) && $h2 === 'out') {
+                        $twoRowHeaderMap['pm_out'] = $idx;
+                    }
+
+                    if ($twoRowHeaderMap['remarks'] === null && (strpos($h1, 'remark') !== false || strpos($h1, 'note') !== false || strpos($h1, 'status') !== false)) {
+                        $twoRowHeaderMap['remarks'] = $idx;
+                    }
+                }
+
+                // If no AM/PM map detected, disable special mapping.
+                if ($twoRowHeaderMap['am_in'] === null && $twoRowHeaderMap['am_out'] === null && $twoRowHeaderMap['pm_in'] === null && $twoRowHeaderMap['pm_out'] === null) {
+                    $twoRowHeaderMap = null;
+                }
+
+                // Second header row is metadata and should not be processed as data.
                 continue;
             }
 
@@ -457,7 +526,9 @@ class DTRGenerator
             $clockOut = $rowValues[$sourceColumns['clock_out']] ?? '';
             $department = trim((string)($rowValues[$sourceColumns['department']] ?? ''));
             $rawRemark = '';
-            if ($sourceColumns['remarks'] !== null) {
+            if ($twoRowHeaderMap !== null && $twoRowHeaderMap['remarks'] !== null) {
+                $rawRemark = $this->normalizeRemarkText($rowValues[$twoRowHeaderMap['remarks']] ?? '');
+            } elseif ($sourceColumns['remarks'] !== null) {
                 $rawRemark = $this->normalizeRemarkText($rowValues[$sourceColumns['remarks']] ?? '');
             }
             
@@ -503,7 +574,8 @@ class DTRGenerator
                     'morning_departure' => '',
                     'afternoon_arrival' => '',
                     'afternoon_departure' => '',
-                    'remarks' => ''
+                    'remarks' => '',
+                    'compact_times' => []
                 ];
             }
 
@@ -516,8 +588,29 @@ class DTRGenerator
                 }
             }
             
+            // Two-row AM/PM headers: map each period directly from dedicated columns.
+            if ($twoRowHeaderMap !== null) {
+                $amInRaw = ($twoRowHeaderMap['am_in'] !== null) ? ($rowValues[$twoRowHeaderMap['am_in']] ?? '') : '';
+                $amOutRaw = ($twoRowHeaderMap['am_out'] !== null) ? ($rowValues[$twoRowHeaderMap['am_out']] ?? '') : '';
+                $pmInRaw = ($twoRowHeaderMap['pm_in'] !== null) ? ($rowValues[$twoRowHeaderMap['pm_in']] ?? '') : '';
+                $pmOutRaw = ($twoRowHeaderMap['pm_out'] !== null) ? ($rowValues[$twoRowHeaderMap['pm_out']] ?? '') : '';
+
+                $morningArrival = $this->formatTime($amInRaw, $name, 'Morning Arrival', $dayOfMonth);
+                $morningDeparture = $this->formatTime($amOutRaw, $name, 'Morning Departure', $dayOfMonth);
+                $afternoonArrival = $this->formatTime($pmInRaw, $name, 'Afternoon Arrival', $dayOfMonth);
+                $afternoonDeparture = $this->formatTime($pmOutRaw, $name, 'Afternoon Departure', $dayOfMonth);
+
+                $this->logData[$name]['dates'][$dayOfMonth]['morning_arrival'] = $morningArrival;
+                $this->logData[$name]['dates'][$dayOfMonth]['morning_departure'] = $morningDeparture;
+                $this->logData[$name]['dates'][$dayOfMonth]['afternoon_arrival'] = $afternoonArrival;
+                $this->logData[$name]['dates'][$dayOfMonth]['afternoon_departure'] = $afternoonDeparture;
+
+                if ($morningArrival) {
+                    $this->logData[$name]['arrival_times'][] = $morningArrival;
+                }
+            }
             // Map clock in/out based on timetable type
-            if (stripos($timetable, 'Morning') !== false) {
+            elseif (stripos($timetable, 'Morning') !== false) {
                 $morningArrival = $this->formatTime($clockIn, $name, 'Morning Arrival', $dayOfMonth);
                 $morningDeparture = $this->formatTime($clockOut, $name, 'Morning Departure', $dayOfMonth);
                 
@@ -535,8 +628,20 @@ class DTRGenerator
                 $this->logData[$name]['dates'][$dayOfMonth]['afternoon_arrival'] = $afternoonArrival;
                 $this->logData[$name]['dates'][$dayOfMonth]['afternoon_departure'] = $afternoonDeparture;
             } else {
-                // Support compact daily rows with no timetable labels (common in March raw data).
-                $mapped = $this->mapCompactDayTimes($name, $dayOfMonth, [$timetable, $clockIn, $clockOut]);
+                // Support compact daily rows with no timetable labels (including separate IN/OUT rows).
+                // Accumulate all times per employee/day first, then map together to avoid losing OUT values.
+                if ($clockIn !== '' && $clockIn !== null) {
+                    $this->logData[$name]['dates'][$dayOfMonth]['compact_times'][] = $clockIn;
+                }
+                if ($clockOut !== '' && $clockOut !== null) {
+                    $this->logData[$name]['dates'][$dayOfMonth]['compact_times'][] = $clockOut;
+                }
+
+                $mapped = $this->mapCompactDayTimes(
+                    $name,
+                    $dayOfMonth,
+                    $this->logData[$name]['dates'][$dayOfMonth]['compact_times']
+                );
                 foreach (['morning_arrival', 'morning_departure', 'afternoon_arrival', 'afternoon_departure'] as $field) {
                     if (!empty($mapped[$field])) {
                         $this->logData[$name]['dates'][$dayOfMonth][$field] = $mapped[$field];
