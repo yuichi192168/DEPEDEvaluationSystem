@@ -19,6 +19,7 @@ require __DIR__ . '/vendor/autoload.php';
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
+use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 
 class DTRGenerator
 {
@@ -30,6 +31,8 @@ class DTRGenerator
     private $currentMonth;
     private $currentYear;
     private $holidays = [];
+    private $monthYearLocked = false;
+    private $templateLayout = null;
     
     /**
      * Constructor
@@ -67,11 +70,108 @@ class DTRGenerator
             $this->currentYear = (int)$matches[2];
             $this->currentMonth = date('n', strtotime($monthName));
             $this->monthYear = "$monthName {$this->currentYear}";
+            $this->monthYearLocked = true;
         } else {
             // Default to current month/year
             $this->currentMonth = (int)date('n');
             $this->currentYear = (int)date('Y');
+            $this->monthYearLocked = false;
         }
+    }
+
+    /**
+     * Use the first valid attendance date to infer month/year when filename is ambiguous.
+     */
+    private function alignMonthYearFromDate(\DateTime $dateObj)
+    {
+        if ($this->monthYearLocked) {
+            return;
+        }
+
+        $newMonth = (int)$dateObj->format('n');
+        $newYear = (int)$dateObj->format('Y');
+
+        if ($newMonth !== $this->currentMonth || $newYear !== $this->currentYear) {
+            $this->currentMonth = $newMonth;
+            $this->currentYear = $newYear;
+            $this->monthYear = $dateObj->format('F Y');
+            $this->initializeHolidays();
+        }
+    }
+
+    /**
+     * Parse numeric/string time values into minutes from midnight for ordering.
+     */
+    private function toMinutes($timeValue)
+    {
+        if ($timeValue === '' || $timeValue === null) {
+            return null;
+        }
+
+        if (is_numeric($timeValue)) {
+            $decimal = (float)$timeValue;
+            if ($decimal >= 0 && $decimal < 1) {
+                return (int)round($decimal * 24 * 60);
+            }
+            $fraction = $decimal - floor($decimal);
+            if ($fraction > 0) {
+                return (int)round($fraction * 24 * 60);
+            }
+        }
+
+        $formatted = $this->formatTime($timeValue);
+        if ($formatted === '') {
+            return null;
+        }
+
+        if (preg_match('/^(\d{2}):(\d{2})$/', $formatted, $matches)) {
+            return ((int)$matches[1] * 60) + (int)$matches[2];
+        }
+
+        return null;
+    }
+
+    /**
+     * Build morning/afternoon fields when source has compact daily rows without timetable labels.
+     */
+    private function mapCompactDayTimes($name, $dayOfMonth, $rawTimes)
+    {
+        $timePoints = [];
+
+        foreach ($rawTimes as $rawTime) {
+            $formatted = $this->formatTime($rawTime, $name, 'Time', $dayOfMonth);
+            $minutes = $this->toMinutes($rawTime);
+            if ($formatted === '' || $minutes === null) {
+                continue;
+            }
+            $timePoints[] = ['minutes' => $minutes, 'time' => $formatted];
+        }
+
+        if (empty($timePoints)) {
+            return [
+                'morning_arrival' => '',
+                'morning_departure' => '',
+                'afternoon_arrival' => '',
+                'afternoon_departure' => ''
+            ];
+        }
+
+        usort($timePoints, function ($a, $b) {
+            return $a['minutes'] <=> $b['minutes'];
+        });
+
+        $orderedTimes = [];
+        foreach ($timePoints as $point) {
+            $orderedTimes[] = $point['time'];
+        }
+        $orderedTimes = array_values(array_unique($orderedTimes));
+
+        return [
+            'morning_arrival' => $orderedTimes[0] ?? '',
+            'morning_departure' => $orderedTimes[1] ?? '',
+            'afternoon_arrival' => $orderedTimes[2] ?? '',
+            'afternoon_departure' => $orderedTimes[3] ?? ''
+        ];
     }
     
     /**
@@ -153,6 +253,12 @@ class DTRGenerator
      */
     public function loadSourceData()
     {
+        // Large attendance workbooks can take longer than the default 120s PHP limit.
+        set_time_limit(0);
+        ini_set('max_execution_time', '0');
+        // Raise memory ceiling for big source files while still staying bounded.
+        ini_set('memory_limit', '1024M');
+
         // Check for both .xls and .xlsx versions
         $sourceFile = $this->sourceFile;
         if (!file_exists($sourceFile)) {
@@ -175,6 +281,7 @@ class DTRGenerator
                 // Try Xls reader first for old Excel format
                 try {
                     $reader = new \PhpOffice\PhpSpreadsheet\Reader\Xls();
+                    $reader->setReadDataOnly(true);
                     $spreadsheet = $reader->load($sourceFile);
                 } catch (Exception $e) {
                     // If Xls reader fails, throw helpful error
@@ -183,10 +290,20 @@ class DTRGenerator
             } else if ($extension === 'xlsx') {
                 // Use Xlsx reader for new Excel format
                 $reader = IOFactory::createReader('Xlsx');
+                $reader->setReadDataOnly(true);
+                if (method_exists($reader, 'setReadEmptyCells')) {
+                    $reader->setReadEmptyCells(false);
+                }
                 $spreadsheet = $reader->load($sourceFile);
             } else {
                 // Try auto-detection for other formats
                 $reader = IOFactory::createReaderForFile($sourceFile);
+                if (method_exists($reader, 'setReadDataOnly')) {
+                    $reader->setReadDataOnly(true);
+                }
+                if (method_exists($reader, 'setReadEmptyCells')) {
+                    $reader->setReadEmptyCells(false);
+                }
                 $spreadsheet = $reader->load($sourceFile);
             }
         } catch (Exception $e) {
@@ -194,33 +311,55 @@ class DTRGenerator
         }
         
         $sheet = $spreadsheet->getActiveSheet();
-        $rows = $sheet->toArray();
-        
-        // Parse the data
+        $isHeaderRow = true;
+
+        // Parse row-by-row to avoid materializing the entire sheet into memory.
         // Expected columns: A=Name, B=Date, C=Timetable, D=Clock In, E=Clock Out, F=Department
-        $headers = array_shift($rows); // Skip header row
-        
-        foreach ($rows as $rowIndex => $row) {
-            if (empty($row[0])) continue; // Skip empty rows
+        foreach ($sheet->getRowIterator() as $row) {
+            if ($isHeaderRow) {
+                $isHeaderRow = false;
+                continue;
+            }
+
+            $rowIndex = $row->getRowIndex();
+            $rowValues = array_fill(0, 6, '');
+            $cellIterator = $row->getCellIterator('A', 'F');
+            $cellIterator->setIterateOnlyExistingCells(true);
+
+            foreach ($cellIterator as $cell) {
+                $columnIndex = Coordinate::columnIndexFromString($cell->getColumn()) - 1;
+                if ($columnIndex >= 0 && $columnIndex < 6) {
+                    $rowValues[$columnIndex] = $cell->getValue();
+                }
+            }
+
+            if (empty($rowValues[0]) && empty($rowValues[1]) && empty($rowValues[2]) && empty($rowValues[3]) && empty($rowValues[4]) && empty($rowValues[5])) {
+                continue;
+            }
             
-            $name = trim($row[0] ?? '');
-            $date = $row[1] ?? '';
-            $timetable = trim($row[2] ?? ''); // Morning or Afternoon
-            $clockIn = $row[3] ?? ''; // Don't trim yet - preserve original for better parsing
-            $clockOut = $row[4] ?? ''; // Don't trim yet - preserve original for better parsing
-            $department = trim($row[5] ?? '');
+            $name = trim((string)($rowValues[0] ?? ''));
+            $date = $rowValues[1] ?? '';
+            $timetable = trim((string)($rowValues[2] ?? '')); // Morning or Afternoon
+            $clockIn = $rowValues[3] ?? ''; // Don't trim yet - preserve original for better parsing
+            $clockOut = $rowValues[4] ?? ''; // Don't trim yet - preserve original for better parsing
+            $department = trim((string)($rowValues[5] ?? ''));
             
+            if ($this->isHeaderLikeRow($name, $date, $timetable)) {
+                continue;
+            }
+
             if (empty($name) || empty($date)) {
-                echo "Warning: Skipping row " . ($rowIndex + 2) . " - missing name or date\n";
+                echo "Warning: Skipping row " . $rowIndex . " - missing name or date\n";
                 continue;
             }
             
             // Parse date to get day of month
             $dateObj = $this->parseDate($date);
             if (!$dateObj) {
-                echo "Warning: Could not parse date '" . substr((string)$date, 0, 20) . "' for $name at row " . ($rowIndex + 2) . "\n";
+                echo "Warning: Could not parse date '" . substr((string)$date, 0, 20) . "' for $name at row " . $rowIndex . "\n";
                 continue;
             }
+            $this->alignMonthYearFromDate($dateObj);
             $dayOfMonth = $dateObj->format('j'); // 1-31
             
             // Initialize employee array if needed
@@ -269,12 +408,23 @@ class DTRGenerator
                 $this->logData[$name]['dates'][$dayOfMonth]['afternoon_arrival'] = $afternoonArrival;
                 $this->logData[$name]['dates'][$dayOfMonth]['afternoon_departure'] = $afternoonDeparture;
             } else {
-                // If timetable doesn't match Morning/Afternoon, log it
-                if ($timetable !== '') {
-                    echo "Notice: Unknown timetable type '" . substr($timetable, 0, 30) . "' for $name on day $dayOfMonth\n";
+                // Support compact daily rows with no timetable labels (common in March raw data).
+                $mapped = $this->mapCompactDayTimes($name, $dayOfMonth, [$timetable, $clockIn, $clockOut]);
+                foreach (['morning_arrival', 'morning_departure', 'afternoon_arrival', 'afternoon_departure'] as $field) {
+                    if (!empty($mapped[$field])) {
+                        $this->logData[$name]['dates'][$dayOfMonth][$field] = $mapped[$field];
+                    }
+                }
+
+                if (!empty($mapped['morning_arrival'])) {
+                    $this->logData[$name]['arrival_times'][] = $mapped['morning_arrival'];
                 }
             }
         }
+
+        $spreadsheet->disconnectWorksheets();
+        unset($sheet, $spreadsheet);
+        gc_collect_cycles();
         
         // Detect schedules for all employees
         $this->detectSchedules();
@@ -367,6 +517,18 @@ class DTRGenerator
     private function parseDate($dateStr)
     {
         if (empty($dateStr)) return null;
+
+        if ($dateStr instanceof \DateTimeInterface) {
+            return \DateTime::createFromInterface($dateStr);
+        }
+
+        if (is_object($dateStr) && method_exists($dateStr, 'format')) {
+            try {
+                return new \DateTime($dateStr->format('Y-m-d H:i:s'));
+            } catch (Exception $e) {
+                // Fall through to string parsing.
+            }
+        }
         
         // Handle numeric Excel dates
         if (is_numeric($dateStr)) {
@@ -379,16 +541,71 @@ class DTRGenerator
         }
         
         // Handle standard date formats
-        $formats = ['m/d/Y', 'd/m/Y', 'Y-m-d', 'j/n/Y'];
+        $cleanDateStr = $this->normalizeDateString((string)$dateStr);
+
+        $formats = ['m/d/Y', 'd/m/Y', 'Y-m-d', 'j/n/Y', 'n/j/Y', 'd-m-Y', 'm-d-Y'];
         
         foreach ($formats as $format) {
-            $parsed = \DateTime::createFromFormat($format, $dateStr);
+            $parsed = \DateTime::createFromFormat($format, $cleanDateStr);
             if ($parsed !== false) {
                 return $parsed;
             }
         }
+
+        // Handle localized dates and messy strings like "2026年3月2日" or strings with extra prefixes/suffixes.
+        if (preg_match('/((?:19|20)\d{2})\D{0,8}(\d{1,2})\D{0,8}(\d{1,2})/u', $cleanDateStr, $matches)) {
+            try {
+                return new \DateTime(sprintf('%04d-%02d-%02d', (int)$matches[1], (int)$matches[2], (int)$matches[3]));
+            } catch (Exception $e) {
+                // Continue to fallback parsing.
+            }
+        }
+
+        if (preg_match('/(\d{1,2})\D{0,8}(\d{1,2})\D{0,8}((?:19|20)?\d{2})?/u', $cleanDateStr, $matches)) {
+            $year = !empty($matches[3]) ? (int)$matches[3] : (int)$this->currentYear;
+            if ($year < 100) {
+                $year += 2000;
+            }
+            try {
+                return new \DateTime(sprintf('%04d-%02d-%02d', $year, (int)$matches[1], (int)$matches[2]));
+            } catch (Exception $e) {
+                // Continue to null.
+            }
+        }
         
         return null;
+    }
+
+    /**
+     * Normalize noisy date strings before parsing.
+     */
+    private function normalizeDateString($value)
+    {
+        $value = (string)$value;
+        $value = preg_replace('/[\x{00A0}\x{200B}\x{200C}\x{200D}\x{FEFF}]/u', ' ', $value);
+        $value = preg_replace('/[\x00-\x1F\x7F]/u', '', $value);
+        $value = trim($value);
+        return $value;
+    }
+
+    /**
+     * Skip obvious header/title rows that leak into the data range.
+     */
+    private function isHeaderLikeRow($name, $date, $timetable)
+    {
+        $name = strtolower(trim((string)$name));
+        $date = strtolower(trim((string)$date));
+        $timetable = strtolower(trim((string)$timetable));
+
+        if ($name === '' || $date === '') {
+            return false;
+        }
+
+        $headerNames = ['name', 'employee name', 'employee', 'full name'];
+        $headerDates = ['date', 'd/m/y', 'month/date', 'day'];
+        $headerTimetables = ['timetable', 'schedule', 'time table'];
+
+        return in_array($name, $headerNames, true) || in_array($date, $headerDates, true) || in_array($timetable, $headerTimetables, true);
     }
     
     /**
@@ -477,7 +694,216 @@ class DTRGenerator
         }
         
         $reader = IOFactory::createReader('Xlsx');
+        $reader->setReadDataOnly(false);
+        if (method_exists($reader, 'setReadEmptyCells')) {
+            $reader->setReadEmptyCells(false);
+        }
+        if (method_exists($reader, 'setIncludeCharts')) {
+            $reader->setIncludeCharts(false);
+        }
         return $reader->load($this->templateFile);
+    }
+
+    /**
+     * Build and cache template mapping so custom monthly templates can be used
+     * without changing code.
+     */
+    private function getTemplateLayout(Worksheet $sheet)
+    {
+        if (is_array($this->templateLayout) && !empty($this->templateLayout)) {
+            return $this->templateLayout;
+        }
+
+        $this->templateLayout = $this->analyzeTemplateLayout($sheet);
+        return $this->templateLayout;
+    }
+
+    /**
+     * Analyze the uploaded template to discover key anchors and data columns.
+     */
+    private function analyzeTemplateLayout(Worksheet $sheet)
+    {
+        $layout = [
+            'nameCell' => 'A13',
+            'periodCell' => 'A14',
+            'officialHoursCells' => ['A15'],
+            'dayStartRow' => 19,
+            'dayEndRow' => 49,
+            'dayColumn' => 'A',
+            'morningArrivalColumn' => 'B',
+            'morningDepartureColumn' => 'C',
+            'afternoonArrivalColumn' => 'D',
+            'afternoonDepartureColumn' => 'E',
+            'remarksColumn' => 'H',
+            'namePlaceholderCells' => []
+        ];
+
+        $dayBlock = $this->detectTemplateDayBlock($sheet);
+        if ($dayBlock) {
+            $layout['dayColumn'] = $dayBlock['column'];
+            $layout['dayStartRow'] = $dayBlock['startRow'];
+            $layout['dayEndRow'] = $dayBlock['endRow'];
+
+            $dayColumnIndex = Coordinate::columnIndexFromString($layout['dayColumn']);
+            $layout['morningArrivalColumn'] = Coordinate::stringFromColumnIndex($dayColumnIndex + 1);
+            $layout['morningDepartureColumn'] = Coordinate::stringFromColumnIndex($dayColumnIndex + 2);
+            $layout['afternoonArrivalColumn'] = Coordinate::stringFromColumnIndex($dayColumnIndex + 3);
+            $layout['afternoonDepartureColumn'] = Coordinate::stringFromColumnIndex($dayColumnIndex + 4);
+        }
+
+        $remarksColumn = $this->detectRemarksColumn($sheet, $layout['dayStartRow']);
+        if ($remarksColumn) {
+            $layout['remarksColumn'] = $remarksColumn;
+        }
+
+        $officialHoursCells = $this->detectOfficialHoursCells($sheet);
+        if (!empty($officialHoursCells)) {
+            $layout['officialHoursCells'] = $officialHoursCells;
+
+            if (preg_match('/^([A-Z]+)(\d+)$/', $officialHoursCells[0], $matches)) {
+                $baseColumn = $matches[1];
+                $baseRow = (int)$matches[2];
+                if ($baseRow > 2) {
+                    $layout['periodCell'] = $baseColumn . ($baseRow - 1);
+                    $layout['nameCell'] = $baseColumn . ($baseRow - 2);
+                }
+            }
+        }
+
+        $layout['namePlaceholderCells'] = $this->detectNamePlaceholders($sheet, $layout['dayEndRow']);
+
+        return $layout;
+    }
+
+    /**
+     * Find the 1..31 day block in the template.
+     */
+    private function detectTemplateDayBlock(Worksheet $sheet)
+    {
+        $bestBlock = null;
+        $bestLength = 0;
+        $maxScanRow = min(160, (int)$sheet->getHighestRow());
+
+        for ($colIndex = 1; $colIndex <= 14; $colIndex++) {
+            $column = Coordinate::stringFromColumnIndex($colIndex);
+
+            for ($row = 1; $row <= $maxScanRow; $row++) {
+                $value = $sheet->getCell($column . $row)->getCalculatedValue();
+                if ($this->extractDayNumber($value) !== 1) {
+                    continue;
+                }
+
+                $expected = 1;
+                $cursor = $row;
+                while ($cursor <= $maxScanRow) {
+                    $current = $this->extractDayNumber($sheet->getCell($column . $cursor)->getCalculatedValue());
+                    if ($current !== $expected) {
+                        break;
+                    }
+                    $expected++;
+                    $cursor++;
+                    if ($expected > 31) {
+                        break;
+                    }
+                }
+
+                $length = $expected - 1;
+                if ($length > $bestLength) {
+                    $bestLength = $length;
+                    $bestBlock = [
+                        'column' => $column,
+                        'startRow' => $row,
+                        'endRow' => $row + $length - 1
+                    ];
+                }
+            }
+        }
+
+        return ($bestLength >= 28) ? $bestBlock : null;
+    }
+
+    /**
+     * Convert day cell values to day numbers when possible.
+     */
+    private function extractDayNumber($value)
+    {
+        if (is_numeric($value)) {
+            $day = (int)$value;
+            if ($day >= 1 && $day <= 31 && (float)$value == (float)$day) {
+                return $day;
+            }
+            return null;
+        }
+
+        $stringValue = trim((string)$value);
+        if (preg_match('/^(\d{1,2})$/', $stringValue, $matches)) {
+            $day = (int)$matches[1];
+            return ($day >= 1 && $day <= 31) ? $day : null;
+        }
+
+        return null;
+    }
+
+    /**
+     * Detect the remarks column from header labels near the day header rows.
+     */
+    private function detectRemarksColumn(Worksheet $sheet, $dayStartRow)
+    {
+        $headerStart = max(1, $dayStartRow - 2);
+        $headerEnd = max($headerStart, $dayStartRow);
+
+        for ($row = $headerStart; $row <= $headerEnd; $row++) {
+            for ($colIndex = 1; $colIndex <= 20; $colIndex++) {
+                $column = Coordinate::stringFromColumnIndex($colIndex);
+                $value = strtolower(trim((string)$sheet->getCell($column . $row)->getCalculatedValue()));
+                if ($value !== '' && strpos($value, 'remark') !== false) {
+                    return $column;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Detect one or more official-hours cells for schedule text updates.
+     */
+    private function detectOfficialHoursCells(Worksheet $sheet)
+    {
+        $cells = [];
+
+        for ($row = 1; $row <= 40; $row++) {
+            for ($colIndex = 1; $colIndex <= 20; $colIndex++) {
+                $column = Coordinate::stringFromColumnIndex($colIndex);
+                $value = strtolower(trim((string)$sheet->getCell($column . $row)->getCalculatedValue()));
+                if ($value !== '' && strpos($value, 'official hours for arrival and departure') !== false) {
+                    $cells[] = $column . $row;
+                }
+            }
+        }
+
+        return $cells;
+    }
+
+    /**
+     * Detect bottom signature name placeholders like "(NAME)".
+     */
+    private function detectNamePlaceholders(Worksheet $sheet, $dayEndRow)
+    {
+        $placeholders = [];
+        $highestRow = min((int)$sheet->getHighestRow(), $dayEndRow + 40);
+
+        for ($row = $dayEndRow + 1; $row <= $highestRow; $row++) {
+            for ($colIndex = 1; $colIndex <= 20; $colIndex++) {
+                $column = Coordinate::stringFromColumnIndex($colIndex);
+                $value = strtolower(trim((string)$sheet->getCell($column . $row)->getCalculatedValue()));
+                if ($value === '(name)' || $value === 'name') {
+                    $placeholders[] = $column . $row;
+                }
+            }
+        }
+
+        return $placeholders;
     }
     
     /**
@@ -485,9 +911,10 @@ class DTRGenerator
      */
     public function generateDTRs()
     {
-        // Increase execution time limit for large batches
-        set_time_limit(300); // 5 minutes
-        ini_set('max_execution_time', '300');
+        // Remove the execution time limit for large batches.
+        set_time_limit(0);
+        ini_set('max_execution_time', '0');
+        ini_set('memory_limit', '1024M');
         
         if (empty($this->logData)) {
             echo "No data to process. Load source data first.\n";
@@ -496,39 +923,23 @@ class DTRGenerator
         
         echo "\nGenerating DTR files...\n";
         
-        // Load template ONCE (major performance improvement)
-        try {
-            $templateSpreadsheet = $this->loadTemplate();
-            // Disable auto-calculation for better performance
-            $templateSpreadsheet->getActiveSheet()->setAutoFilter(null);
-        } catch (Exception $e) {
-            echo "Error loading template: " . $e->getMessage() . "\n";
-            return 0;
-        }
-        
         $count = 0;
         $generationErrors = [];
         foreach ($this->logData as $employeeName => $data) {
             try {
-                // Pass the template to avoid reloading from disk
+                // Load a fresh template per employee to avoid in-memory workbook cloning spikes.
+                $templateSpreadsheet = $this->loadTemplate();
                 $this->generateSingleDTR($employeeName, $data, $templateSpreadsheet);
                 $count++;
                 echo "✓ Generated DTR for: $employeeName\n";
                 
-                // Free memory every 5 employees
-                if ($count % 5 === 0) {
-                    gc_collect_cycles();
-                }
+                gc_collect_cycles();
             } catch (Exception $e) {
                 $errorMsg = "Error generating DTR for $employeeName: " . $e->getMessage();
                 $generationErrors[] = $errorMsg;
                 echo "✗ {$errorMsg}\n";
             }
         }
-        
-        // Clean up template
-        $templateSpreadsheet->disconnectWorksheets();
-        unset($templateSpreadsheet);
 
         if ($count === 0 && !empty($generationErrors)) {
             $previewErrors = array_slice($generationErrors, 0, 3);
@@ -560,121 +971,115 @@ class DTRGenerator
     
     /**
      * Generate DTR for a single employee
-     * @param Spreadsheet $templateSpreadsheet The pre-loaded template to copy
+     * @param Spreadsheet $templateSpreadsheet The loaded template workbook
      */
     private function generateSingleDTR($employeeName, $employeeData, $templateSpreadsheet)
     {
-        // PhpSpreadsheet no longer supports cloning Spreadsheet directly.
-        $template = $templateSpreadsheet->copy();
-        $sheet = $template->getActiveSheet();
-        
-        // Detect and update official hours based on schedule
-        $schedule = $employeeData['schedule'] ?? '8-5';
-        $officialHoursText = '';
-        
-        if ($schedule === '7-4') {
-            $officialHoursText = 'Official hours for arrival and departure: 7:00 a.m. to 4:00 p.m.';
-        } else {
-            $officialHoursText = 'Official hours for arrival and departure: 8:00 a.m. to 5:00 p.m.';
-        }
-        
-        // Update cells A14 and I14 with official hours
-        $sheet->setCellValue('A14', $officialHoursText);
-        $sheet->setCellValue('I14', $officialHoursText);
+        $template = $templateSpreadsheet;
+        try {
+            $sheet = $template->getActiveSheet();
+            $layout = $this->getTemplateLayout($sheet);
 
-        // Ensure no mixed duplicate "Official hours" line remains in nearby cells
-        foreach (['A15', 'I15'] as $cellRef) {
-            $currentValue = strtolower(trim((string)$sheet->getCell($cellRef)->getValue()));
-            if (strpos($currentValue, 'official hours for arrival and departure:') !== false) {
-                $sheet->setCellValue($cellRef, $officialHoursText);
-            }
-        }
-        
-        // CLEAR ALL existing data rows completely (columns A-F)
-        // Remove all template/default data - nothing should remain
-        for ($day = 1; $day <= 31; $day++) {
-            $row = 18 + $day; // Days start at row 19 (day 1)
-            for ($col = 1; $col <= 6; $col++) { // Clear columns A through F
-                $sheet->setCellValueByColumnAndRow($col, $row, '');
-            }
-        }
-        
-        // Set employee name in cell A13
-        $sheet->setCellValue('A13', strtoupper($employeeName));
-        
-        // Populate ALL days of the month (1-31), marking weekends and holidays
-        $daysInMonth = (int)date('t', mktime(0, 0, 0, $this->currentMonth, 1, $this->currentYear));
-        
-        for ($day = 1; $day <= $daysInMonth; $day++) {
-            $row = 18 + $day; // Days start at row 19 (day 1)
-            
-            // Always write the day number
-            $sheet->setCellValueByColumnAndRow(1, $row, $day);
-            
-            $dayData = $employeeData['dates'][$day] ?? null;
-            $isWeekend = $this->isWeekend($day);
-            $isHoliday = $this->isHoliday($day);
-            
-            // Determine remarks for this day
-            // Only write remarks for holidays or employee-specific data
-            // Skip weekends since the template already displays them
-            $remarks = '';
-            if ($isHoliday) {
-                $remarks = $this->getHolidayName($day);
-            } elseif ($dayData && !empty($dayData['remarks'])) {
-                $remarks = $dayData['remarks'];
-            }
-            
-            // For weekends and holidays, skip writing time data (leave blank)
-            if ($isWeekend || $isHoliday) {
-                // Leave time columns blank
-                $sheet->setCellValueByColumnAndRow(2, $row, '');
-                $sheet->setCellValueByColumnAndRow(3, $row, '');
-                $sheet->setCellValueByColumnAndRow(4, $row, '');
-                $sheet->setCellValueByColumnAndRow(5, $row, '');
-                // Only write remarks for holidays, skip weekends to avoid duplication
-                if ($isHoliday) {
-                    $sheet->setCellValueByColumnAndRow(6, $row, $remarks);
-                } else {
-                    // Leave remarks blank for weekends - template already shows them
-                    $sheet->setCellValueByColumnAndRow(6, $row, '');
-                }
-            } elseif ($dayData) {
-                // Regular workday with data
-                $sheet->setCellValueByColumnAndRow(2, $row, $dayData['morning_arrival'] ?? '');
-                $sheet->setCellValueByColumnAndRow(3, $row, $dayData['morning_departure'] ?? '');
-                $sheet->setCellValueByColumnAndRow(4, $row, $dayData['afternoon_arrival'] ?? '');
-                $sheet->setCellValueByColumnAndRow(5, $row, $dayData['afternoon_departure'] ?? '');
-                $sheet->setCellValueByColumnAndRow(6, $row, $remarks);
+            // Detect and update official hours based on schedule
+            $schedule = $employeeData['schedule'] ?? '8-5';
+            $officialHoursText = '';
+
+            if ($schedule === '7-4') {
+                $officialHoursText = 'Official hours for arrival and departure: 7:00 a.m. to 4:00 p.m.';
             } else {
-                // Workday with no data (employee might be absent)
-                $sheet->setCellValueByColumnAndRow(2, $row, '');
-                $sheet->setCellValueByColumnAndRow(3, $row, '');
-                $sheet->setCellValueByColumnAndRow(4, $row, '');
-                $sheet->setCellValueByColumnAndRow(5, $row, '');
-                $sheet->setCellValueByColumnAndRow(6, $row, $remarks);
+                $officialHoursText = 'Official hours for arrival and departure: 8:00 a.m. to 5:00 p.m.';
             }
-        }
-        
-        // Clear any remaining rows beyond the actual days in the month
-        for ($day = $daysInMonth + 1; $day <= 31; $day++) {
-            $row = 18 + $day;
-            for ($col = 1; $col <= 6; $col++) {
-                $sheet->setCellValueByColumnAndRow($col, $row, '');
+
+            // Update all detected official-hours anchors in the active template.
+            foreach ($layout['officialHoursCells'] as $cellAddress) {
+                $sheet->setCellValue($cellAddress, $officialHoursText);
             }
+
+            // Keep the template period synced to the source month and year.
+            if (!empty($layout['periodCell'])) {
+                $sheet->setCellValue($layout['periodCell'], 'For ' . $this->monthYear);
+            }
+
+            // Set employee name in primary and signature placeholders.
+            if (!empty($layout['nameCell'])) {
+                $sheet->setCellValue($layout['nameCell'], strtoupper($employeeName));
+            }
+            foreach ($layout['namePlaceholderCells'] as $nameCell) {
+                $sheet->setCellValue($nameCell, strtoupper($employeeName));
+            }
+
+            // Clear 31 template day rows while preserving all template styles/formatting.
+            for ($offset = 0; $offset < 31; $offset++) {
+                $row = $layout['dayStartRow'] + $offset;
+                $sheet->setCellValue($layout['dayColumn'] . $row, '');
+                $sheet->setCellValue($layout['morningArrivalColumn'] . $row, '');
+                $sheet->setCellValue($layout['morningDepartureColumn'] . $row, '');
+                $sheet->setCellValue($layout['afternoonArrivalColumn'] . $row, '');
+                $sheet->setCellValue($layout['afternoonDepartureColumn'] . $row, '');
+                $sheet->setCellValue($layout['remarksColumn'] . $row, '');
+            }
+
+            // Populate ALL days of the month (1-31), marking weekends and holidays
+            $daysInMonth = (int)date('t', mktime(0, 0, 0, $this->currentMonth, 1, $this->currentYear));
+
+            for ($day = 1; $day <= $daysInMonth; $day++) {
+                $row = $layout['dayStartRow'] + ($day - 1);
+
+                $dayData = $employeeData['dates'][$day] ?? null;
+                $isWeekend = $this->isWeekend($day);
+                $isHoliday = $this->isHoliday($day);
+
+                // Determine remarks for this day
+                // Only write remarks for holidays or employee-specific data
+                // Skip weekends since the template already displays them
+                $remarks = '';
+                if ($isHoliday) {
+                    $remarks = $this->getHolidayName($day);
+                } elseif ($dayData && !empty($dayData['remarks'])) {
+                    $remarks = $dayData['remarks'];
+                }
+
+                $morningArrival = '';
+                $morningDeparture = '';
+                $afternoonArrival = '';
+                $afternoonDeparture = '';
+
+                // For weekends and holidays, leave time data blank.
+                if ($isWeekend || $isHoliday) {
+                    // Only write remarks for holidays, skip weekends to avoid duplication.
+                    if ($isHoliday) {
+                        // Keep holiday remarks from the calendar.
+                    } else {
+                        $remarks = '';
+                    }
+                } elseif ($dayData) {
+                    $morningArrival = $dayData['morning_arrival'] ?? '';
+                    $morningDeparture = $dayData['morning_departure'] ?? '';
+                    $afternoonArrival = $dayData['afternoon_arrival'] ?? '';
+                    $afternoonDeparture = $dayData['afternoon_departure'] ?? '';
+                }
+
+                $sheet->setCellValue($layout['dayColumn'] . $row, $day);
+                $sheet->setCellValue($layout['morningArrivalColumn'] . $row, $morningArrival);
+                $sheet->setCellValue($layout['morningDepartureColumn'] . $row, $morningDeparture);
+                $sheet->setCellValue($layout['afternoonArrivalColumn'] . $row, $afternoonArrival);
+                $sheet->setCellValue($layout['afternoonDepartureColumn'] . $row, $afternoonDeparture);
+                $sheet->setCellValue($layout['remarksColumn'] . $row, $remarks);
+            }
+
+            // Save the file with schedule-specific filename
+            $schedule = $employeeData['schedule'] ?? '8-5';
+            $filename = $this->sanitizeFilename("DTR_{$schedule}_{$employeeName}.xlsx");
+            $filepath = "{$this->outputDir}/{$filename}";
+
+            $writer = IOFactory::createWriter($template, 'Xlsx');
+            $writer->setPreCalculateFormulas(false);
+            $writer->save($filepath);
+        } finally {
+            // Always release workbook memory, including when generation fails.
+            $template->disconnectWorksheets();
+            unset($sheet, $template);
         }
-        
-        // Save the file with schedule-specific filename
-        $schedule = $employeeData['schedule'] ?? '8-5';
-        $filename = $this->sanitizeFilename("DTR_{$schedule}_{$employeeName}.xlsx");
-        $filepath = "{$this->outputDir}/{$filename}";
-        
-        $writer = IOFactory::createWriter($template, 'Xlsx');
-        $writer->save($filepath);
-        
-        // Free memory
-        $template->disconnectWorksheets();
-        unset($template);
     }
     
     /**
@@ -752,7 +1157,13 @@ class DTRGenerator
 /**
  * Main execution
  */
-if (php_sapi_name() === 'cli') {
+$isDirectCliExecution = (
+    php_sapi_name() === 'cli' &&
+    isset($_SERVER['SCRIPT_FILENAME']) &&
+    realpath((string)$_SERVER['SCRIPT_FILENAME']) === __FILE__
+);
+
+if ($isDirectCliExecution) {
     try {
         $generator = new DTRGenerator();
         

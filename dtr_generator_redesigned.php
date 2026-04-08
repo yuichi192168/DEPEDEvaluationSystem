@@ -238,23 +238,62 @@ function validateTemplateCompatibility($templateRelativePath) {
             $issues[] = 'Template has no active worksheet.';
         } else {
             $maxRow = (int)$sheet->getHighestRow();
-            $maxCol = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::columnIndexFromString($sheet->getHighestColumn());
 
-            if ($maxRow < 49) {
-                $issues[] = 'Template must include DTR rows up to row 49 (days 1-31 section).';
+            if ($maxRow < 20) {
+                $issues[] = 'Template appears too short. Please upload a full monthly DTR template.';
             }
 
-            if ($maxCol < 9) {
-                $issues[] = 'Template must include columns up to at least I (for official hours text).';
-            }
+            // Detect a contiguous 1..31 day block anywhere in the sheet.
+            $dayBlockFound = false;
+            $maxScanRow = min(180, $maxRow);
+            $maxScanCol = min(20, \PhpOffice\PhpSpreadsheet\Cell\Coordinate::columnIndexFromString($sheet->getHighestColumn()));
 
-            $requiredCells = ['A13', 'A14', 'I14'];
-            foreach ($requiredCells as $cellRef) {
-                try {
-                    $sheet->getCell($cellRef);
-                } catch (Exception $e) {
-                    $issues[] = 'Missing required template cell: ' . $cellRef;
+            for ($colIndex = 1; $colIndex <= $maxScanCol && !$dayBlockFound; $colIndex++) {
+                $column = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($colIndex);
+                for ($row = 1; $row <= $maxScanRow && !$dayBlockFound; $row++) {
+                    $first = $sheet->getCell($column . $row)->getCalculatedValue();
+                    if ((int)$first !== 1 || (string)(int)$first !== trim((string)$first)) {
+                        continue;
+                    }
+
+                    $expected = 1;
+                    $cursor = $row;
+                    while ($cursor <= $maxScanRow) {
+                        $value = $sheet->getCell($column . $cursor)->getCalculatedValue();
+                        if ((int)$value !== $expected || (string)(int)$value !== trim((string)$value)) {
+                            break;
+                        }
+                        $expected++;
+                        $cursor++;
+                        if ($expected > 31) {
+                            break;
+                        }
+                    }
+
+                    if (($expected - 1) >= 28) {
+                        $dayBlockFound = true;
+                    }
                 }
+            }
+
+            if (!$dayBlockFound) {
+                $issues[] = 'Template must contain a day section with rows labeled 1 to 31 (or at least 1 to 28).';
+            }
+
+            // Detect official-hours instruction text used for schedule stamping.
+            $officialHoursFound = false;
+            for ($row = 1; $row <= min(40, $maxRow) && !$officialHoursFound; $row++) {
+                for ($colIndex = 1; $colIndex <= $maxScanCol && !$officialHoursFound; $colIndex++) {
+                    $column = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($colIndex);
+                    $value = strtolower(trim((string)$sheet->getCell($column . $row)->getCalculatedValue()));
+                    if ($value !== '' && strpos($value, 'official hours for arrival and departure') !== false) {
+                        $officialHoursFound = true;
+                    }
+                }
+            }
+
+            if (!$officialHoursFound) {
+                $issues[] = 'Template is missing an "Official hours for arrival and departure" instruction row.';
             }
         }
 
