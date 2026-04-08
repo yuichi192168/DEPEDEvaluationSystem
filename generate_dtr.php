@@ -33,6 +33,10 @@ class DTRGenerator
     private $holidays = [];
     private $monthYearLocked = false;
     private $templateLayout = null;
+    private $scheduleLabels = [
+        '7-4' => '7:00 AM - 4:00 PM',
+        '8-5' => '8:00 AM - 5:00 PM'
+    ];
     
     /**
      * Constructor
@@ -77,6 +81,103 @@ class DTRGenerator
             $this->currentYear = (int)date('Y');
             $this->monthYearLocked = false;
         }
+    }
+
+    /**
+     * Get standardized human-readable schedule label.
+     */
+    private function getScheduleLabel($scheduleCode)
+    {
+        return $this->scheduleLabels[$scheduleCode] ?? $this->scheduleLabels['8-5'];
+    }
+
+    /**
+     * Build official-hours line using standardized schedule labels.
+     */
+    private function getOfficialHoursText($scheduleCode)
+    {
+        if ($scheduleCode === '7-4') {
+            return 'Official hours for arrival and departure: 7:00 a.m. to 4:00 p.m.';
+        }
+        return 'Official hours for arrival and departure: 8:00 a.m. to 5:00 p.m.';
+    }
+
+    /**
+     * Detect source column indexes by header labels with fallback defaults.
+     */
+    private function detectSourceColumns(array $headerRow)
+    {
+        $normalized = [];
+        foreach ($headerRow as $index => $value) {
+            $normalized[$index] = strtolower(trim((string)$value));
+        }
+
+        $findColumn = function (array $keywords) use ($normalized) {
+            foreach ($normalized as $index => $label) {
+                foreach ($keywords as $keyword) {
+                    if ($label !== '' && strpos($label, $keyword) !== false) {
+                        return $index;
+                    }
+                }
+            }
+            return null;
+        };
+
+        return [
+            'name' => $findColumn(['name', 'employee']) ?? 0,
+            'date' => $findColumn(['date']) ?? 1,
+            'timetable' => $findColumn(['timetable', 'schedule', 'shift']) ?? 2,
+            'clock_in' => $findColumn(['clock in', 'time in', 'in']) ?? 3,
+            'clock_out' => $findColumn(['clock out', 'time out', 'out']) ?? 4,
+            'department' => $findColumn(['department', 'office', 'unit']) ?? 5,
+            'remarks' => $findColumn(['remarks', 'remark', 'note', 'status'])
+        ];
+    }
+
+    /**
+     * Normalize schedule tokens from free-form timetable strings.
+     */
+    private function extractScheduleCodeFromText($value)
+    {
+        $text = strtolower(trim((string)$value));
+        if ($text === '') {
+            return null;
+        }
+
+        $compact = preg_replace('/\s+/', '', $text);
+        if (preg_match('/\b0?7(?::?00)?\s*(?:a\.?m\.?)?\s*(?:-|–|—|to)\s*0?4(?::?00)?\s*(?:p\.?m\.?)?\b/i', $text) ||
+            strpos($compact, '7-4pm') !== false ||
+            strpos($compact, '7am-4pm') !== false ||
+            strpos($compact, '0700-1600') !== false) {
+            return '7-4';
+        }
+
+        if (preg_match('/\b0?8(?::?00)?\s*(?:a\.?m\.?)?\s*(?:-|–|—|to)\s*0?5(?::?00)?\s*(?:p\.?m\.?)?\b/i', $text) ||
+            strpos($compact, '8-5pm') !== false ||
+            strpos($compact, '8am-5pm') !== false ||
+            strpos($compact, '0800-1700') !== false) {
+            return '8-5';
+        }
+
+        return null;
+    }
+
+    /**
+     * Keep only one normalized schedule label in remarks when present.
+     */
+    private function normalizeRemarkText($remarkText)
+    {
+        $remark = trim((string)$remarkText);
+        if ($remark === '') {
+            return '';
+        }
+
+        $scheduleCode = $this->extractScheduleCodeFromText($remark);
+        if ($scheduleCode !== null) {
+            return $this->getScheduleLabel($scheduleCode);
+        }
+
+        return preg_replace('/\s+/', ' ', $remark);
     }
 
     /**
@@ -312,37 +413,53 @@ class DTRGenerator
         
         $sheet = $spreadsheet->getActiveSheet();
         $isHeaderRow = true;
+        $sourceColumns = [
+            'name' => 0,
+            'date' => 1,
+            'timetable' => 2,
+            'clock_in' => 3,
+            'clock_out' => 4,
+            'department' => 5,
+            'remarks' => null
+        ];
 
         // Parse row-by-row to avoid materializing the entire sheet into memory.
-        // Expected columns: A=Name, B=Date, C=Timetable, D=Clock In, E=Clock Out, F=Department
+        // Expected columns are detected from header labels with A-F fallback.
         foreach ($sheet->getRowIterator() as $row) {
-            if ($isHeaderRow) {
-                $isHeaderRow = false;
-                continue;
-            }
-
             $rowIndex = $row->getRowIndex();
-            $rowValues = array_fill(0, 6, '');
-            $cellIterator = $row->getCellIterator('A', 'F');
+            $rowValues = array_fill(0, 26, '');
+            $cellIterator = $row->getCellIterator('A', 'Z');
             $cellIterator->setIterateOnlyExistingCells(true);
 
             foreach ($cellIterator as $cell) {
                 $columnIndex = Coordinate::columnIndexFromString($cell->getColumn()) - 1;
-                if ($columnIndex >= 0 && $columnIndex < 6) {
+                if ($columnIndex >= 0 && $columnIndex < 26) {
                     $rowValues[$columnIndex] = $cell->getValue();
                 }
             }
 
-            if (empty($rowValues[0]) && empty($rowValues[1]) && empty($rowValues[2]) && empty($rowValues[3]) && empty($rowValues[4]) && empty($rowValues[5])) {
+            if ($isHeaderRow) {
+                $sourceColumns = $this->detectSourceColumns($rowValues);
+                $isHeaderRow = false;
                 continue;
             }
-            
-            $name = trim((string)($rowValues[0] ?? ''));
-            $date = $rowValues[1] ?? '';
-            $timetable = trim((string)($rowValues[2] ?? '')); // Morning or Afternoon
-            $clockIn = $rowValues[3] ?? ''; // Don't trim yet - preserve original for better parsing
-            $clockOut = $rowValues[4] ?? ''; // Don't trim yet - preserve original for better parsing
-            $department = trim((string)($rowValues[5] ?? ''));
+
+            $nameIndex = $sourceColumns['name'];
+            $dateIndex = $sourceColumns['date'];
+            if (empty($rowValues[$nameIndex]) && empty($rowValues[$dateIndex])) {
+                continue;
+            }
+
+            $name = trim((string)($rowValues[$sourceColumns['name']] ?? ''));
+            $date = $rowValues[$sourceColumns['date']] ?? '';
+            $timetable = trim((string)($rowValues[$sourceColumns['timetable']] ?? ''));
+            $clockIn = $rowValues[$sourceColumns['clock_in']] ?? '';
+            $clockOut = $rowValues[$sourceColumns['clock_out']] ?? '';
+            $department = trim((string)($rowValues[$sourceColumns['department']] ?? ''));
+            $rawRemark = '';
+            if ($sourceColumns['remarks'] !== null) {
+                $rawRemark = $this->normalizeRemarkText($rowValues[$sourceColumns['remarks']] ?? '');
+            }
             
             if ($this->isHeaderLikeRow($name, $date, $timetable)) {
                 continue;
@@ -368,6 +485,7 @@ class DTRGenerator
                     'department' => $department,
                     'dates' => [],
                     'schedule' => null, // Will be detected later
+                    'schedule_label' => '',
                     'arrival_times' => [], // Fallback for schedule detection when timetable labels are missing
                     'timetable_values' => [] // Track raw timetable labels for deterministic schedule detection
                 ];
@@ -387,6 +505,15 @@ class DTRGenerator
                     'afternoon_departure' => '',
                     'remarks' => ''
                 ];
+            }
+
+            if ($rawRemark !== '') {
+                $existingRemark = $this->logData[$name]['dates'][$dayOfMonth]['remarks'];
+                if ($existingRemark === '') {
+                    $this->logData[$name]['dates'][$dayOfMonth]['remarks'] = $rawRemark;
+                } elseif (stripos($existingRemark, $rawRemark) === false) {
+                    $this->logData[$name]['dates'][$dayOfMonth]['remarks'] = $existingRemark . '; ' . $rawRemark;
+                }
             }
             
             // Map clock in/out based on timetable type
@@ -455,11 +582,13 @@ class DTRGenerator
             // Primary logic: timetable labels decide schedule
             if ($sevenFourLabelCount > 0 || $eightFiveLabelCount > 0) {
                 $data['schedule'] = ($sevenFourLabelCount > $eightFiveLabelCount) ? '7-4' : '8-5';
+                $data['schedule_label'] = $this->getScheduleLabel($data['schedule']);
                 continue;
             }
 
             if (empty($data['arrival_times'])) {
                 $data['schedule'] = '8-5'; // Default when no usable timetable/arrival data
+                $data['schedule_label'] = $this->getScheduleLabel($data['schedule']);
                 continue;
             }
             
@@ -485,6 +614,7 @@ class DTRGenerator
             } else {
                 $data['schedule'] = '8-5';
             }
+            $data['schedule_label'] = $this->getScheduleLabel($data['schedule']);
         }
         unset($data); // Break reference
     }
@@ -494,21 +624,7 @@ class DTRGenerator
      */
     private function detectScheduleFromTimetable($timetableValue)
     {
-        $timetable = strtolower(trim((string)$timetableValue));
-
-        if ($timetable === '') {
-            return null;
-        }
-
-        if (strpos($timetable, '7-4pm') !== false || (strpos($timetable, '7') !== false && strpos($timetable, '4pm') !== false)) {
-            return '7-4';
-        }
-
-        if (strpos($timetable, '8-5pm') !== false || (strpos($timetable, '8') !== false && strpos($timetable, '5pm') !== false)) {
-            return '8-5';
-        }
-
-        return null;
+        return $this->extractScheduleCodeFromText($timetableValue);
     }
     
     /**
@@ -982,12 +1098,14 @@ class DTRGenerator
 
             // Detect and update official hours based on schedule
             $schedule = $employeeData['schedule'] ?? '8-5';
-            $officialHoursText = '';
+            $officialHoursText = $this->getOfficialHoursText($schedule);
 
-            if ($schedule === '7-4') {
-                $officialHoursText = 'Official hours for arrival and departure: 7:00 a.m. to 4:00 p.m.';
-            } else {
-                $officialHoursText = 'Official hours for arrival and departure: 8:00 a.m. to 5:00 p.m.';
+            // Keep a copy of template-provided default remarks (e.g., Saturday/Sunday labels)
+            // so generated files do not lose preset template remarks.
+            $defaultRemarksByDay = [];
+            for ($offset = 0; $offset < 31; $offset++) {
+                $row = $layout['dayStartRow'] + $offset;
+                $defaultRemarksByDay[$offset + 1] = trim((string)$sheet->getCell($layout['remarksColumn'] . $row)->getCalculatedValue());
             }
 
             // Update all detected official-hours anchors in the active template.
@@ -1030,13 +1148,15 @@ class DTRGenerator
                 $isHoliday = $this->isHoliday($day);
 
                 // Determine remarks for this day
-                // Only write remarks for holidays or employee-specific data
-                // Skip weekends since the template already displays them
                 $remarks = '';
-                if ($isHoliday) {
-                    $remarks = $this->getHolidayName($day);
-                } elseif ($dayData && !empty($dayData['remarks'])) {
+                if ($dayData && !empty($dayData['remarks'])) {
                     $remarks = $dayData['remarks'];
+                } elseif ($isHoliday) {
+                    $remarks = $this->getHolidayName($day);
+                } elseif (!empty($defaultRemarksByDay[$day])) {
+                    $remarks = $defaultRemarksByDay[$day];
+                } elseif ($isWeekend) {
+                    $remarks = $this->getDayName($day);
                 }
 
                 $morningArrival = '';
@@ -1044,14 +1164,9 @@ class DTRGenerator
                 $afternoonArrival = '';
                 $afternoonDeparture = '';
 
-                // For weekends and holidays, leave time data blank.
+                // For weekends and holidays, keep time fields blank but preserve remarks.
                 if ($isWeekend || $isHoliday) {
-                    // Only write remarks for holidays, skip weekends to avoid duplication.
-                    if ($isHoliday) {
-                        // Keep holiday remarks from the calendar.
-                    } else {
-                        $remarks = '';
-                    }
+                    // no-op for remarks; they are already resolved above
                 } elseif ($dayData) {
                     $morningArrival = $dayData['morning_arrival'] ?? '';
                     $morningDeparture = $dayData['morning_departure'] ?? '';
