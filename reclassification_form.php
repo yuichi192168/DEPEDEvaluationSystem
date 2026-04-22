@@ -162,15 +162,15 @@ $performanceRules = [
     ],
     "Master Teacher II" => [
         "coi_vs" => 0,
-        "ncoi_vs" => 5,
-        "coi_o" => 10,
-        "ncoi_o" => 5,
+        "ncoi_vs" => 6,
+        "coi_o" => 18,
+        "ncoi_o" => 6,
     ],
     "Master Teacher III" => [
         "coi_vs" => 0,
-        "ncoi_vs" => 8,
-        "coi_o" => 21,
-        "ncoi_o" => 8,
+        "ncoi_vs" => 6,
+        "coi_o" => 18,
+        "ncoi_o" => 6,
     ],
 ];
 
@@ -256,7 +256,80 @@ $ppstIndicators = [
             ["code" => "7.2.2", "text" => "Adopt practices that uphold the dignity of teaching as a profession by exhibiting qualities such as caring attitude, respect and integrity. (NCOI)"],
             ["code" => "7.3.2", "text" => "Participate in professional networks to share knowledge and to enhance practice. (NCOI)"],
             ["code" => "7.4.2", "text" => "Develop a personal professional improvement plan based on reflection of one's practice and ongoing professional learning. (NCOI)"],
-            ["code" => "7.5.2", "text" => "Set professional development goals based on the Philippine Professional Standards for Teachers. (NCOI)"],
+$ppstIndicatorsForm2 = [
+    [
+        "domain" => "Domain 1. Content Knowledge and Pedagogy",
+        "items" => [
+            ["code" => "1.1.3", "text" => "Model effective applications of content knowledge within and across curriculum teaching areas."],
+            ["code" => "1.2.3", "text" => "Collaborate with colleagues in the conduct and application of research to enrich knowledge of content and pedagogy."],
+            ["code" => "1.3.3", "text" => "Promote effective strategies in the positive use of ICT to facilitate teaching and learning process."],
+            ["code" => "1.4.3", "text" => "Evaluate with colleagues the effectiveness of teaching strategies that promote learner achievement in literacy and numeracy."],
+            ["code" => "1.5.3", "text" => "Develop and apply effective teaching strategies to promote critical and creative thinking, as well as other higher-order thinking skills."],
+            ["code" => "1.6.3", "text" => "Model and support colleagues in the proficient use of Mother Tongue, Filipino and English to improve teaching and learning, as well as to develop learners' pride of their language, heritage and culture."],
+            ["code" => "1.7.3", "text" => "Display a wide range of effective verbal and non-verbal classroom communication strategies to support learner understanding, participation, engagement and achievement."],
+        ],
+    ],
+    [
+        "domain" => "Domain 2. Learning Environment",
+        "items" => [
+            ["code" => "2.1.3", "text" => "Exhibit effective strategies that ensure safe and secure learning environments to enhance learning through consistent implementation of policies, guidelines and procedures."],
+            ["code" => "2.2.3", "text" => "Exhibit effective practices to foster learning environments that promote fairness, respect and care to encourage learning."],
+            ["code" => "2.3.3", "text" => "Work with colleagues to model and share effective techniques in the management of classroom structure to engage learners, individually or in groups, in meaningful exploration, discovery and hands-on activities within a range of physical learning environments."],
+            ["code" => "2.4.3", "text" => "Work with colleagues to share successful strategies that sustain supportive learning environments that nurture and inspire learners to participate, cooperate and collaborate in continued learning."],
+            ["code" => "2.5.3", "text" => "Model successful strategies and support colleagues in promoting learning environments that effectively motivate learners to work productively by assuming responsibility for their own learning."],
+            ["code" => "2.6.3", "text" => "Exhibit effective and constructive behavior management skills by applying positive and non-violent discipline to ensure learning-focused environments."],
+        ],
+    ],
+    [
+        "domain" => "Domain 3. Diversity of Learners",
+        "items" => [
+            ["code" => "3.1.3", "text" => "Work with colleagues to share differentiated, developmentally appropriate opportunities to address learners' differences in gender, needs, strengths, interests and experiences."],
+            ["code" => "3.2.3", "text" => "Exhibit a learner-centered culture that promotes success by using effective teaching strategies that respond to learners' linguistic, cultural, socio-economic and religious backgrounds."],
+            ["code" => "3.3.3", "text" => "Assist colleagues to design, adapt and implement teaching strategies that are responsive to learners with disabilities, giftedness and talents."],
+            ["code" => "3.4.3", "text" => "Evaluate with colleagues teaching strategies that are responsive to the special educational needs of learners in difficult circumstances, including: geographic isolation; chronic illness; displacement due to armed conflict, urban resettlement or disasters; child abuse and child labor practices."],
+            ["code" => "3.5.3", "text" => "Develop and apply teaching strategies to address effectively the needs of learners from indigenous groups."],
+        ],
+    ],
+    [
+        "domain" => "Domain 4. Curriculum and Planning",
+        "items" => [
+            ["code" => "4.1.3", "text" => "Develop and apply effective strategies in planning and management of developmentally sequenced teaching and learning processes to meet curriculum requirements and varied teaching contexts."],
+            ["code" => "4.2.3", "text" => "Model to colleagues the setting of achievable and challenging learning outcomes that are aligned with learning competencies to cultivate a culture of excellence for all learners."],
+            ["code" => "4.3.3", "text" => "Work collaboratively with colleagues to evaluate the design of learning programs that develop knowledge and skills of learners at different ability levels."],
+            ["code" => "4.4.3", "text" => "Review with colleagues, teacher and learner feedback to plan, facilitate, and enrich teaching practice."],
+            ["code" => "4.5.3", "text" => "Advise and guide colleagues in the selection, organization, development and use of appropriate teaching and learning resources, including ICT, to address specific learning goals."],
+        ],
+    ],
+    [
+        "domain" => "Domain 5. Assessment and Reporting",
+        "items" => [
+            ["code" => "5.1.3", "text" => "Work collaboratively with colleagues to review the design, selection, organization and use of a range of effective diagnostic, formative and summative assessment strategies consistent with curriculum requirements."],
+            ["code" => "5.2.3", "text" => "Interpret collaboratively monitoring and evaluation strategies of attainment data to support learner progress and achievement."],
+            ["code" => "5.3.3", "text" => "Use effective strategies for providing timely, accurate and constructive feedback to encourage learners to reflect on and improve their own learning."],
+            ["code" => "5.4.3", "text" => "Apply skills in effective communication of learner needs, progress and achievement to key stakeholders, including parents/guardians."],
+            ["code" => "5.5.3", "text" => "Work collaboratively with colleagues to analyze and utilize assessment data to modify practices and programs to further support learner progress and achievement."],
+        ],
+    ],
+    [
+        "domain" => "Domain 6. Community Linkages and Professional Engagement",
+        "items" => [
+            ["code" => "6.1.3", "text" => "Reflect on and evaluate learning environments that are responsive to community contexts."],
+            ["code" => "6.2.3", "text" => "Guide colleagues to strengthen relationships with parents/guardians and the wider school community to maximize their involvement in the educative process."],
+            ["code" => "6.3.3", "text" => "Discuss with colleagues teaching and learning practices that apply existing codes, laws and regulations applicable to the teaching profession, and responsibilities specified in the Code of Ethics for Professional Teachers."],
+            ["code" => "6.4.3", "text" => "Exhibit commitment to and support teachers in the implementation of school policies and procedures to foster harmonious relationships with learners, parents, and other stakeholders."],
+        ],
+    ],
+    [
+        "domain" => "Domain 7. Personal Growth and Professional Development",
+        "items" => [
+            ["code" => "7.1.3", "text" => "Manifest a learner-centered teaching philosophy in various aspects of practice and support colleagues in enhancing their own learner-centered teaching philosophy."],
+            ["code" => "7.2.3", "text" => "Identify and utilize personal professional strengths to uphold the dignity of teaching as a profession to help build a positive teaching and learning culture within the school."],
+            ["code" => "7.3.3", "text" => "Contribute actively to professional networks within and between schools to improve knowledge and to enhance practice."],
+            ["code" => "7.4.3", "text" => "Initiate professional reflections and promote learning opportunities with colleagues to improve practice."],
+            ["code" => "7.5.3", "text" => "Reflect on the Philippine Professional Standards for Teachers to plan personal professional development goals and assist colleagues in planning and achieving their own goals."],
+        ],
+    ],
+],
         ],
     ],
 ];
@@ -345,7 +418,9 @@ function compute_ppst_counts(array $ppstIndicators): array
     return $counts;
 }
 
-$ppstCounts = compute_ppst_counts($ppstIndicators);
+// Use appropriate PPST indicators based on form type
+$currentPpstIndicators = $formType === "form2" ? $ppstIndicatorsForm2 : $ppstIndicators;
+$ppstCounts = compute_ppst_counts($currentPpstIndicators);
 
 function requires_t4_gate(string $positionApplied): bool
 {
@@ -611,6 +686,12 @@ function format_additional_requirements(string $positionApplied): string
     }
     if ($positionApplied === "Teacher V") {
         $requirements[] = "Must have at least 6 COE/COI indicators.";
+    }
+    if ($positionApplied === "Master Teacher II") {
+        $requirements[] = "At least 10 Highly Proficient COIs at Outstanding; and At least 5 Highly Proficient NCOIs at Very Satisfactory and 5 Highly Proficient NCOIs at Outstanding";
+    }
+    if ($positionApplied === "Master Teacher III") {
+        $requirements[] = "21 Highly Proficient COIs at Outstanding; and 8 Highly Proficient NCOIs at Very Satisfactory and 8 Highly Proficient NCOIs at Outstanding";
     }
     if (requires_t4_gate($positionApplied)) {
         $requirements[] = "Must pass Teacher IV (T4) gate with at least 4 validated T4 indicators.";
@@ -1261,7 +1342,7 @@ function format_additional_requirements(string $positionApplied): string
 
     <div class="section">
         <div class="section-title">Summary of the Achievement of PPST Indicators</div>
-        <table class="ppst-table">
+        <table class="ppst-table" id="ppst-indicators-table">
             <thead>
             <tr>
                 <th class="col-no">No.</th>
@@ -1271,15 +1352,16 @@ function format_additional_requirements(string $positionApplied): string
             </tr>
             </thead>
             <tbody>
+            <!-- Form 1 Indicators -->
             <?php $rowNumber = 1; ?>
             <?php foreach ($ppstIndicators as $domain): ?>
-                <tr class="domain-row">
+                <tr class="domain-row" data-form-type="form1">
                     <td class="col-no"></td>
                     <td colspan="3"><?php echo htmlspecialchars($domain["domain"]); ?></td>
                 </tr>
                 <?php foreach ($domain["items"] as $item): ?>
                     <?php $indicatorType = is_ncoi_indicator_text((string)$item["text"]) ? "ncoi" : "coi"; ?>
-                    <tr>
+                    <tr data-form-type="form1">
                         <td class="col-no"><?php echo $rowNumber; ?></td>
                         <td>
                             <strong><?php echo htmlspecialchars($item["code"]); ?></strong>
@@ -1295,6 +1377,33 @@ function format_additional_requirements(string $positionApplied): string
                     <?php $rowNumber++; ?>
                 <?php endforeach; ?>
             <?php endforeach; ?>
+            
+            <!-- Form 2 Indicators -->
+            <?php $rowNumber = 1; ?>
+            <?php foreach ($ppstIndicatorsForm2 as $domain): ?>
+                <tr class="domain-row" data-form-type="form2" style="display: none;">
+                    <td class="col-no"></td>
+                    <td colspan="3"><?php echo htmlspecialchars($domain["domain"]); ?></td>
+                </tr>
+                <?php foreach ($domain["items"] as $item): ?>
+                    <?php $indicatorType = is_ncoi_indicator_text((string)$item["text"]) ? "ncoi" : "coi"; ?>
+                    <tr data-form-type="form2" style="display: none;">
+                        <td class="col-no"><?php echo $rowNumber; ?></td>
+                        <td>
+                            <strong><?php echo htmlspecialchars($item["code"]); ?></strong>
+                            <?php echo htmlspecialchars($item["text"]); ?>
+                        </td>
+                        <td class="col-check">
+                            <input type="checkbox" data-indicator-type="<?php echo htmlspecialchars($indicatorType); ?>" name="ppst_o_<?php echo $rowNumber; ?>" value="1">
+                        </td>
+                        <td class="col-check">
+                            <input type="checkbox" data-indicator-type="<?php echo htmlspecialchars($indicatorType); ?>" name="ppst_vs_<?php echo $rowNumber; ?>" value="1">
+                        </td>
+                    </tr>
+                    <?php $rowNumber++; ?>
+                <?php endforeach; ?>
+            <?php endforeach; ?>
+            
             <tr>
                 <td class="col-no"></td>
                 <td><strong>Total Number of O and VS</strong></td>
@@ -1572,6 +1681,8 @@ function format_additional_requirements(string $positionApplied): string
     const form2Order = <?php echo json_encode($form2Order, JSON_UNESCAPED_SLASHES); ?>;
     const form1Applied = <?php echo json_encode($form1Positions, JSON_UNESCAPED_SLASHES); ?>;
     const form2Applied = <?php echo json_encode($form2Positions, JSON_UNESCAPED_SLASHES); ?>;
+    const ppstIndicatorsForm1 = <?php echo json_encode($ppstIndicators, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
+    const ppstIndicatorsForm2 = <?php echo json_encode($ppstIndicatorsForm2, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
     const latestResult = <?php echo json_encode($result, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
     const latestResultPosition = <?php echo json_encode($positionApplied, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
     const formTypeSelect = document.getElementById("form_type");
@@ -1671,6 +1782,178 @@ function format_additional_requirements(string $positionApplied): string
                 t4GatePassedSelect.value = "0";
             }
         }
+    };
+
+    const updatePpstIndicatorsTable = () => {
+        const formType = formTypeSelect.value;
+        const tbody = document.querySelector("#ppst-indicators-table tbody");
+        if (!tbody) return;
+
+        console.log('Updating PPST table for form:', formType);
+
+        // Show/hide rows based on form type
+        document.querySelectorAll("#ppst-indicators-table tbody tr").forEach((row) => {
+            const rowFormType = row.getAttribute("data-form-type");
+            if (rowFormType) {
+                const shouldShow = rowFormType === formType;
+                row.style.display = shouldShow ? "" : "none";
+                console.log('Row data-form-type:', rowFormType, 'Display:', row.style.display);
+            }
+        });
+
+        // Clear performance inputs when switching form types
+        clearPerformanceInputs();
+        updateTotals();
+        
+        // Get ALL PPST checkboxes and filter by visibility
+        const allCheckboxes = Array.from(
+            tbody.querySelectorAll('input[type="checkbox"][name^="ppst_"]')
+        );
+        
+        console.log('Total ppst checkboxes found:', allCheckboxes.length);
+        
+        const visibleCheckboxes = allCheckboxes.filter(checkbox => {
+            const row = checkbox.closest('tr');
+            const isVisible = row && row.style.display !== "none";
+            return isVisible;
+        });
+        
+        console.log('Visible checkboxes:', visibleCheckboxes.length);
+        
+        // Update the global ppstCheckboxes array
+        ppstCheckboxes.length = 0;
+        ppstCheckboxes.push(...visibleCheckboxes);
+        
+        // Rebind events to visible checkboxes only
+        visibleCheckboxes.forEach(checkbox => {
+            checkbox.removeEventListener("change", ppstCheckboxChangeHandler);
+            checkbox.addEventListener("change", ppstCheckboxChangeHandler);
+        });
+    };
+
+    const renderPPSTIndicators = (formType) => {
+        console.log('Rendering PPST:', formType);
+        
+        const tbody = document.querySelector("#ppst-indicators-table tbody");
+        if (!tbody) {
+            console.error("PPST indicators table tbody not found!");
+            return;
+        }
+
+        // Clear old content
+        tbody.innerHTML = '';
+        
+        // Get correct dataset
+        const indicators = formType === 'form2' ? ppstIndicatorsForm2 : ppstIndicatorsForm1;
+        console.log('Using indicators dataset:', {
+            formType,
+            indicatorCount: indicators ? indicators.reduce((sum, d) => sum + d.items.length, 0) : 0
+        });
+
+        // Generate HTML content
+        let html = '';
+        let rowNumber = 1;
+        
+        indicators.forEach(domain => {
+            // Add domain row
+            html += `
+                <tr class="domain-row">
+                    <td class="col-no"></td>
+                    <td colspan="3">${domain.domain}</td>
+                </tr>
+            `;
+            
+            // Add indicator rows
+            domain.items.forEach(item => {
+                const isNcoi = item.text.includes("(NCOI)");
+                html += `
+                    <tr>
+                        <td class="col-no">${rowNumber}</td>
+                        <td>
+                            <strong>${item.code}</strong>
+                            ${item.text}
+                        </td>
+                        <td class="col-check">
+                            <input type="checkbox" name="ppst_o_${rowNumber}" value="1" data-indicator-type="${isNcoi ? 'ncoi' : 'coi'}">
+                        </td>
+                        <td class="col-check">
+                            <input type="checkbox" name="ppst_vs_${rowNumber}" value="1" data-indicator-type="${isNcoi ? 'ncoi' : 'coi'}">
+                        </td>
+                    </tr>
+                `;
+                rowNumber++;
+            });
+        });
+        
+        // Add total row
+        html += `
+            <tr>
+                <td class="col-no"></td>
+                <td><strong>Total Number of O and VS</strong></td>
+                <td class="col-check">
+                    <input type="number" id="ppst_total_o" name="ppst_total_o" class="line-input" value="" readonly>
+                </td>
+                <td class="col-check">
+                    <input type="number" id="ppst_total_vs" name="ppst_total_vs" class="line-input" value="" readonly>
+                </td>
+            </tr>
+        `;
+        
+        // Inject content
+        tbody.innerHTML = html;
+        console.log('PPST content injected, rows created:', rowNumber - 1);
+        
+        // Rebind checkbox events
+        const newCheckboxes = Array.from(tbody.querySelectorAll("input[type='checkbox'][name^='ppst_']"));
+        newCheckboxes.forEach(checkbox => {
+            checkbox.addEventListener("change", (event) => {
+                enforcePpstSingleSelection(event.target);
+                updatePerformanceFromPpst();
+                updateTotals();
+                saveDraft();
+            });
+        });
+        
+        // Update global ppstCheckboxes reference
+        ppstCheckboxes.length = 0;
+        ppstCheckboxes.push(...newCheckboxes);
+        
+        // Clear performance inputs and reset totals
+        clearPerformanceInputs();
+        updateTotals();
+        
+        console.log('PPST rendering completed', {
+            formType,
+            checkboxesBound: newCheckboxes.length
+        });
+    };
+
+    const clearPpstInputs = () => {
+        // Clear all PPST checkbox values
+        ppstCheckboxes.forEach(checkbox => {
+            checkbox.checked = false;
+        });
+        
+        // Clear performance input fields
+        clearPerformanceInputs();
+        
+        updateTotals();
+    };
+
+    const clearPerformanceInputs = () => {
+        // Clear performance input fields
+        vsInputs.forEach(input => input.value = "");
+        oInputs.forEach(input => input.value = "");
+        
+        // Clear T4 gate fields if they exist
+        if (t4IndicatorsInput) t4IndicatorsInput.value = "0";
+        if (t4GatePassedSelect) t4GatePassedSelect.value = "0";
+        
+        // Clear PPST total fields if they exist
+        const ppstTotalO = document.getElementById("ppst_total_o");
+        const ppstTotalVs = document.getElementById("ppst_total_vs");
+        if (ppstTotalO) ppstTotalO.value = "";
+        if (ppstTotalVs) ppstTotalVs.value = "";
     };
 
     const updateAppliedOptions = () => {
@@ -2086,11 +2369,8 @@ function format_additional_requirements(string $positionApplied): string
         document.getElementById("item_number").value = record.item_number || "";
         document.getElementById("sg_salary").value = payload.sg_salary || "";
 
-        if (payload.form_type && formTypeSelect.value !== payload.form_type) {
-            formTypeSelect.value = payload.form_type;
-            updateFormScope();
-            updatePositionOptions();
-        }
+        // Form type is now determined by position selection, not loaded from database
+        // This prevents automatic form type changes when loading saved records
 
         updateAppliedOptions();
         updateQsFields();
@@ -2652,12 +2932,32 @@ function format_additional_requirements(string $positionApplied): string
         saveDraft();
     });
     formTypeSelect.addEventListener("change", () => {
+        const selectedForm = this.value;
+        
+        console.log('Form type changed to:', selectedForm);
+        
         updateFormScope();
         updatePositionOptions();
         updateAppliedOptions();
         updatePerformanceTable();
         updatePerformanceSections();
         updateQsFields();
+        
+        // Clear previous form data and reset calculations
+        clearPerformance();
+        updatePpstIndicatorsTable();
+        
+        // Render appropriate PPST indicators based on form type
+        if (selectedForm === 'form1') {
+            console.log('Rendering Form 1 content');
+            renderPPSTIndicators('form1');
+        }
+        
+        if (selectedForm === 'form2') {
+            console.log('Rendering Form 2 content - Master Teacher II-III');
+            renderPPSTIndicators('form2');
+        }
+        
         updateActionTables();
         saveDraft();
     });
@@ -2744,6 +3044,7 @@ function format_additional_requirements(string $positionApplied): string
         updatePerformanceTable();
         updatePerformanceSections();
         updateQsFields();
+        updatePpstIndicatorsTable();
         clearPerformance();
         clearValidationHints();
         updateTotals();
@@ -2764,6 +3065,7 @@ function format_additional_requirements(string $positionApplied): string
     updatePerformanceTable();
     updatePerformanceSections();
     updateQsFields();
+    updatePpstIndicatorsTable();
     updatePerformanceFromPpst();
     updateTotals();
     restoreDraft();
