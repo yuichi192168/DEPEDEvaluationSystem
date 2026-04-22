@@ -37,6 +37,7 @@ require_once 'classes/ComparativeAssessmentReport.php';
 require_once 'classes/DBConnection.php';
 require_once 'config/evaluation_criteria.php';
 require_once 'config/baseline_library.php';
+require_once 'includes/report_filters.php';
 
 // Debug database connection
 try {
@@ -55,8 +56,25 @@ try {
 }
 
 $car = new ComparativeAssessmentReport();
-$positionId = $_GET['position_id'] ?? null;
-$viewMode = $_GET['view'] ?? 'position'; // 'position' or 'all' or 'ies'
+$positionId = (isset($_GET['position_id']) && ctype_digit((string)$_GET['position_id'])) ? (int)$_GET['position_id'] : null;
+$viewMode = isset($_GET['view']) ? trim((string)$_GET['view']) : 'position';
+if (!in_array($viewMode, ['position', 'all', 'ies'], true)) {
+    $viewMode = 'position';
+}
+
+$activeFilters = normalizeReportFilters($_GET);
+$activeFilterLabel = buildActiveFilterLabel($activeFilters);
+$hasActiveFilters = hasActiveFilters($activeFilters);
+$filterQueryString = buildFilterQueryString($activeFilters);
+$baseViewQuery = 'view=' . urlencode($viewMode);
+if ($positionId !== null) {
+    $baseViewQuery .= '&position_id=' . urlencode((string)$positionId);
+}
+$filterQueryWithView = $baseViewQuery . ($filterQueryString !== '' ? '&' . $filterQueryString : '');
+$allViewUrl = 'comparative_assessment_results.php?view=all' . ($filterQueryString !== '' ? '&' . $filterQueryString : '');
+$positionViewUrl = 'comparative_assessment_results.php' . ($filterQueryString !== '' ? '?' . $filterQueryString : '');
+$iesViewUrl = 'comparative_assessment_results.php?view=ies' . ($filterQueryString !== '' ? '&' . $filterQueryString : '');
+$exportExcelUrl = 'export_applicants_excel.php?' . $filterQueryWithView;
 
 /**
  * Map database score columns to position-specific criteria
@@ -94,17 +112,10 @@ function getCriteriaMappings($positionGroup, $salaryGrade = null, $category = nu
     return $mappings;
 }
 
-// Get positions with results
-$positionsResult = $car->getPositionsWithResults();
-$positions = [];
-$positionsCount = 0;
-$positionsResultOk = $positionsResult ? true : false;
-if ($positionsResult) {
-    $positionsCount = $positionsResult->num_rows;
-    while ($row = $positionsResult->fetch_assoc()) {
-        $positions[] = $row;
-    }
-}
+// Get positions with results based on active filters
+$positions = fetchFilteredPositionsWithResults($conn, $activeFilters);
+$positionsCount = count($positions);
+$positionsResultOk = true;
 
 // Get current position details and results
 $results = [];
@@ -113,116 +124,90 @@ $groupedResults = []; // For 'all' view mode
 
 // Determine what to display based on view mode
 if ($viewMode === 'all') {
-    // Display ALL applicants across ALL positions
-    $allResult = $car->getAllResults();
-    if ($allResult) {
-        $currentPosition = null;
-        while ($row = $allResult->fetch_assoc()) {
-            $pos = $row['position_name'];
-            if ($pos !== $currentPosition) {
-                if (!isset($groupedResults[$pos])) {
-                    $groupedResults[$pos] = [
-                        'position_name' => $pos,
-                        'applicants' => []
-                    ];
-                }
-                $currentPosition = $pos;
-            }
-            $groupedResults[$pos]['applicants'][] = $row;
+    $allRows = fetchFilteredAllResults($conn, $activeFilters);
+    foreach ($allRows as $row) {
+        $pos = $row['position_name'];
+        if (!isset($groupedResults[$pos])) {
+            $groupedResults[$pos] = [
+                'position_name' => $pos,
+                'applicants' => []
+            ];
         }
+        $groupedResults[$pos]['applicants'][] = $row;
     }
-} else if ($positionId) {
-    // Display specific position
+} else if ($positionId !== null) {
+    // Keep global ranking generation current for the selected position.
     $car->generateRankings($positionId);
-    
-    $result = $car->getResultsByPosition($positionId);
-    if ($result) {
-        $firstRow = true;
-        while ($row = $result->fetch_assoc()) {
-            if ($firstRow) {
-                $positionDetails = [
-                    'id' => $row['id'] ?? $positionId,
-                    'position_name' => $row['position_name'] ?? '',
-                    'salary_grade' => $row['salary_grade'] ?? '',
-                    'item_number' => $row['item_number'] ?? ''
-                ];
-                $firstRow = false;
-            }
-            $results[] = $row;
-        }
+
+    $results = fetchFilteredResultsByPosition($conn, $positionId, $activeFilters);
+    if (!empty($results)) {
+        $first = $results[0];
+        $positionDetails = [
+            'id' => $first['position_id'] ?? $positionId,
+            'position_name' => $first['position_name'] ?? '',
+            'salary_grade' => $first['salary_grade'] ?? '',
+            'item_number' => $first['item_number'] ?? ''
+        ];
     }
 }
 
 // Load IES data for 'ies' view mode
 $iesData = [];
 if ($viewMode === 'ies') {
-    $query = "
-        SELECT 
-            a.id as applicant_id,
-            a.name,
-            COALESCE(p.position_name, e.position_group) as position_name,
-            e.id as evaluation_id,
-            e.total_score,
-            e.evaluation_date,
-            ed.criterion,
-            ed.applicant_qualification,
-            ed.applicant_level,
-            ed.baseline_qualification,
-            ed.baseline_level,
-            ed.weight,
-            ed.increment,
-            ed.final_score
-        FROM applicants a
-        LEFT JOIN evaluations e ON a.id = e.applicant_id
-        LEFT JOIN positions p ON e.position_id = p.id
-        LEFT JOIN evaluation_details ed ON e.id = ed.evaluation_id
-        WHERE e.id IS NOT NULL
-        ORDER BY a.name, e.evaluation_date DESC
-    ";
-    
-    $result = $conn->query($query);
-    if ($result) {
-        $currentApplicant = null;
-        while ($row = $result->fetch_assoc()) {
-            $applicantId = $row['applicant_id'];
-            
-            if ($applicantId !== $currentApplicant) {
-                if (!isset($iesData[$applicantId])) {
-                    $iesData[$applicantId] = [
-                        'name' => $row['name'],
-                        'position_name' => $row['position_name'],
-                        'evaluations' => []
-                    ];
-                }
-                $currentApplicant = $applicantId;
-            }
-            
-            $evalId = $row['evaluation_id'];
-            if ($evalId && !isset($iesData[$applicantId]['evaluations'][$evalId])) {
-                $iesData[$applicantId]['evaluations'][$evalId] = [
-                    'evaluation_id' => $evalId,
-                    'position' => $row['position_name'],
-                    'total_score' => $row['total_score'],
-                    'evaluation_date' => $row['evaluation_date'],
-                    'details' => []
-                ];
-            }
-            
-            if ($evalId && $row['criterion']) {
-                $iesData[$applicantId]['evaluations'][$evalId]['details'][] = [
-                    'criterion' => $row['criterion'],
-                    'applicant_qualification' => $row['applicant_qualification'],
-                    'applicant_level' => $row['applicant_level'],
-                    'baseline_qualification' => $row['baseline_qualification'],
-                    'baseline_level' => $row['baseline_level'],
-                    'weight' => $row['weight'],
-                    'increment' => $row['increment'],
-                    'final_score' => $row['final_score']
-                ];
-            }
+    $iesRows = fetchFilteredIESRows($conn, $activeFilters);
+    foreach ($iesRows as $row) {
+        $applicantId = $row['applicant_id'];
+        if (!isset($iesData[$applicantId])) {
+            $iesData[$applicantId] = [
+                'name' => $row['name'],
+                'position_name' => $row['position_name'],
+                'evaluations' => []
+            ];
+        }
+
+        $evalId = $row['evaluation_id'];
+        if ($evalId && !isset($iesData[$applicantId]['evaluations'][$evalId])) {
+            $iesData[$applicantId]['evaluations'][$evalId] = [
+                'evaluation_id' => $evalId,
+                'position' => $row['position_name'],
+                'total_score' => $row['total_score'],
+                'evaluation_date' => $row['evaluation_date'],
+                'details' => []
+            ];
+        }
+
+        if ($evalId && !empty($row['criterion'])) {
+            $iesData[$applicantId]['evaluations'][$evalId]['details'][] = [
+                'criterion' => $row['criterion'],
+                'applicant_qualification' => $row['applicant_qualification'],
+                'applicant_level' => $row['applicant_level'],
+                'baseline_qualification' => $row['baseline_qualification'],
+                'baseline_level' => $row['baseline_level'],
+                'weight' => $row['weight'],
+                'increment' => $row['increment'],
+                'final_score' => $row['final_score']
+            ];
         }
     }
 }
+
+$allApplicantsTotal = 0;
+$allPositionsTotal = count($groupedResults);
+$allTotalScore = 0.0;
+foreach ($groupedResults as $group) {
+    foreach ($group['applicants'] as $applicantRow) {
+        $allApplicantsTotal++;
+        $allTotalScore += (float)($applicantRow['total_score'] ?? 0);
+    }
+}
+$allAverageScore = $allApplicantsTotal > 0 ? ($allTotalScore / $allApplicantsTotal) : 0.0;
+
+$positionApplicantsCount = count($results);
+$positionTotalScore = 0.0;
+foreach ($results as $r) {
+    $positionTotalScore += (float)($r['total_score'] ?? 0);
+}
+$positionAverageScore = $positionApplicantsCount > 0 ? ($positionTotalScore / $positionApplicantsCount) : 0.0;
 
 // DEBUG COMMENTS
 echo "<!-- DEBUG: positionId = " . ($positionId ?: 'NULL') . " -->\n";
@@ -473,6 +458,85 @@ if (count($positions) > 0) {
             padding: 15px;
             margin-bottom: 20px;
         }
+
+        .filter-panel {
+            background: #eef6fc;
+            border: 1px solid #cfe4f7;
+            border-radius: 6px;
+            padding: 14px;
+            margin: 16px 0 20px;
+        }
+
+        .filter-form {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 10px;
+            align-items: end;
+        }
+
+        .filter-field label {
+            display: block;
+            font-size: 12px;
+            font-weight: 700;
+            color: #2f3a4a;
+            margin-bottom: 5px;
+        }
+
+        .filter-field input,
+        .filter-field select {
+            width: 100%;
+            padding: 8px 10px;
+            border: 1px solid #b5c9dc;
+            border-radius: 4px;
+            font-size: 13px;
+            background: #fff;
+        }
+
+        .filter-actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .active-filter-state {
+            margin-top: 10px;
+            background: #fff;
+            border: 1px dashed #9ab8d8;
+            color: #284a6d;
+            border-radius: 4px;
+            padding: 8px 10px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .summary-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .summary-card {
+            border: 1px solid #d9e4ef;
+            border-radius: 6px;
+            background: #f8fbff;
+            padding: 10px;
+        }
+
+        .summary-card .summary-label {
+            font-size: 11px;
+            color: #597189;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            margin-bottom: 4px;
+        }
+
+        .summary-card .summary-value {
+            font-size: 18px;
+            color: #153654;
+            font-weight: 700;
+        }
         
         .selector-row {
             display: flex;
@@ -590,15 +654,15 @@ if (count($positions) > 0) {
         <!-- Navigation -->
         <div class="navigation">
             <a href="index.php" class="nav-btn secondary">Back to Evaluation Form</a>
-            <a href="comparative_assessment_results.php?view=all" class="nav-btn" 
+                <a href="<?php echo htmlspecialchars($allViewUrl); ?>" class="nav-btn" 
                style="<?php echo ($viewMode === 'all') ? 'background: #333; font-weight: bold;' : ''; ?>">
                View All Applicants
             </a>
-            <a href="comparative_assessment_results.php" class="nav-btn" 
+                <a href="<?php echo htmlspecialchars($positionViewUrl); ?>" class="nav-btn" 
                style="<?php echo ($viewMode === 'position') ? 'background: #333; font-weight: bold;' : ''; ?>">
                View by Position
             </a>
-            <a href="comparative_assessment_results.php?view=ies" class="nav-btn" 
+                <a href="<?php echo htmlspecialchars($iesViewUrl); ?>" class="nav-btn" 
                style="<?php echo ($viewMode === 'ies') ? 'background: #333; font-weight: bold;' : ''; ?>">
                View IES Data
             </a>
@@ -608,6 +672,52 @@ if (count($positions) > 0) {
         <div class="car-title">
             <h1>COMPARATIVE ASSESSMENT RESULT</h1>
             <p style="text-align: center; font-size: 11px; margin-top: 5px;">Annex I</p>
+        </div>
+
+        <div class="filter-panel">
+            <form id="reportFilterForm" method="GET" action="comparative_assessment_results.php" class="filter-form">
+                <input type="hidden" name="view" value="<?php echo htmlspecialchars($viewMode); ?>">
+                <?php if ($positionId !== null): ?>
+                    <input type="hidden" name="position_id" value="<?php echo (int)$positionId; ?>">
+                <?php endif; ?>
+                <div class="filter-field">
+                    <label for="from_date">From Date</label>
+                    <input type="date" id="from_date" name="from_date" value="<?php echo htmlspecialchars($activeFilters['from_date'] ?? ''); ?>">
+                </div>
+                <div class="filter-field">
+                    <label for="to_date">To Date</label>
+                    <input type="date" id="to_date" name="to_date" value="<?php echo htmlspecialchars($activeFilters['to_date'] ?? ''); ?>">
+                </div>
+                <div class="filter-field">
+                    <label for="filter_month">Month</label>
+                    <select id="filter_month" name="filter_month">
+                        <option value="">All Months</option>
+                        <?php for ($m = 1; $m <= 12; $m++): ?>
+                            <option value="<?php echo $m; ?>" <?php echo ((int)($activeFilters['filter_month'] ?? 0) === $m) ? 'selected' : ''; ?>>
+                                <?php echo date('F', mktime(0, 0, 0, $m, 1)); ?>
+                            </option>
+                        <?php endfor; ?>
+                    </select>
+                </div>
+                <div class="filter-field">
+                    <label for="filter_year">Year</label>
+                    <select id="filter_year" name="filter_year">
+                        <option value="">All Years</option>
+                        <?php $currentYear = (int)date('Y'); ?>
+                        <?php for ($y = $currentYear + 1; $y >= 2022; $y--): ?>
+                            <option value="<?php echo $y; ?>" <?php echo ((int)($activeFilters['filter_year'] ?? 0) === $y) ? 'selected' : ''; ?>>
+                                <?php echo $y; ?>
+                            </option>
+                        <?php endfor; ?>
+                    </select>
+                </div>
+                <div class="filter-actions">
+                    <button type="submit" class="btn-action">Apply</button>
+                    <a class="btn-action" style="text-decoration:none;background:#5b6b7a;" href="comparative_assessment_results.php?view=<?php echo htmlspecialchars($viewMode); ?><?php echo $positionId !== null ? '&position_id=' . urlencode((string)$positionId) : ''; ?>">Reset / Clear</a>
+                    <a class="btn-action export" href="<?php echo htmlspecialchars($exportExcelUrl); ?>">Export Excel</a>
+                </div>
+            </form>
+            <div class="active-filter-state"><?php echo htmlspecialchars($activeFilterLabel); ?></div>
         </div>
         
         <!-- <?php
@@ -640,6 +750,21 @@ if (count($positions) > 0) {
                         <h1 style="color: #333; font-size: 18px; border-bottom: 3px solid #666; padding-bottom: 12px; margin-bottom: 20px;">
                             All Applicants by Position
                         </h1>
+
+                        <div class="summary-cards">
+                            <div class="summary-card">
+                                <div class="summary-label">Displayed Applicants</div>
+                                <div class="summary-value"><?php echo (int)$allApplicantsTotal; ?></div>
+                            </div>
+                            <div class="summary-card">
+                                <div class="summary-label">Displayed Positions</div>
+                                <div class="summary-value"><?php echo (int)$allPositionsTotal; ?></div>
+                            </div>
+                            <div class="summary-card">
+                                <div class="summary-label">Average Total Score</div>
+                                <div class="summary-value"><?php echo number_format($allAverageScore, 2); ?></div>
+                            </div>
+                        </div>
                         
                         <!-- Search Box -->
                         <div style="margin-top: 15px; margin-bottom: 15px;">
@@ -650,13 +775,7 @@ if (count($positions) > 0) {
                                    style="padding: 10px; width: 100%; max-width: 500px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px;"
                                    onkeyup="filterAllApplicants()">
                             <div style="font-size: 12px; color: #666; margin-top: 5px;">
-                                Found: <span id="allApplicantsCount"><?php 
-                                    $totalCount = 0;
-                                    foreach ($groupedResults as $posData) {
-                                        $totalCount += count($posData['applicants']);
-                                    }
-                                    echo $totalCount;
-                                ?></span> applicant(s) across <span id="positionCount"><?php echo count($groupedResults); ?></span> position(s)
+                                Found: <span id="allApplicantsCount"><?php echo (int)$allApplicantsTotal; ?></span> applicant(s) across <span id="positionCount"><?php echo (int)$allPositionsTotal; ?></span> position(s)
                             </div>
                         </div>
                     </div>
@@ -759,7 +878,7 @@ if (count($positions) > 0) {
                 <?php else: ?>
                     <div class="empty-message">
                         <h3>No Applicants Found</h3>
-                        <p>There are no applicants in the system yet.</p>
+                        <p>No applicant records match the current filter. Try changing date/month/year or click Reset / Clear.</p>
                         <p><a href="index.php" class="nav-btn" style="display:inline-block;margin-top:10px;">
                             Go to Evaluation Form to create evaluations
                         </a></p>
@@ -812,9 +931,25 @@ if (count($positions) > 0) {
                     <?php if ($positionId): ?>
                         <!-- <button class="btn-action print" onclick="window.print()">Print</button> -->
                         <button class="btn-action export" onclick="exportToCSV()">Export CSV</button>
+                        <a class="btn-action export" href="<?php echo htmlspecialchars($exportExcelUrl); ?>" style="text-decoration:none;">Export Excel</a>
                     <?php endif; ?>
                 </div>
                 <?php endif; ?>
+            </div>
+
+            <div class="summary-cards">
+                <div class="summary-card">
+                    <div class="summary-label">Displayed Applicants</div>
+                    <div class="summary-value"><?php echo (int)$positionApplicantsCount; ?></div>
+                </div>
+                <div class="summary-card">
+                    <div class="summary-label">Average Total Score</div>
+                    <div class="summary-value"><?php echo number_format($positionAverageScore, 2); ?></div>
+                </div>
+                <div class="summary-card">
+                    <div class="summary-label">Filter State</div>
+                    <div class="summary-value" style="font-size: 12px; line-height: 1.3;"><?php echo htmlspecialchars($activeFilterLabel); ?></div>
+                </div>
             </div>
             
             <!-- Evaluation Criteria Reference - Collapsible -->
@@ -1069,7 +1204,7 @@ if (count($positions) > 0) {
                 
                 <div class="empty-message">
                     <h3>No Results for Selected Position</h3>
-                    <p>There are no assessment results for this position yet.</p>
+                    <p>No records matched the active filter for this position. Adjust the date/month/year filter or click Reset / Clear.</p>
                     <p><a href="index.php" class="nav-btn" style="display:inline-block;margin-top:10px;">
                         Go to Evaluation Form to evaluate applicants
                     </a></p>
@@ -1117,6 +1252,17 @@ if (count($positions) > 0) {
                             <h1 style="color: #333; font-size: 18px; border-bottom: 3px solid #666; padding-bottom: 12px; margin: 0; flex: 1;">
                                 Individual Evaluation Sheets (IES)
                             </h1>
+                            <a class="btn-action export" href="<?php echo htmlspecialchars($exportExcelUrl); ?>" style="text-decoration:none;">Export Excel</a>
+                        </div>
+                        <div class="summary-cards">
+                            <div class="summary-card">
+                                <div class="summary-label">Displayed Applicants</div>
+                                <div class="summary-value"><?php echo count($iesData); ?></div>
+                            </div>
+                            <div class="summary-card">
+                                <div class="summary-label">Filter State</div>
+                                <div class="summary-value" style="font-size: 12px; line-height: 1.3;"><?php echo htmlspecialchars($activeFilterLabel); ?></div>
+                            </div>
                         </div>
                         <!-- Search Box -->
                         <div style="margin-bottom: 15px;">
@@ -1205,7 +1351,7 @@ if (count($positions) > 0) {
                 <?php else: ?>
                     <div class="empty-message">
                         <h3>No IES Data Available</h3>
-                        <p>No individual evaluation sheets have been created yet.</p>
+                        <p>No IES records match the active filter. Try changing date/month/year or click Reset / Clear.</p>
                         <p><a href="index.php" class="nav-btn" style="display:inline-block;margin-top:10px;">
                             Go to Evaluation Form to create evaluations
                         </a></p>
@@ -1223,15 +1369,84 @@ if (count($positions) > 0) {
     </div>
     
     <script>
+        function getFilterQueryParams() {
+            const form = document.getElementById('reportFilterForm');
+            if (!form) return '';
+
+            const data = new FormData(form);
+            // Position changes explicitly set view/position_id, so remove current values here.
+            data.delete('view');
+            data.delete('position_id');
+
+            const params = new URLSearchParams();
+            data.forEach((value, key) => {
+                const strVal = String(value).trim();
+                if (strVal !== '') {
+                    params.append(key, strVal);
+                }
+            });
+
+            const query = params.toString();
+            return query ? '&' + query : '';
+        }
+
         function changePosition() {
             const positionId = document.getElementById('positionSelect').value;
             if (positionId) {
-                window.location.href = `comparative_assessment_results.php?position_id=${positionId}`;
+                const filterQuery = getFilterQueryParams();
+                window.location.href = `comparative_assessment_results.php?view=position&position_id=${positionId}${filterQuery}`;
             }
         }
         
         function refreshResults() {
             location.reload();
+        }
+
+        function initFilterFormAutoRefresh() {
+            const form = document.getElementById('reportFilterForm');
+            if (!form) return;
+
+            const fromDate = document.getElementById('from_date');
+            const toDate = document.getElementById('to_date');
+            const autoFields = ['filter_month', 'filter_year'];
+
+            form.addEventListener('submit', function (event) {
+                const fromVal = fromDate ? fromDate.value : '';
+                const toVal = toDate ? toDate.value : '';
+                if (fromVal && toVal && fromVal > toVal) {
+                    event.preventDefault();
+                    if (fromDate && toDate) {
+                        const temp = fromDate.value;
+                        fromDate.value = toDate.value;
+                        toDate.value = temp;
+                    }
+                    form.submit();
+                }
+            });
+
+            autoFields.forEach((fieldId) => {
+                const field = document.getElementById(fieldId);
+                if (field) {
+                    field.addEventListener('change', function () {
+                        form.submit();
+                    });
+                }
+            });
+
+            if (fromDate) {
+                fromDate.addEventListener('change', function () {
+                    if (toDate && toDate.value !== '') {
+                        form.submit();
+                    }
+                });
+            }
+            if (toDate) {
+                toDate.addEventListener('change', function () {
+                    if (fromDate && fromDate.value !== '') {
+                        form.submit();
+                    }
+                });
+            }
         }
         
         function exportToCSV() {
@@ -1439,6 +1654,10 @@ if (count($positions) > 0) {
             document.getElementById('allApplicantsCount').textContent = totalVisibleCount;
             document.getElementById('positionCount').textContent = visiblePositionCount;
         }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            initFilterFormAutoRefresh();
+        });
 
         // Download individual IES as HTML/PDF with preview
         function downloadIES(applicantName, applicantId) {

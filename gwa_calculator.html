@@ -544,77 +544,81 @@
 
         .subjects-container {
             margin-bottom: 12px;
-            display: grid;
-            grid-template-columns: repeat(5, minmax(0, 1fr));
-            gap: 8px;
-        }
-
-        .subject-card {
-            background: #f8f9fa;
-            border: 2px solid #e0e0e0;
-            padding: 10px;
+            overflow-x: auto;
+            border: 1px solid #d9e1ec;
             border-radius: 6px;
-            transition: all 0.3s ease;
+            background: #ffffff;
         }
 
-        .subject-card:hover {
+        .subjects-table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 980px;
+        }
+
+        .subjects-table th,
+        .subjects-table td {
+            border: 1px solid #d9e1ec;
+            padding: 8px;
+            font-size: 12px;
+            text-align: center;
+            vertical-align: middle;
+        }
+
+        .subjects-table thead th {
+            background: #eef4fb;
+            color: #243649;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+
+        .subjects-table .col-subject {
+            min-width: 90px;
+            font-weight: 600;
+        }
+
+        .subjects-table .col-total,
+        .subjects-table .col-weighted,
+        .subjects-table .col-action {
+            min-width: 95px;
+        }
+
+        .table-input {
+            width: 100%;
+            min-width: 76px;
+            padding: 6px;
+            border: 1px solid #c9d3e0;
+            border-radius: 4px;
+            font-size: 12px;
+            text-align: center;
+        }
+
+        .table-input:focus {
+            outline: none;
             border-color: #055489;
-            box-shadow: 0 2px 8px rgba(5, 84, 137, 0.1);
+            box-shadow: 0 0 0 2px rgba(5, 84, 137, 0.12);
         }
 
-        .subject-card.removing {
-            opacity: 0.5;
-        }
-
-        .subject-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 6px;
-            gap: 6px;
-        }
-
-        .subject-header h4 {
-            color: #333;
-            font-size: 11px;
-            margin: 0;
+        .table-cell-value {
+            font-weight: 600;
+            color: #055489;
         }
 
         .btn-remove {
             background: #dc3545;
             color: white;
             border: none;
-            padding: 4px 8px;
+            padding: 6px 10px;
             border-radius: 4px;
             cursor: pointer;
-            font-size: 10px;
+            font-size: 11px;
             transition: all 0.3s ease;
             white-space: nowrap;
         }
 
         .btn-remove:hover {
             background: #c82333;
-        }
-
-        .form-row {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 6px;
-            margin-bottom: 0;
-        }
-
-        .form-group {
-            display: flex;
-            flex-direction: column;
-        }
-
-        .form-group label {
-            font-size: 10px;
-            font-weight: 600;
-            color: #666;
-            margin-bottom: 2px;
-            text-transform: uppercase;
-            letter-spacing: 0.2px;
         }
 
         .form-group input,
@@ -1296,10 +1300,6 @@
                 font-size: 22px;
             }
 
-            .form-row {
-                grid-template-columns: 1fr;
-            }
-
             .button-group {
                 flex-direction: column;
             }
@@ -1330,26 +1330,26 @@
         }
 
         @media (max-width: 1400px) {
-            .subjects-container {
-                grid-template-columns: repeat(4, minmax(0, 1fr));
+            .subjects-table {
+                min-width: 920px;
             }
         }
 
         @media (max-width: 1200px) {
-            .subjects-container {
-                grid-template-columns: repeat(3, minmax(0, 1fr));
+            .subjects-table {
+                min-width: 880px;
             }
         }
 
         @media (max-width: 900px) {
-            .subjects-container {
-                grid-template-columns: repeat(2, minmax(0, 1fr));
+            .subjects-table {
+                min-width: 820px;
             }
         }
 
         @media (max-width: 640px) {
-            .subjects-container {
-                grid-template-columns: 1fr;
+            .subjects-table {
+                min-width: 780px;
             }
         }
 
@@ -1786,6 +1786,18 @@
                 <p>No subjects added yet. Click "Add Subject" to get started.</p>
             </div>
 
+            <datalist id="gradeOptions">
+                <option value="1.00"></option>
+                <option value="1.25"></option>
+                <option value="1.50"></option>
+                <option value="1.75"></option>
+                <option value="2.00"></option>
+                <option value="2.25"></option>
+                <option value="2.50"></option>
+                <option value="2.75"></option>
+                <option value="3.00"></option>
+            </datalist>
+
             <!-- Quick Actions -->
             <div class="quick-actions">
                 <div class="action-group">
@@ -1944,11 +1956,11 @@
                         </li>
                         <li class="help-step">
                             <div class="help-step-title">2. Add Subjects</div>
-                            <div class="help-step-desc">Click "Add Subject" or use Ctrl+Shift+A to add subject cards. For each subject, select a grade (1.00-3.00) and units (1-8).</div>
+                            <div class="help-step-desc">Click "Add Subject" or use Ctrl+Shift+A to add rows. Enter Unit and Rate values under columns A, B, and C for each subject.</div>
                         </li>
                         <li class="help-step">
-                            <div class="help-step-title">3. Use Grade Shortcuts</div>
-                            <div class="help-step-desc">Press number keys 1-9 to quickly set grades: 1=1.00, 2=1.25, 3=1.50, 4=1.75, 5=2.00, 6=2.25, 7=2.50, 8=2.75, 9=3.00.</div>
+                            <div class="help-step-title">3. Enter Numerical Grade</div>
+                            <div class="help-step-desc">Use either grade format: 75 to 100, or 1.00 to 3.00 (including 1.25, 1.50, 1.75, etc.).</div>
                         </li>
                         <li class="help-step">
                             <div class="help-step-title">4. Quick Actions</div>
@@ -1977,10 +1989,10 @@
                 </summary>
                 <div class="formula-body">
                     <ul class="formula-steps">
-                        <li><strong>Step 1:</strong> List all subjects with grades, units, and numerical values</li>
-                        <li><strong>Step 2:</strong> Multiply each grade by its unit weight (e.g., 1.50 × 3 units = 4.50)</li>
-                        <li><strong>Step 3:</strong> Sum all weighted grades from all subjects</li>
-                        <li><strong>Step 4:</strong> Add up the total number of units taken</li>
+                        <li><strong>Step 1:</strong> Enter Unit and Rate per school in columns A, B, and C for each subject</li>
+                        <li><strong>Step 2:</strong> Enter the subject grade using either 75-100 or 1.00-3.00 scale</li>
+                        <li><strong>Step 3:</strong> Compute total units per subject: A Unit + B Unit + C Unit</li>
+                        <li><strong>Step 4:</strong> Compute weighted grade per subject: Grade × Total Units</li>
                         <li><strong>Step 5:</strong> Divide total weighted grades by total units = GWA</li>
                     </ul>
                 </div>
@@ -2080,9 +2092,22 @@
         }
 
         function scrollToSubject(id) {
-            const card = document.querySelector(`.subject-card[data-id="${id}"]`);
+            const card = document.querySelector(`tr[data-id="${id}"]`);
             if (!card) return;
             card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        const legacyGrades = ['1.00', '1.25', '1.50', '1.75', '2.00', '2.25', '2.50', '2.75', '3.00'];
+
+        function isValidGradeValue(value) {
+            const grade = parseFloat(value);
+            if (isNaN(grade)) return false;
+
+            if (grade >= 75 && grade <= 100) {
+                return true;
+            }
+
+            return legacyGrades.some(option => Math.abs(grade - parseFloat(option)) < 0.0001);
         }
 
         // Load history on page load
@@ -2104,8 +2129,13 @@
             subjects.push({
                 id: id,
                 name: '',
-                grade: '',
-                units: ''
+                schoolAUnits: '',
+                schoolARate: '',
+                schoolBUnits: '',
+                schoolBRate: '',
+                schoolCUnits: '',
+                schoolCRate: '',
+                grade: ''
             });
 
             renderSubjects();
@@ -2126,7 +2156,17 @@
             for (let i = 0; i < maxAdd; i++) {
                 subjectCount++;
                 lastId = subjectCount;
-                subjects.push({ id: subjectCount, name: '', grade: '', units: '' });
+                subjects.push({
+                    id: subjectCount,
+                    name: '',
+                    schoolAUnits: '',
+                    schoolARate: '',
+                    schoolBUnits: '',
+                    schoolBRate: '',
+                    schoolCUnits: '',
+                    schoolCRate: '',
+                    grade: ''
+                });
             }
 
             renderSubjects();
@@ -2147,8 +2187,13 @@
             subjects.push({
                 id,
                 name: '',
+                schoolAUnits: last.schoolAUnits || '',
+                schoolARate: last.schoolARate || '',
+                schoolBUnits: last.schoolBUnits || '',
+                schoolBRate: last.schoolBRate || '',
+                schoolCUnits: last.schoolCUnits || '',
+                schoolCRate: last.schoolCRate || '',
                 grade: last.grade,
-                units: last.units
             });
 
             renderSubjects();
@@ -2163,9 +2208,14 @@
                 return;
             }
 
-            subjects = subjects.map(s => ({ ...s, units: String(units) }));
+            subjects = subjects.map(s => ({
+                ...s,
+                schoolAUnits: String(units),
+                schoolBUnits: String(units),
+                schoolCUnits: String(units)
+            }));
             renderSubjects();
-            showBanner('success', 'Units Applied', `All subjects set to ${units} units.`);
+            showBanner('success', 'Units Applied', `All school unit columns set to ${units}.`);
             saveDraft();
         }
 
@@ -2198,62 +2248,56 @@
 
             noMessage.style.display = 'none';
 
-            container.innerHTML = subjects.map((subject, index) => {
-                const weighted = subject.grade && subject.units 
-                    ? (parseFloat(subject.grade) * parseFloat(subject.units)).toFixed(2)
-                    : '0.00';
-
-                const gradeError = subject.grade ? '' : 'input-error';
-                const unitError = subject.units ? '' : 'input-error';
+            const rows = subjects.map((subject, index) => {
+                const schoolAUnits = parseFloat(subject.schoolAUnits) || 0;
+                const schoolBUnits = parseFloat(subject.schoolBUnits) || 0;
+                const schoolCUnits = parseFloat(subject.schoolCUnits) || 0;
+                const totalUnits = schoolAUnits + schoolBUnits + schoolCUnits;
+                const grade = parseFloat(subject.grade);
+                const gradeIsValid = isValidGradeValue(subject.grade);
+                const weighted = gradeIsValid && totalUnits > 0 ? (grade * totalUnits).toFixed(2) : '0.00';
 
                 return `
-                    <div class="subject-card" data-id="${subject.id}">
-                        <div class="subject-header">
-                            <h4>Subject ${index + 1}</h4>
+                    <tr data-id="${subject.id}">
+                        <td class="col-subject">Subject ${index + 1}</td>
+                        <td><input type="number" class="table-input" min="0" step="0.5" value="${subject.schoolAUnits || ''}" onchange="updateSubject(${subject.id}, 'schoolAUnits', this.value)" placeholder="Unit"></td>
+                        <td><input type="number" class="table-input" min="0" step="0.01" value="${subject.schoolARate || ''}" onchange="updateSubject(${subject.id}, 'schoolARate', this.value)" placeholder="Rate"></td>
+                        <td><input type="number" class="table-input" min="0" step="0.5" value="${subject.schoolBUnits || ''}" onchange="updateSubject(${subject.id}, 'schoolBUnits', this.value)" placeholder="Unit"></td>
+                        <td><input type="number" class="table-input" min="0" step="0.01" value="${subject.schoolBRate || ''}" onchange="updateSubject(${subject.id}, 'schoolBRate', this.value)" placeholder="Rate"></td>
+                        <td><input type="number" class="table-input" min="0" step="0.5" value="${subject.schoolCUnits || ''}" onchange="updateSubject(${subject.id}, 'schoolCUnits', this.value)" placeholder="Unit"></td>
+                        <td><input type="number" class="table-input" min="0" step="0.01" value="${subject.schoolCRate || ''}" onchange="updateSubject(${subject.id}, 'schoolCRate', this.value)" placeholder="Rate"></td>
+                        <td><input type="text" list="gradeOptions" data-grade-input="true" class="table-input ${gradeIsValid ? '' : 'input-error'}" value="${subject.grade || ''}" onchange="updateSubject(${subject.id}, 'grade', this.value)" placeholder="75-100 or 1.00-3.00"></td>
+                        <td class="table-cell-value col-total">${totalUnits.toFixed(2)}</td>
+                        <td class="table-cell-value col-weighted">${weighted}</td>
+                        <td class="col-action">
                             <button class="btn-remove" onclick="removeSubject(${subject.id})">
-                                <i class="fas fa-trash"></i> Remove
+                                <i class="fas fa-trash"></i>
                             </button>
-                        </div>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label>Grade (Numerical Value)</label>
-                                <select class="${gradeError}" onchange="updateSubject(${subject.id}, 'grade', this.value)">
-                                    <option value="">Select Grade</option>
-                                    <option value="1.00" ${subject.grade === '1.00' ? 'selected' : ''}>1.00</option>
-                                    <option value="1.25" ${subject.grade === '1.25' ? 'selected' : ''}>1.25</option>
-                                    <option value="1.50" ${subject.grade === '1.50' ? 'selected' : ''}>1.50</option>
-                                    <option value="1.75" ${subject.grade === '1.75' ? 'selected' : ''}>1.75</option>
-                                    <option value="2.00" ${subject.grade === '2.00' ? 'selected' : ''}>2.00</option>
-                                    <option value="2.25" ${subject.grade === '2.25' ? 'selected' : ''}>2.25</option>
-                                    <option value="2.50" ${subject.grade === '2.50' ? 'selected' : ''}>2.50</option>
-                                    <option value="2.75" ${subject.grade === '2.75' ? 'selected' : ''}>2.75</option>
-                                    <option value="3.00" ${subject.grade === '3.00' ? 'selected' : ''}>3.00</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label>Units</label>
-                                <select class="${unitError}" onchange="updateSubject(${subject.id}, 'units', this.value)">
-                                    <option value="">Select Units</option>
-                                    <option value="1" ${subject.units === '1' ? 'selected' : ''}>1 Unit</option>
-                                    <option value="2" ${subject.units === '2' ? 'selected' : ''}>2 Units</option>
-                                    <option value="3" ${subject.units === '3' ? 'selected' : ''}>3 Units</option>
-                                    <option value="4" ${subject.units === '4' ? 'selected' : ''}>4 Units</option>
-                                    <option value="5" ${subject.units === '5' ? 'selected' : ''}>5 Units</option>
-                                    <option value="6" ${subject.units === '6' ? 'selected' : ''}>6 Units</option>
-                                    <option value="7" ${subject.units === '7' ? 'selected' : ''}>7 Units</option>
-                                    <option value="8" ${subject.units === '8' ? 'selected' : ''}>8 Units</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div style="margin-top: 6px;">
-                            <div class="form-group">
-                                <label>Weighted Grade (Calculated)</label>
-                                <div class="calculated-value">${weighted}</div>
-                            </div>
-                        </div>
-                    </div>
+                        </td>
+                    </tr>
                 `;
             }).join('');
+
+            container.innerHTML = `
+                <table class="subjects-table">
+                    <thead>
+                        <tr>
+                            <th>Subject</th>
+                            <th>A Unit</th>
+                            <th>A Rate</th>
+                            <th>B Unit</th>
+                            <th>B Rate</th>
+                            <th>C Unit</th>
+                            <th>C Rate</th>
+                            <th>Grade (75-100 or 1.00-3.00)</th>
+                            <th>Total Units</th>
+                            <th>Weighted Grade</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>${rows}</tbody>
+                </table>
+            `;
         }
 
         function calculateGWA() {
@@ -2267,10 +2311,18 @@
 
             for (const subject of subjects) {
                 const grade = parseFloat(subject.grade);
-                const units = parseFloat(subject.units);
+                const schoolAUnits = parseFloat(subject.schoolAUnits) || 0;
+                const schoolBUnits = parseFloat(subject.schoolBUnits) || 0;
+                const schoolCUnits = parseFloat(subject.schoolCUnits) || 0;
+                const units = schoolAUnits + schoolBUnits + schoolCUnits;
 
-                if (isNaN(grade) || isNaN(units) || grade === '' || units === '') {
-                    alert('Please select Grade and Units for all subjects.');
+                if (!isValidGradeValue(subject.grade)) {
+                    alert('Please enter a valid Grade for all subjects: either 75-100 or 1.00-3.00 (1.25, 1.50, etc.).');
+                    return;
+                }
+
+                if (units <= 0) {
+                    alert('Each subject must have at least one unit across columns A, B, or C.');
                     return;
                 }
 
@@ -2588,7 +2640,17 @@
             try {
                 const draft = JSON.parse(raw);
                 if (draft && Array.isArray(draft.subjects)) {
-                    subjects = draft.subjects;
+                    subjects = draft.subjects.map((subject) => ({
+                        id: subject.id,
+                        name: subject.name || '',
+                        schoolAUnits: subject.schoolAUnits || subject.units || '',
+                        schoolARate: subject.schoolARate || '',
+                        schoolBUnits: subject.schoolBUnits || '',
+                        schoolBRate: subject.schoolBRate || '',
+                        schoolCUnits: subject.schoolCUnits || '',
+                        schoolCRate: subject.schoolCRate || '',
+                        grade: subject.grade || ''
+                    }));
                     subjectCount = draft.subjectCount || subjects.length;
                     const nameInput = document.getElementById('calculationName');
                     if (nameInput) nameInput.value = draft.applicantName || '';
@@ -2768,12 +2830,6 @@
             toggle.classList.toggle('open');
         }
 
-        /* Keyboard Shortcuts for Grades */
-        const gradeMap = {
-            '1': '1.00', '2': '1.25', '3': '1.50', '4': '1.75', '5': '2.00',
-            '6': '2.25', '7': '2.50', '8': '2.75', '9': '3.00'
-        };
-
         /* Stats Dashboard */
         function updateStatsDisplay() {
             const history = JSON.parse(localStorage.getItem('gwaHistory')) || [];
@@ -2848,7 +2904,10 @@
                 tableHTML += `<tr><td><strong>Subject ${i + 1}</strong></td>`;
                 selected.forEach(app => {
                     const subj = app.subjects[i];
-                    const gradeDisplay = subj ? `${subj.grade} (${subj.units}u)` : '-';
+                    const unitsDisplay = subj
+                        ? ((parseFloat(subj.schoolAUnits) || 0) + (parseFloat(subj.schoolBUnits) || 0) + (parseFloat(subj.schoolCUnits) || 0) + (parseFloat(subj.units) || 0)).toFixed(2)
+                        : '0.00';
+                    const gradeDisplay = subj ? `${subj.grade || '-'} (${unitsDisplay}u)` : '-';
                     tableHTML += `<td style="text-align: center;">${gradeDisplay}</td>`;
                 });
                 tableHTML += `</tr>`;
@@ -2933,18 +2992,16 @@
             showBanner('success', 'Batch Import Complete', message);
         }
 
-        /* Keyboard Tab Navigation for Grade/Units */
+        /* Keyboard Tab Navigation for grade input */
         document.addEventListener('change', function(e) {
-            if (e.target.tagName === 'SELECT' && subjects.length > 0) {
-                const card = e.target.closest('.subject-card');
-                if (!card) return;
-
-                const subjectId = parseInt(card.dataset.id);
-                const allSelects = card.querySelectorAll('select');
-                
-                // If grade was just selected, focus on units
-                if (allSelects[0] === e.target && allSelects[0].value) {
-                    setTimeout(() => allSelects[1].focus(), 0);
+            if (e.target.classList.contains('table-input') && e.target.dataset.gradeInput === 'true') {
+                const row = e.target.closest('tr');
+                if (!row) return;
+                const nextRow = row.nextElementSibling;
+                if (!nextRow) return;
+                const firstInput = nextRow.querySelector('.table-input');
+                if (firstInput) {
+                    setTimeout(() => firstInput.focus(), 0);
                 }
             }
         }, true);
