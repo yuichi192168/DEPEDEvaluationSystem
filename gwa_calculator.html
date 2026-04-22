@@ -542,83 +542,323 @@
             background: white;
         }
 
-        .subjects-container {
+        /* Grade Scale Toggle Switch Styles */
+        .grade-scale-toggle-section {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border: 2px solid #e0e0e0;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+
+        .grade-scale-header {
+            text-align: center;
+            margin-bottom: 16px;
+        }
+
+        .grade-scale-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 4px;
+        }
+
+        .grade-scale-subtitle {
+            font-size: 12px;
+            color: #666;
+        }
+
+        .toggle-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+            margin-bottom: 12px;
+        }
+
+        .scale-option {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            min-width: 140px;
+        }
+
+        .scale-label {
+            font-size: 14px;
+            font-weight: 500;
+            color: #333;
+            text-align: center;
+        }
+
+        .scale-range {
+            font-size: 11px;
+            color: #666;
+            text-align: center;
+        }
+
+        .toggle-switch {
+            position: relative;
+            width: 60px;
+            height: 30px;
+            background: #ccc;
+            border-radius: 15px;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        .toggle-switch.active {
+            background: #055489;
+        }
+
+        .toggle-slider {
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            width: 24px;
+            height: 24px;
+            background: white;
+            border-radius: 50%;
+            transition: transform 0.3s ease;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .toggle-switch.active .toggle-slider {
+            transform: translateX(30px);
+        }
+
+        .scale-option.active .scale-label {
+            color: #055489;
+            font-weight: 600;
+        }
+
+        .scale-description {
+            text-align: center;
+            font-size: 12px;
+            color: #666;
+            padding: 8px;
+            background: white;
+            border-radius: 6px;
+            border: 1px solid #e0e0e0;
+        }
+
+        .scale-description strong {
+            color: #055489;
+        }
+
+        /* Excel-like Spreadsheet Styles */
+        .spreadsheet-container {
             margin-bottom: 12px;
             overflow-x: auto;
-            border: 1px solid #d9e1ec;
+            border: 2px solid #d0d0d0;
             border-radius: 6px;
-            background: #ffffff;
+            background: white;
         }
 
-        .subjects-table {
+        .spreadsheet-table {
             width: 100%;
             border-collapse: collapse;
-            min-width: 980px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
 
-        .subjects-table th,
-        .subjects-table td {
-            border: 1px solid #d9e1ec;
-            padding: 8px;
-            font-size: 12px;
+        .spreadsheet-table th {
+            background: #f8f9fa;
+            border: 1px solid #d0d0d0;
+            padding: 8px 12px;
             text-align: center;
-            vertical-align: middle;
-        }
-
-        .subjects-table thead th {
-            background: #eef4fb;
-            color: #243649;
-            font-weight: 700;
+            font-weight: 600;
+            font-size: 12px;
+            color: #333;
             text-transform: uppercase;
-            letter-spacing: 0.3px;
+            letter-spacing: 0.5px;
+            position: sticky;
+            top: 0;
+            z-index: 10;
         }
 
-        .subjects-table .col-subject {
-            min-width: 90px;
-            font-weight: 600;
+        .spreadsheet-table td {
+            border: 1px solid #d0d0d0;
+            padding: 0;
+            position: relative;
+            min-width: 80px;
         }
 
-        .subjects-table .col-total,
-        .subjects-table .col-weighted,
-        .subjects-table .col-action {
-            min-width: 95px;
-        }
-
-        .table-input {
+        .spreadsheet-cell {
             width: 100%;
-            min-width: 76px;
-            padding: 6px;
-            border: 1px solid #c9d3e0;
-            border-radius: 4px;
-            font-size: 12px;
+            height: 36px;
+            border: none;
+            padding: 6px 8px;
+            font-size: 13px;
+            font-family: inherit;
             text-align: center;
-        }
-
-        .table-input:focus {
+            background: transparent;
+            transition: all 0.2s ease;
             outline: none;
-            border-color: #055489;
-            box-shadow: 0 0 0 2px rgba(5, 84, 137, 0.12);
         }
 
-        .table-cell-value {
-            font-weight: 600;
+        .spreadsheet-cell:focus {
+            background: #e7f0ff;
+            box-shadow: 0 0 0 2px #055489 inset;
+            z-index: 5;
+            position: relative;
+        }
+
+        .spreadsheet-cell:hover:not(:focus) {
+            background: #f8f9fa;
+        }
+
+        .spreadsheet-cell.grade-cell {
+            font-weight: 500;
             color: #055489;
+        }
+
+        .spreadsheet-cell.units-cell {
+            font-weight: 500;
+            color: #666;
+        }
+
+        .spreadsheet-cell.calculated-cell {
+            background: #f8f9fa;
+            color: #333;
+            font-weight: 600;
+            cursor: default;
+        }
+
+        .spreadsheet-cell.error {
+            background: #fff5f5;
+            color: #dc3545;
+        }
+
+        .spreadsheet-cell.error:focus {
+            background: #ffe0e0;
+            box-shadow: 0 0 0 2px #dc3545 inset;
+        }
+
+        .subject-row {
+            transition: background-color 0.2s ease;
+        }
+
+        .subject-row:hover {
+            background-color: #f8f9fa;
+        }
+
+        .subject-row.selected {
+            background-color: #e7f0ff;
+        }
+
+        .row-number-cell {
+            background: #f8f9fa;
+            border: 1px solid #d0d0d0;
+            padding: 6px 8px;
+            text-align: center;
+            font-weight: 600;
+            font-size: 12px;
+            color: #666;
+            width: 40px;
+            min-width: 40px;
+        }
+
+        .delete-cell {
+            background: #f8f9fa;
+            border: 1px solid #d0d0d0;
+            padding: 4px;
+            text-align: center;
+            width: 60px;
+            min-width: 60px;
+        }
+
+        .btn-delete-row {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 4px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 11px;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+            width: 100%;
+        }
+
+        .btn-delete-row:hover {
+            background: #c82333;
+        }
+
+        /* Legacy subject card styles (kept for compatibility) */
+        .subjects-container {
+            margin-bottom: 12px;
+            display: grid;
+            grid-template-columns: repeat(5, minmax(0, 1fr));
+            gap: 8px;
+        }
+
+        .subject-card {
+            background: #f8f9fa;
+            border: 2px solid #e0e0e0;
+            padding: 10px;
+            border-radius: 6px;
+            transition: all 0.3s ease;
+        }
+
+        .subject-card:hover {
+            border-color: #055489;
+            box-shadow: 0 2px 8px rgba(5, 84, 137, 0.1);
+        }
+
+        .subject-card.removing {
+            opacity: 0.5;
+        }
+
+        .subject-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 6px;
+            gap: 6px;
+        }
+
+        .subject-header h4 {
+            color: #333;
+            font-size: 11px;
+            margin: 0;
         }
 
         .btn-remove {
             background: #dc3545;
             color: white;
             border: none;
-            padding: 6px 10px;
+            padding: 4px 8px;
             border-radius: 4px;
             cursor: pointer;
-            font-size: 11px;
+            font-size: 10px;
             transition: all 0.3s ease;
             white-space: nowrap;
         }
 
         .btn-remove:hover {
             background: #c82333;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px;
+            margin-bottom: 0;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-group label {
+            font-size: 10px;
+            font-weight: 600;
+            color: #666;
+            margin-bottom: 2px;
+            text-transform: uppercase;
+            letter-spacing: 0.2px;
         }
 
         .form-group input,
@@ -1300,6 +1540,10 @@
                 font-size: 22px;
             }
 
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+
             .button-group {
                 flex-direction: column;
             }
@@ -1330,26 +1574,26 @@
         }
 
         @media (max-width: 1400px) {
-            .subjects-table {
-                min-width: 920px;
+            .subjects-container {
+                grid-template-columns: repeat(4, minmax(0, 1fr));
             }
         }
 
         @media (max-width: 1200px) {
-            .subjects-table {
-                min-width: 880px;
+            .subjects-container {
+                grid-template-columns: repeat(3, minmax(0, 1fr));
             }
         }
 
         @media (max-width: 900px) {
-            .subjects-table {
-                min-width: 820px;
+            .subjects-container {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
             }
         }
 
         @media (max-width: 640px) {
-            .subjects-table {
-                min-width: 780px;
+            .subjects-container {
+                grid-template-columns: 1fr;
             }
         }
 
@@ -1743,6 +1987,78 @@
             background: #0668aa;
         }
 
+        /* Dark mode spreadsheet styles */
+        body.dark-mode .spreadsheet-container {
+            border-color: #334155;
+            background: #1f2937;
+        }
+
+        body.dark-mode .spreadsheet-table th {
+            background: #111827;
+            border-color: #334155;
+            color: #f3f4f6;
+        }
+
+        body.dark-mode .spreadsheet-table td {
+            border-color: #334155;
+        }
+
+        body.dark-mode .spreadsheet-cell {
+            background: transparent;
+            color: #e5e7eb;
+        }
+
+        body.dark-mode .spreadsheet-cell:focus {
+            background: #1e293b;
+            box-shadow: 0 0 0 2px #055489 inset;
+        }
+
+        body.dark-mode .spreadsheet-cell:hover:not(:focus) {
+            background: #374151;
+        }
+
+        body.dark-mode .spreadsheet-cell.grade-cell {
+            color: #60a5fa;
+        }
+
+        body.dark-mode .spreadsheet-cell.units-cell {
+            color: #cbd5e1;
+        }
+
+        body.dark-mode .spreadsheet-cell.calculated-cell {
+            background: #111827;
+            color: #f3f4f6;
+        }
+
+        body.dark-mode .spreadsheet-cell.error {
+            background: #7f1d1d;
+            color: #fca5a5;
+        }
+
+        body.dark-mode .spreadsheet-cell.error:focus {
+            background: #991b1b;
+            box-shadow: 0 0 0 2px #dc3545 inset;
+        }
+
+        body.dark-mode .subject-row:hover {
+            background-color: #374151;
+        }
+
+        body.dark-mode .subject-row.selected {
+            background-color: #1e293b;
+        }
+
+        body.dark-mode .row-number-cell {
+            background: #111827;
+            border-color: #334155;
+            color: #cbd5e1;
+        }
+
+        body.dark-mode .delete-cell {
+            background: #111827;
+            border-color: #334155;
+        }
+
         @media print {
             .home-link,
             .theme-toggle {
@@ -1777,8 +2093,45 @@
 
         <!-- Calculator -->
         <div class="calculator">
-            <div class="subjects-container" id="subjectsContainer">
-                <!-- Subject cards will be added here dynamically -->
+            <!-- Grade Scale Toggle Switch -->
+            <div class="grade-scale-toggle-section">
+                <div class="grade-scale-header">
+                    <div class="grade-scale-title">Select Grading System</div>
+                    <div class="grade-scale-subtitle">Choose between percentage and numerical grading scales</div>
+                </div>
+                <div class="toggle-container">
+                    <div class="scale-option active" id="percentage-option">
+                        <div class="scale-label">100-Point Percentage</div>
+                        <div class="scale-range">(75-100)</div>
+                    </div>
+                    <div class="toggle-switch active" id="gradeScaleToggle" onclick="toggleGradeScale()">
+                        <div class="toggle-slider"></div>
+                    </div>
+                    <div class="scale-option" id="numerical-option">
+                        <div class="scale-label">5-Point Numerical</div>
+                        <div class="scale-range">(1.00-3.00)</div>
+                    </div>
+                </div>
+                <div class="scale-description" id="scaleDescription">
+                    <strong>Current Scale:</strong> 100-Point Percentage Scale - Enter grades from 75 to 100
+                </div>
+            </div>
+
+            <!-- Spreadsheet Interface -->
+            <div class="spreadsheet-container" id="spreadsheetContainer" style="display: none;">
+                <table class="spreadsheet-table" id="spreadsheetTable">
+                    <thead>
+                        <tr>
+                            <th class="row-number-cell">#</th>
+                            <th id="gradeHeader">Grade (1.00-3.00)</th>
+                            <th>Units</th>
+                            <th style="width: 60px;">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="spreadsheetBody">
+                        <!-- Spreadsheet rows will be added here dynamically -->
+                    </tbody>
+                </table>
             </div>
 
             <div id="noSubjectsMessage" class="no-subjects">
@@ -1786,17 +2139,10 @@
                 <p>No subjects added yet. Click "Add Subject" to get started.</p>
             </div>
 
-            <datalist id="gradeOptions">
-                <option value="1.00"></option>
-                <option value="1.25"></option>
-                <option value="1.50"></option>
-                <option value="1.75"></option>
-                <option value="2.00"></option>
-                <option value="2.25"></option>
-                <option value="2.50"></option>
-                <option value="2.75"></option>
-                <option value="3.00"></option>
-            </datalist>
+            <!-- Legacy subjects container (kept for compatibility) -->
+            <div class="subjects-container" id="subjectsContainer" style="display: none;">
+                <!-- Subject cards will be added here dynamically -->
+            </div>
 
             <!-- Quick Actions -->
             <div class="quick-actions">
@@ -1955,23 +2301,27 @@
                             <div class="help-step-desc">Type the applicant's name in the "Applicant Name" field. The calculator will suggest previously saved names as you type.</div>
                         </li>
                         <li class="help-step">
-                            <div class="help-step-title">2. Add Subjects</div>
-                            <div class="help-step-desc">Click "Add Subject" or use Ctrl+Shift+A to add rows. Enter Unit and Rate values under columns A, B, and C for each subject.</div>
+                            <div class="help-step-title">2. Choose Grade Scale</div>
+                            <div class="help-step-desc">Select between "100-Point Percentage Scale (75-100)" or "5-Point Numerical Scale (1.00-3.00)" from the dropdown menu.</div>
                         </li>
                         <li class="help-step">
-                            <div class="help-step-title">3. Enter Numerical Grade</div>
-                            <div class="help-step-desc">Use either grade format: 75 to 100, or 1.00 to 3.00 (including 1.25, 1.50, 1.75, etc.).</div>
+                            <div class="help-step-title">3. Add Subjects</div>
+                            <div class="help-step-desc">Click "Add Subject" or use Ctrl+Shift+A to add spreadsheet rows. For each subject, type a grade and units (1-8) directly into the cells based on your selected scale.</div>
                         </li>
                         <li class="help-step">
-                            <div class="help-step-title">4. Quick Actions</div>
+                            <div class="help-step-title">4. Use Spreadsheet Navigation</div>
+                            <div class="help-step-desc">Navigate cells using arrow keys, Tab/Shift+Tab, or Enter. Press Escape to exit editing. The interface works like Excel with inline editing.</div>
+                        </li>
+                        <li class="help-step">
+                            <div class="help-step-title">5. Quick Actions</div>
                             <div class="help-step-desc">Use Bulk Add for multiple subjects, Copy Last to duplicate the previous subject, or Quick Units buttons to apply the same units to all.</div>
                         </li>
                         <li class="help-step">
-                            <div class="help-step-title">5. Calculate & Save</div>
+                            <div class="help-step-title">6. Calculate & Save</div>
                             <div class="help-step-desc">Click "Calculate GWA" (Ctrl+Enter) to compute the weighted average. Add optional notes, then click "Save as New Record" to store the calculation.</div>
                         </li>
                         <li class="help-step">
-                            <div class="help-step-title">6. Manage Records</div>
+                            <div class="help-step-title">7. Manage Records</div>
                             <div class="help-step-desc">Pin favorites with the star icon, batch select and delete multiple records, or compare 2-3 applicants side-by-side. View stats for your records.</div>
                         </li>
                     </ul>
@@ -1989,12 +2339,29 @@
                 </summary>
                 <div class="formula-body">
                     <ul class="formula-steps">
-                        <li><strong>Step 1:</strong> Enter Unit and Rate per school in columns A, B, and C for each subject</li>
-                        <li><strong>Step 2:</strong> Enter the subject grade using either 75-100 or 1.00-3.00 scale</li>
-                        <li><strong>Step 3:</strong> Compute total units per subject: A Unit + B Unit + C Unit</li>
-                        <li><strong>Step 4:</strong> Compute weighted grade per subject: Grade × Total Units</li>
-                        <li><strong>Step 5:</strong> Divide total weighted grades by total units = GWA</li>
+                        <li><strong>Step 1:</strong> List all subjects with grades and units (1-8)</li>
+                        <li><strong>Step 2:</strong> Choose your scale: Percentage (75-100) or Numerical (1.00-3.00)</li>
+                        <li><strong>Step 3:</strong> Multiply each grade by its unit weight</li>
+                        <li><strong>Step 4:</strong> Sum all weighted grades from all subjects</li>
+                        <li><strong>Step 5:</strong> Add up the total number of units taken</li>
+                        <li><strong>Step 6:</strong> Divide total weighted grades by total units = GWA</li>
                     </ul>
+                    <div style="margin-top: 15px; padding: 12px; background: #f0f4ff; border-radius: 6px; font-size: 12px;">
+                        <strong style="color: #055489;">Percentage Scale Example:</strong><br>
+                        Subject 1: 85 × 3 units = 255<br>
+                        Subject 2: 90 × 4 units = 360<br>
+                        Subject 3: 88 × 3 units = 264<br>
+                        Total Weighted: 879 | Total Units: 10<br>
+                        <strong>GWA = 879 ÷ 10 = 87.9</strong>
+                    </div>
+                    <div style="margin-top: 10px; padding: 12px; background: #f0f8ff; border-radius: 6px; font-size: 12px;">
+                        <strong style="color: #055489;">Numerical Scale Example:</strong><br>
+                        Subject 1: 1.50 × 3 units = 4.50<br>
+                        Subject 2: 1.75 × 4 units = 7.00<br>
+                        Subject 3: 1.25 × 3 units = 3.75<br>
+                        Total Weighted: 15.25 | Total Units: 10<br>
+                        <strong>GWA = 15.25 ÷ 10 = 1.525</strong>
+                    </div>
                 </div>
             </details>
         </div>
@@ -2030,6 +2397,7 @@
         let undoTimeout = null;
         let pinnedRecords = new Set();
         let focusedSubjectId = null;
+        let currentGradeScale = 'percentage'; // 'percentage' or 'numerical'
 
         function initThemeToggle() {
             const toggle = document.getElementById('themeToggle');
@@ -2092,27 +2460,15 @@
         }
 
         function scrollToSubject(id) {
-            const card = document.querySelector(`tr[data-id="${id}"]`);
+            const card = document.querySelector(`.subject-card[data-id="${id}"]`);
             if (!card) return;
             card.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
-
-        const legacyGrades = ['1.00', '1.25', '1.50', '1.75', '2.00', '2.25', '2.50', '2.75', '3.00'];
-
-        function isValidGradeValue(value) {
-            const grade = parseFloat(value);
-            if (isNaN(grade)) return false;
-
-            if (grade >= 75 && grade <= 100) {
-                return true;
-            }
-
-            return legacyGrades.some(option => Math.abs(grade - parseFloat(option)) < 0.0001);
         }
 
         // Load history on page load
         window.addEventListener('DOMContentLoaded', function() {
             initThemeToggle();
+            initializeGradeScale();
             loadDraft();
             renderSubjects();
             loadPinnedRecords();
@@ -2123,19 +2479,40 @@
             setupShortcuts();
         });
 
+        function initializeGradeScale() {
+            const savedScale = localStorage.getItem('gwaGradeScale') || 'percentage';
+            const toggle = document.getElementById('gradeScaleToggle');
+            const percentageOption = document.getElementById('percentage-option');
+            const numericalOption = document.getElementById('numerical-option');
+            const scaleDescription = document.getElementById('scaleDescription');
+            const gradeHeader = document.getElementById('gradeHeader');
+            
+            currentGradeScale = savedScale;
+            
+            // Set initial toggle state
+            if (savedScale === 'percentage') {
+                toggle.classList.add('active');
+                percentageOption.classList.add('active');
+                numericalOption.classList.remove('active');
+                scaleDescription.innerHTML = '<strong>Current Scale:</strong> 100-Point Percentage Scale - Enter grades from 75 to 100';
+                gradeHeader.textContent = 'Grade (75-100)';
+            } else {
+                toggle.classList.remove('active');
+                percentageOption.classList.remove('active');
+                numericalOption.classList.add('active');
+                scaleDescription.innerHTML = '<strong>Current Scale:</strong> 5-Point Numerical Scale - Enter grades from 1.00 to 3.00';
+                gradeHeader.textContent = 'Grade (1.00-3.00)';
+            }
+        }
+
         function addSubject() {
             subjectCount++;
             const id = subjectCount;
             subjects.push({
                 id: id,
                 name: '',
-                schoolAUnits: '',
-                schoolARate: '',
-                schoolBUnits: '',
-                schoolBRate: '',
-                schoolCUnits: '',
-                schoolCRate: '',
-                grade: ''
+                grade: '',
+                units: ''
             });
 
             renderSubjects();
@@ -2156,17 +2533,7 @@
             for (let i = 0; i < maxAdd; i++) {
                 subjectCount++;
                 lastId = subjectCount;
-                subjects.push({
-                    id: subjectCount,
-                    name: '',
-                    schoolAUnits: '',
-                    schoolARate: '',
-                    schoolBUnits: '',
-                    schoolBRate: '',
-                    schoolCUnits: '',
-                    schoolCRate: '',
-                    grade: ''
-                });
+                subjects.push({ id: subjectCount, name: '', grade: '', units: '' });
             }
 
             renderSubjects();
@@ -2187,13 +2554,8 @@
             subjects.push({
                 id,
                 name: '',
-                schoolAUnits: last.schoolAUnits || '',
-                schoolARate: last.schoolARate || '',
-                schoolBUnits: last.schoolBUnits || '',
-                schoolBRate: last.schoolBRate || '',
-                schoolCUnits: last.schoolCUnits || '',
-                schoolCRate: last.schoolCRate || '',
                 grade: last.grade,
+                units: last.units
             });
 
             renderSubjects();
@@ -2208,14 +2570,9 @@
                 return;
             }
 
-            subjects = subjects.map(s => ({
-                ...s,
-                schoolAUnits: String(units),
-                schoolBUnits: String(units),
-                schoolCUnits: String(units)
-            }));
+            subjects = subjects.map(s => ({ ...s, units: String(units) }));
             renderSubjects();
-            showBanner('success', 'Units Applied', `All school unit columns set to ${units}.`);
+            showBanner('success', 'Units Applied', `All subjects set to ${units} units.`);
             saveDraft();
         }
 
@@ -2235,108 +2592,345 @@
             }
         }
 
+        /* Spreadsheet Functions */
+        function validateGrade(value) {
+            const grade = parseFloat(value);
+            if (isNaN(grade)) return false;
+            
+            if (currentGradeScale === 'percentage') {
+                return grade >= 75 && grade <= 100;
+            } else if (currentGradeScale === 'numerical') {
+                return grade >= 1.00 && grade <= 3.00;
+            }
+            return false;
+        }
+
+        function validateUnits(value) {
+            const units = parseFloat(value);
+            return !isNaN(units) && units >= 1 && units <= 8 && Number.isInteger(units);
+        }
+
+        function toggleGradeScale() {
+            const toggle = document.getElementById('gradeScaleToggle');
+            const percentageOption = document.getElementById('percentage-option');
+            const numericalOption = document.getElementById('numerical-option');
+            const scaleDescription = document.getElementById('scaleDescription');
+            const gradeHeader = document.getElementById('gradeHeader');
+            
+            // Toggle the scale
+            const newScale = currentGradeScale === 'percentage' ? 'numerical' : 'percentage';
+            
+            // Show confirmation if there are existing subjects
+            if (subjects.length > 0) {
+                if (!confirm('Changing the grade scale will clear all existing subjects. Continue?')) {
+                    return; // Don't change the scale
+                }
+            }
+            
+            // Update current scale
+            currentGradeScale = newScale;
+            
+            // Update toggle UI
+            if (newScale === 'percentage') {
+                toggle.classList.add('active');
+                percentageOption.classList.add('active');
+                numericalOption.classList.remove('active');
+                scaleDescription.innerHTML = '<strong>Current Scale:</strong> 100-Point Percentage Scale - Enter grades from 75 to 100';
+                gradeHeader.textContent = 'Grade (75-100)';
+            } else {
+                toggle.classList.remove('active');
+                percentageOption.classList.remove('active');
+                numericalOption.classList.add('active');
+                scaleDescription.innerHTML = '<strong>Current Scale:</strong> 5-Point Numerical Scale - Enter grades from 1.00 to 3.00';
+                gradeHeader.textContent = 'Grade (1.00-3.00)';
+            }
+            
+            // Save grade scale preference
+            localStorage.setItem('gwaGradeScale', currentGradeScale);
+            
+            // Clear existing subjects if any
+            if (subjects.length > 0) {
+                resetCalculator();
+            }
+            
+            saveDraft();
+            renderSubjects();
+        }
+
+        function handleGradeScaleChange() {
+            // This function is kept for compatibility but now just calls toggleGradeScale
+            toggleGradeScale();
+        }
+
+        function getGradeRange() {
+            if (currentGradeScale === 'percentage') {
+                return { min: 75, max: 100, step: 0.01, placeholder: '75-100' };
+            } else {
+                return { min: 1.00, max: 3.00, step: 0.01, placeholder: '1.00-3.00' };
+            }
+        }
+
+        function handleCellInput(id, field, value) {
+            const subject = subjects.find(s => s.id === id);
+            if (!subject) return;
+
+            // Validate input
+            const isValid = field === 'grade' ? validateGrade(value) : validateUnits(value);
+            
+            if (value === '' || isValid) {
+                subject[field] = value;
+                saveDraft();
+                
+            }
+        }
+
+        function handleCellFocus(element) {
+            // Select all text in the input field for easy editing
+            setTimeout(() => {
+                element.select();
+            }, 10);
+        }
+
+        function handleCellKeydown(event, id, field, element) {
+            const key = event.key;
+            const row = element.closest('tr');
+            const tbody = row.closest('tbody');
+            const allRows = Array.from(tbody.querySelectorAll('tr'));
+            const currentRowIndex = allRows.indexOf(row);
+            const allCells = row.querySelectorAll('.spreadsheet-cell');
+            const currentCellIndex = Array.from(allCells).indexOf(element);
+
+            // Handle navigation keys
+            switch (key) {
+                case 'ArrowUp':
+                    event.preventDefault();
+                    if (currentRowIndex > 0) {
+                        const prevRow = allRows[currentRowIndex - 1];
+                        const targetCell = prevRow.querySelectorAll('.spreadsheet-cell')[currentCellIndex];
+                        if (targetCell) targetCell.focus();
+                    }
+                    break;
+
+                case 'ArrowDown':
+                    event.preventDefault();
+                    if (currentRowIndex < allRows.length - 1) {
+                        const nextRow = allRows[currentRowIndex + 1];
+                        const targetCell = nextRow.querySelectorAll('.spreadsheet-cell')[currentCellIndex];
+                        if (targetCell) targetCell.focus();
+                    }
+                    break;
+
+                case 'ArrowLeft':
+                    event.preventDefault();
+                    if (currentCellIndex > 0) {
+                        const prevCell = allCells[currentCellIndex - 1];
+                        if (prevCell) prevCell.focus();
+                    }
+                    break;
+
+                case 'ArrowRight':
+                    event.preventDefault();
+                    if (currentCellIndex < allCells.length - 1) {
+                        const nextCell = allCells[currentCellIndex + 1];
+                        if (nextCell) nextCell.focus();
+                    }
+                    break;
+
+                case 'Enter':
+                    event.preventDefault();
+                    if (currentRowIndex < allRows.length - 1) {
+                        // Move to next row
+                        const nextRow = allRows[currentRowIndex + 1];
+                        // If currently in units column (index 1), move to next row's grade (index 0)
+                        // Otherwise, stay in same column
+                        const targetIndex = (field === 'units') ? 0 : currentCellIndex;
+                        const targetCell = nextRow.querySelectorAll('.spreadsheet-cell')[targetIndex];
+                        if (targetCell) targetCell.focus();
+                    } else {
+                        // If we're on the last row, add a new subject and focus on grade input
+                        addSubject();
+                        setTimeout(() => {
+                            const newRows = tbody.querySelectorAll('tr');
+                            const lastRow = newRows[newRows.length - 1];
+                            // Always focus on the grade input (index 0) for new rows
+                            const gradeCell = lastRow.querySelectorAll('.spreadsheet-cell')[0];
+                            if (gradeCell) gradeCell.focus();
+                        }, 100);
+                    }
+                    break;
+
+                case 'Tab':
+                    event.preventDefault();
+                    if (event.shiftKey) {
+                        // Shift+Tab: move to previous cell
+                        if (currentCellIndex > 0) {
+                            const prevCell = allCells[currentCellIndex - 1];
+                            if (prevCell) prevCell.focus();
+                        } else if (currentRowIndex > 0) {
+                            const prevRow = allRows[currentRowIndex - 1];
+                            const lastCell = prevRow.querySelectorAll('.spreadsheet-cell')[prevRow.querySelectorAll('.spreadsheet-cell').length - 1];
+                            if (lastCell) lastCell.focus();
+                        }
+                    } else {
+                        // Tab: move to next cell
+                        if (currentCellIndex < allCells.length - 1) {
+                            const nextCell = allCells[currentCellIndex + 1];
+                            if (nextCell) nextCell.focus();
+                        } else if (currentRowIndex < allRows.length - 1) {
+                            const nextRow = allRows[currentRowIndex + 1];
+                            const firstCell = nextRow.querySelectorAll('.spreadsheet-cell')[0];
+                            if (firstCell) firstCell.focus();
+                        } else {
+                            // If we're on the last cell of the last row, add a new subject
+                            addSubject();
+                            setTimeout(() => {
+                                const newRows = tbody.querySelectorAll('tr');
+                                const lastRow = newRows[newRows.length - 1];
+                                const firstCell = lastRow.querySelectorAll('.spreadsheet-cell')[0];
+                                if (firstCell) firstCell.focus();
+                            }, 100);
+                        }
+                    }
+                    break;
+
+                case 'Escape':
+                    event.preventDefault();
+                    element.blur();
+                    break;
+            }
+        }
+
+        function autoCalculateWeighted(id) {
+            const subject = subjects.find(s => s.id === id);
+            if (!subject || !subject.grade || !subject.units) return;
+
+            const grade = parseFloat(subject.grade);
+            const units = parseFloat(subject.units);
+            
+            if (validateGrade(grade) && validateUnits(units)) {
+                const weighted = (grade * units).toFixed(2);
+                
+                // Update the weighted cell in the current row
+                const row = document.querySelector(`tr[data-id="${id}"]`);
+                if (row) {
+                    const weightedCell = row.querySelector('.calculated-cell');
+                    if (weightedCell) {
+                        weightedCell.value = weighted;
+                    }
+                }
+            }
+        }
+
         function renderSubjects() {
-            const container = document.getElementById('subjectsContainer');
+            const spreadsheetContainer = document.getElementById('spreadsheetContainer');
+            const spreadsheetBody = document.getElementById('spreadsheetBody');
             const noMessage = document.getElementById('noSubjectsMessage');
+            const legacyContainer = document.getElementById('subjectsContainer');
+            const gradeRange = getGradeRange();
 
             if (subjects.length === 0) {
-                container.innerHTML = '';
+                spreadsheetContainer.style.display = 'none';
+                legacyContainer.style.display = 'none';
                 noMessage.style.display = 'block';
                 document.getElementById('resultsSection').classList.remove('show');
                 return;
             }
 
             noMessage.style.display = 'none';
+            spreadsheetContainer.style.display = 'block';
+            legacyContainer.style.display = 'none';
 
-            const rows = subjects.map((subject, index) => {
-                const schoolAUnits = parseFloat(subject.schoolAUnits) || 0;
-                const schoolBUnits = parseFloat(subject.schoolBUnits) || 0;
-                const schoolCUnits = parseFloat(subject.schoolCUnits) || 0;
-                const totalUnits = schoolAUnits + schoolBUnits + schoolCUnits;
-                const grade = parseFloat(subject.grade);
-                const gradeIsValid = isValidGradeValue(subject.grade);
-                const weighted = gradeIsValid && totalUnits > 0 ? (grade * totalUnits).toFixed(2) : '0.00';
+            spreadsheetBody.innerHTML = subjects.map((subject, index) => {
+                const weighted = subject.grade && subject.units 
+                    ? (parseFloat(subject.grade) * parseFloat(subject.units)).toFixed(2)
+                    : '0.00';
+
+                const gradeError = subject.grade && validateGrade(subject.grade) ? '' : 'error';
+                const unitError = subject.units && validateUnits(subject.units) ? '' : 'error';
 
                 return `
-                    <tr data-id="${subject.id}">
-                        <td class="col-subject">Subject ${index + 1}</td>
-                        <td><input type="number" class="table-input" min="0" step="0.5" value="${subject.schoolAUnits || ''}" onchange="updateSubject(${subject.id}, 'schoolAUnits', this.value)" placeholder="Unit"></td>
-                        <td><input type="number" class="table-input" min="0" step="0.01" value="${subject.schoolARate || ''}" onchange="updateSubject(${subject.id}, 'schoolARate', this.value)" placeholder="Rate"></td>
-                        <td><input type="number" class="table-input" min="0" step="0.5" value="${subject.schoolBUnits || ''}" onchange="updateSubject(${subject.id}, 'schoolBUnits', this.value)" placeholder="Unit"></td>
-                        <td><input type="number" class="table-input" min="0" step="0.01" value="${subject.schoolBRate || ''}" onchange="updateSubject(${subject.id}, 'schoolBRate', this.value)" placeholder="Rate"></td>
-                        <td><input type="number" class="table-input" min="0" step="0.5" value="${subject.schoolCUnits || ''}" onchange="updateSubject(${subject.id}, 'schoolCUnits', this.value)" placeholder="Unit"></td>
-                        <td><input type="number" class="table-input" min="0" step="0.01" value="${subject.schoolCRate || ''}" onchange="updateSubject(${subject.id}, 'schoolCRate', this.value)" placeholder="Rate"></td>
-                        <td><input type="text" list="gradeOptions" data-grade-input="true" class="table-input ${gradeIsValid ? '' : 'input-error'}" value="${subject.grade || ''}" onchange="updateSubject(${subject.id}, 'grade', this.value)" placeholder="75-100 or 1.00-3.00"></td>
-                        <td class="table-cell-value col-total">${totalUnits.toFixed(2)}</td>
-                        <td class="table-cell-value col-weighted">${weighted}</td>
-                        <td class="col-action">
-                            <button class="btn-remove" onclick="removeSubject(${subject.id})">
-                                <i class="fas fa-trash"></i>
+                    <tr class="subject-row" data-id="${subject.id}">
+                        <td class="row-number-cell">${index + 1}</td>
+                        <td>
+                            <input type="number" 
+                                   class="spreadsheet-cell grade-cell ${gradeError}" 
+                                   value="${subject.grade || ''}" 
+                                   placeholder="${gradeRange.placeholder}"
+                                   min="${gradeRange.min}" 
+                                   max="${gradeRange.max}" 
+                                   step="${gradeRange.step}"
+                                   data-field="grade"
+                                   data-id="${subject.id}"
+                                   oninput="handleCellInput(${subject.id}, 'grade', this.value)"
+                                   onkeydown="handleCellKeydown(event, ${subject.id}, 'grade', this)"
+                                   onfocus="handleCellFocus(this)">
+                        </td>
+                        <td>
+                            <input type="number" 
+                                   class="spreadsheet-cell units-cell ${unitError}" 
+                                   value="${subject.units || ''}" 
+                                   placeholder="1-8"
+                                   min="1" 
+                                   max="8" 
+                                   step="1"
+                                   data-field="units"
+                                   data-id="${subject.id}"
+                                   oninput="handleCellInput(${subject.id}, 'units', this.value)"
+                                   onkeydown="handleCellKeydown(event, ${subject.id}, 'units', this)"
+                                   onfocus="handleCellFocus(this)">
+                        </td>
+                        <td class="delete-cell">
+                            <button class="btn-delete-row" onclick="removeSubject(${subject.id})">
+                                <i class="fas fa-trash"></i> Delete
                             </button>
                         </td>
                     </tr>
                 `;
             }).join('');
-
-            container.innerHTML = `
-                <table class="subjects-table">
-                    <thead>
-                        <tr>
-                            <th>Subject</th>
-                            <th>A Unit</th>
-                            <th>A Rate</th>
-                            <th>B Unit</th>
-                            <th>B Rate</th>
-                            <th>C Unit</th>
-                            <th>C Rate</th>
-                            <th>Grade (75-100 or 1.00-3.00)</th>
-                            <th>Total Units</th>
-                            <th>Weighted Grade</th>
-                            <th>Action</th>
-                        </tr>
-                    </thead>
-                    <tbody>${rows}</tbody>
-                </table>
-            `;
         }
 
         function calculateGWA() {
             if (subjects.length === 0) {
-                alert('Please add at least one subject before calculating GWA.');
+                showBanner('error', 'No Subjects', 'Please add at least one subject before calculating GWA.');
                 return;
             }
 
             let totalWeighted = 0;
             let totalUnits = 0;
+            let hasErrors = false;
 
             for (const subject of subjects) {
                 const grade = parseFloat(subject.grade);
-                const schoolAUnits = parseFloat(subject.schoolAUnits) || 0;
-                const schoolBUnits = parseFloat(subject.schoolBUnits) || 0;
-                const schoolCUnits = parseFloat(subject.schoolCUnits) || 0;
-                const units = schoolAUnits + schoolBUnits + schoolCUnits;
+                const units = parseFloat(subject.units);
 
-                if (!isValidGradeValue(subject.grade)) {
-                    alert('Please enter a valid Grade for all subjects: either 75-100 or 1.00-3.00 (1.25, 1.50, etc.).');
-                    return;
+                if (!subject.grade || !subject.units || !validateGrade(subject.grade) || !validateUnits(subject.units)) {
+                    hasErrors = true;
+                    continue;
                 }
 
-                if (units <= 0) {
-                    alert('Each subject must have at least one unit across columns A, B, or C.');
-                    return;
+                if (isNaN(grade) || isNaN(units)) {
+                    hasErrors = true;
+                    continue;
                 }
 
                 totalWeighted += grade * units;
                 totalUnits += units;
             }
 
-            const gwa = totalUnits > 0 ? (totalWeighted / totalUnits).toFixed(3) : 0;
+            if (hasErrors || totalUnits === 0) {
+                const gradeRange = currentGradeScale === 'percentage' ? '75-100' : '1.00-3.00';
+                showBanner('error', 'Validation Error', `Please enter valid grades (${gradeRange}) and units (1-8) for all subjects.`);
+                return;
+            }
+
+            const gwa = totalUnits > 0 ? (totalWeighted / totalUnits).toFixed(2) : 0;
 
             currentResult = {
                 totalWeighted: totalWeighted.toFixed(2),
                 totalUnits: totalUnits,
                 gwa: gwa,
-                subjects: JSON.parse(JSON.stringify(subjects))
+                subjects: JSON.parse(JSON.stringify(subjects)),
+                gradeScale: currentGradeScale
             };
 
             document.getElementById('totalWeightedResult').textContent = totalWeighted.toFixed(2);
@@ -2628,7 +3222,8 @@
             const draft = {
                 applicantName: document.getElementById('calculationName').value || '',
                 subjects,
-                subjectCount
+                subjectCount,
+                gradeScale: currentGradeScale
             };
             localStorage.setItem(draftKey, JSON.stringify(draft));
         }
@@ -2640,20 +3235,21 @@
             try {
                 const draft = JSON.parse(raw);
                 if (draft && Array.isArray(draft.subjects)) {
-                    subjects = draft.subjects.map((subject) => ({
-                        id: subject.id,
-                        name: subject.name || '',
-                        schoolAUnits: subject.schoolAUnits || subject.units || '',
-                        schoolARate: subject.schoolARate || '',
-                        schoolBUnits: subject.schoolBUnits || '',
-                        schoolBRate: subject.schoolBRate || '',
-                        schoolCUnits: subject.schoolCUnits || '',
-                        schoolCRate: subject.schoolCRate || '',
-                        grade: subject.grade || ''
-                    }));
+                    subjects = draft.subjects;
                     subjectCount = draft.subjectCount || subjects.length;
                     const nameInput = document.getElementById('calculationName');
                     if (nameInput) nameInput.value = draft.applicantName || '';
+                    
+                    // Restore grade scale if available
+                    if (draft.gradeScale) {
+                        currentGradeScale = draft.gradeScale;
+                        const scaleSelect = document.getElementById('gradeScale');
+                        if (scaleSelect) {
+                            scaleSelect.value = currentGradeScale;
+                            handleGradeScaleChange();
+                        }
+                    }
+                    
                     if (subjects.length > 0) {
                         showBanner('info', 'Draft Restored', 'Unfinished inputs were restored.');
                     }
@@ -2830,6 +3426,12 @@
             toggle.classList.toggle('open');
         }
 
+        /* Keyboard Shortcuts for Grades */
+        const gradeMap = {
+            '1': '1.00', '2': '1.25', '3': '1.50', '4': '1.75', '5': '2.00',
+            '6': '2.25', '7': '2.50', '8': '2.75', '9': '3.00'
+        };
+
         /* Stats Dashboard */
         function updateStatsDisplay() {
             const history = JSON.parse(localStorage.getItem('gwaHistory')) || [];
@@ -2904,10 +3506,7 @@
                 tableHTML += `<tr><td><strong>Subject ${i + 1}</strong></td>`;
                 selected.forEach(app => {
                     const subj = app.subjects[i];
-                    const unitsDisplay = subj
-                        ? ((parseFloat(subj.schoolAUnits) || 0) + (parseFloat(subj.schoolBUnits) || 0) + (parseFloat(subj.schoolCUnits) || 0) + (parseFloat(subj.units) || 0)).toFixed(2)
-                        : '0.00';
-                    const gradeDisplay = subj ? `${subj.grade || '-'} (${unitsDisplay}u)` : '-';
+                    const gradeDisplay = subj ? `${subj.grade} (${subj.units}u)` : '-';
                     tableHTML += `<td style="text-align: center;">${gradeDisplay}</td>`;
                 });
                 tableHTML += `</tr>`;
@@ -2992,16 +3591,18 @@
             showBanner('success', 'Batch Import Complete', message);
         }
 
-        /* Keyboard Tab Navigation for grade input */
+        /* Keyboard Tab Navigation for Grade/Units */
         document.addEventListener('change', function(e) {
-            if (e.target.classList.contains('table-input') && e.target.dataset.gradeInput === 'true') {
-                const row = e.target.closest('tr');
-                if (!row) return;
-                const nextRow = row.nextElementSibling;
-                if (!nextRow) return;
-                const firstInput = nextRow.querySelector('.table-input');
-                if (firstInput) {
-                    setTimeout(() => firstInput.focus(), 0);
+            if (e.target.tagName === 'SELECT' && subjects.length > 0) {
+                const card = e.target.closest('.subject-card');
+                if (!card) return;
+
+                const subjectId = parseInt(card.dataset.id);
+                const allSelects = card.querySelectorAll('select');
+                
+                // If grade was just selected, focus on units
+                if (allSelects[0] === e.target && allSelects[0].value) {
+                    setTimeout(() => allSelects[1].focus(), 0);
                 }
             }
         }, true);
@@ -3025,4 +3626,3 @@
     </div>
 </body>
 </html>
-
