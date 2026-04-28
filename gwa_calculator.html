@@ -2800,26 +2800,6 @@
             }
         }
 
-        function autoCalculateWeighted(id) {
-            const subject = subjects.find(s => s.id === id);
-            if (!subject || !subject.grade || !subject.units) return;
-
-            const grade = parseFloat(subject.grade);
-            const units = parseFloat(subject.units);
-            
-            if (validateGrade(grade) && validateUnits(units)) {
-                const weighted = (grade * units).toFixed(2);
-                
-                // Update the weighted cell in the current row
-                const row = document.querySelector(`tr[data-id="${id}"]`);
-                if (row) {
-                    const weightedCell = row.querySelector('.calculated-cell');
-                    if (weightedCell) {
-                        weightedCell.value = weighted;
-                    }
-                }
-            }
-        }
 
         function renderSubjects() {
             const spreadsheetContainer = document.getElementById('spreadsheetContainer');
