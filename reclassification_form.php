@@ -228,7 +228,6 @@ $ppstIndicators = [
             ["code" => "4.3.2", "text" => "Adapt and implement learning programs that ensure relevance and responsiveness to the needs of all learners. (NCOI)"],
             ["code" => "4.4.2", "text" => "Participate in collegial discussions that use teacher and learner feedback to enrich teaching practice. (NCOI)"],
             ["code" => "4.5.2", "text" => "Select, develop, organize and use appropriate teaching and learning resources, including ICT, to address learning goals. (COI)"],
-             ["code" => "4.6.2", "text" => "Use a variety of strategies to manage time, activities and resources effectively in the teaching and learning process. (NCOI)"],
         ],
     ],
     [
