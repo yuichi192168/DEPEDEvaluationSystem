@@ -131,16 +131,16 @@ $performanceRules = [
         "ncoi_o" => 0,
     ],
     "Teacher IV" => [
-        "coi_vs" => 0,
-        "ncoi_vs" => 0,
+        "coi_vs" => 21,
+        "ncoi_vs" => 16,
         "coi_o" => 0,
         "ncoi_o" => 0,
     ],
     "Teacher V" => [
         "coi_vs" => 0,
         "ncoi_vs" => 0,
-        "coi_o" => 0,
-        "ncoi_o" => 0,
+        "coi_o" => 6,
+        "ncoi_o" => 4,
     ],
     "Teacher VI" => [
         "coi_vs" => 0,
