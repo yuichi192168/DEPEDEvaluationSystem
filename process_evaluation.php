@@ -161,6 +161,13 @@ function convertRatingToWeightedPoints($rating, $weight, $maxRating = 5) {
     return $maxRating > 0 ? ($r / $maxRating) * $w : 0;
 }
 
+function getCurrentEvaluationPeriodBounds() {
+    $currentDate = date('Y-m-d');
+    $periodStart = date('Y-m-01', strtotime($currentDate));
+    $periodEnd = date('Y-m-t', strtotime($currentDate));
+    return [$currentDate, $periodStart, $periodEnd];
+}
+
 function isRomanNumeral($token) {
     return preg_match('/^[IVXLCDM]+$/i', $token) === 1;
 }
@@ -325,6 +332,8 @@ $totalScore = $educationScore + $trainingScore + $experienceScore + $performance
               $outstandingAccomplishmentsScore + $applicationOfEducationScore + 
               $applicationOfLdScore + $potentialScore;
 
+list($evaluationDate, $evaluationPeriodStart, $evaluationPeriodEnd) = getCurrentEvaluationPeriodBounds();
+
 // Start transaction
 $conn->begin_transaction();
 
@@ -383,25 +392,22 @@ try {
     }
     $stmt->close();
 
-    // Prevent duplicate applicant name + application code on other records
-    if (!empty($applicationCode)) {
-        $stmt = $conn->prepare(
-            "SELECT car.id
-             FROM comparative_assessment_results car
-             INNER JOIN applicants a ON a.id = car.applicant_id
-             WHERE car.application_code = ?
-               AND LOWER(TRIM(a.name)) = LOWER(TRIM(?))
-               AND NOT (car.applicant_id = ? AND car.position_id = ?)
-             LIMIT 1"
-        );
-        $stmt->bind_param('ssii', $applicationCode, $applicantName, $applicantId, $positionId);
-        $stmt->execute();
-        $dupRes = $stmt->get_result();
-        if ($dupRes && $dupRes->num_rows > 0) {
-            throw new Exception('Duplicate applicant name and application code found. Please review Applicant Name and Application Code.');
-        }
-        $stmt->close();
+    // Prevent duplicate evaluation entries for the same applicant and position in the same period
+    $stmt = $conn->prepare(
+        "SELECT car.id
+         FROM comparative_assessment_results car
+         WHERE car.applicant_id = ?
+           AND car.position_id = ?
+           AND car.assessment_date BETWEEN ? AND ?
+         LIMIT 1"
+    );
+    $stmt->bind_param('iiss', $applicantId, $positionId, $evaluationPeriodStart, $evaluationPeriodEnd);
+    $stmt->execute();
+    $dupRes = $stmt->get_result();
+    if ($dupRes && $dupRes->num_rows > 0) {
+        throw new Exception('A duplicate evaluation already exists for this applicant, position, and evaluation period.');
     }
+    $stmt->close();
     
     // Save or update applicant qualifications
     $stmt = $conn->prepare("SELECT id FROM applicant_qualifications WHERE applicant_id = ? LIMIT 1");
@@ -462,164 +468,83 @@ try {
     }
     $stmt->close();
     
-    // Save or update evaluation record
+    // Insert a new evaluation record for this submission
     $evaluationId = null;
-    $stmt = $conn->prepare("SELECT id FROM evaluations WHERE applicant_id = ? ORDER BY created_at DESC LIMIT 1");
-    $stmt->bind_param("i", $applicantId);
+    $posGroup = !empty($positionGroupName) ? $positionGroupName : 'NON-TEACHING LEVEL I';
+    $notes = "Evaluation created from form";
+    $evaluationStatus = 'pending';
+    $stmt = $conn->prepare("INSERT INTO evaluations 
+        (applicant_id, position_id, position_group, total_score, evaluation_date, notes, status, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, NOW())");
+    $stmt->bind_param("iisdsss", 
+        $applicantId,
+        $positionId,
+        $posGroup,
+        $totalScore,
+        $evaluationDate,
+        $notes,
+        $evaluationStatus
+    );
     $stmt->execute();
-    $result = $stmt->get_result();
-    
-    if ($result->num_rows > 0) {
-        // Update existing evaluation
-        $row = $result->fetch_assoc();
-        $evaluationId = $row['id'];
-        
-        $stmt = $conn->prepare("UPDATE evaluations SET 
-            position_id = ?,
-            position_group = ?,
-            total_score = ?,
-            evaluation_date = CURDATE(),
-            notes = ?,
-            status = ?,
-            updated_at = NOW()
-            WHERE id = ?");
-        $posGroup = !empty($positionGroupName) ? $positionGroupName : 'NON-TEACHING LEVEL I';
-        $notes = "Evaluation updated from form";
-        $evaluationStatus = 'pending';
-        $stmt->bind_param("isdssi", 
-            $positionId,
-            $posGroup,
-            $totalScore,
-            $notes,
-            $evaluationStatus,
-            $evaluationId
+    $evaluationId = $conn->insert_id;
+    $stmt->close();
+
+    // Insert evaluation details (criteria breakdown)
+    $criteria = [
+        ['Education', $applicantEducationDegree, $appEduLevel, $baselineEducationDegree, $baseEduLevel, $educationIncrement, $weights['education'], $educationScore],
+        ['Training', $applicantTraining . ' hours', $appTrainingLevel, $baselineTraining . ' hours', $baseTrainingLevel, $trainingIncrement, $weights['training'], $trainingScore],
+        ['Experience', $applicantExperience . ' months', $appExperienceLevel, $baselineExperience . ' months', $baseExperienceLevel, $experienceIncrement, $weights['experience'], $experienceScore],
+        ['Performance Rating', $applicantPerformance . '/5', 0, 'N/A', 0, 0, $weights['performance'], $performanceScore],
+        ['Outstanding Accomplishments', $applicantOutstandingAccomplishments, 0, 'N/A', 0, 0, $weights['outstanding_accomplishments'], $outstandingAccomplishmentsScore],
+        ['Application of Education', 'Level ' . $applicantApplicationOfEducation, 0, 'N/A', 0, 0, $weights['application_of_education'], $applicationOfEducationScore],
+        ['Application of L&D', 'Level ' . $applicantApplicationOfLd, 0, 'N/A', 0, 0, $weights['application_of_ld'], $applicationOfLdScore],
+        ['Potential', 'Level ' . $applicantPotential, 0, 'N/A', 0, 0, $weights['potential'], $potentialScore]
+    ];
+
+    $stmt = $conn->prepare("INSERT INTO evaluation_details 
+        (evaluation_id, criterion, applicant_qualification, applicant_level, 
+        baseline_qualification, baseline_level, increment, weight, final_score, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())");
+
+    foreach ($criteria as $crit) {
+        $stmt->bind_param("issiisiid", 
+            $evaluationId,
+            $crit[0], // criterion (s)
+            $crit[1], // applicant_qualification (s)
+            $crit[2], // applicant_level (i)
+            $crit[3], // baseline_qualification (s)
+            $crit[4], // baseline_level (i)
+            $crit[5], // increment (i)
+            $crit[6], // weight (i)
+            $crit[7]  // final_score (d)
         );
         $stmt->execute();
-    } else {
-        // Insert new evaluation
-        $posGroup = !empty($positionGroupName) ? $positionGroupName : 'NON-TEACHING LEVEL I';
-        $stmt = $conn->prepare("INSERT INTO evaluations 
-            (applicant_id, position_id, position_group, total_score, evaluation_date, notes, status, created_at)
-            VALUES (?, ?, ?, ?, CURDATE(), ?, ?, NOW())");
-        $notes = "Evaluation created from form";
-        $evaluationStatus = 'pending';
-        $stmt->bind_param("iisdss", 
-            $applicantId,
-            $positionId,
-            $posGroup,
-            $totalScore,
-            $notes,
-            $evaluationStatus
-        );
-        $stmt->execute();
-        $evaluationId = $conn->insert_id;
     }
     $stmt->close();
-    
-    // Delete old evaluation details if updating
-    if ($evaluationId) {
-        $stmt = $conn->prepare("DELETE FROM evaluation_details WHERE evaluation_id = ?");
-        $stmt->bind_param("i", $evaluationId);
-        $stmt->execute();
-        $stmt->close();
-        
-        // Insert evaluation details (criteria breakdown)
-        $criteria = [
-            ['Education', $applicantEducationDegree, $appEduLevel, $baselineEducationDegree, $baseEduLevel, $educationIncrement, $weights['education'], $educationScore],
-            ['Training', $applicantTraining . ' hours', $appTrainingLevel, $baselineTraining . ' hours', $baseTrainingLevel, $trainingIncrement, $weights['training'], $trainingScore],
-            ['Experience', $applicantExperience . ' months', $appExperienceLevel, $baselineExperience . ' months', $baseExperienceLevel, $experienceIncrement, $weights['experience'], $experienceScore],
-            ['Performance Rating', $applicantPerformance . '/5', 0, 'N/A', 0, 0, $weights['performance'], $performanceScore],
-            ['Outstanding Accomplishments', $applicantOutstandingAccomplishments, 0, 'N/A', 0, 0, $weights['outstanding_accomplishments'], $outstandingAccomplishmentsScore],
-            ['Application of Education', 'Level ' . $applicantApplicationOfEducation, 0, 'N/A', 0, 0, $weights['application_of_education'], $applicationOfEducationScore],
-            ['Application of L&D', 'Level ' . $applicantApplicationOfLd, 0, 'N/A', 0, 0, $weights['application_of_ld'], $applicationOfLdScore],
-            ['Potential', 'Level ' . $applicantPotential, 0, 'N/A', 0, 0, $weights['potential'], $potentialScore]
-        ];
-        
-        $stmt = $conn->prepare("INSERT INTO evaluation_details 
-            (evaluation_id, criterion, applicant_qualification, applicant_level, 
-            baseline_qualification, baseline_level, increment, weight, final_score, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())");
-        
-        foreach ($criteria as $crit) {
-            $stmt->bind_param("issiisiid", 
-                $evaluationId,
-                $crit[0], // criterion (s)
-                $crit[1], // applicant_qualification (s)
-                $crit[2], // applicant_level (i)
-                $crit[3], // baseline_qualification (s)
-                $crit[4], // baseline_level (i)
-                $crit[5], // increment (i)
-                $crit[6], // weight (i)
-                $crit[7]  // final_score (d)
-            );
-            $stmt->execute();
-        }
-        $stmt->close();
-    }
-    
-    // Check if CAR entry exists for this position/applicant combination
-    $stmt = $conn->prepare("SELECT id FROM comparative_assessment_results WHERE position_id = ? AND applicant_id = ? LIMIT 1");
-    $stmt->bind_param("ii", $positionId, $applicantId);
+
+    // Insert a fresh CAR entry for the current evaluation period
+    $stmt = $conn->prepare("INSERT INTO comparative_assessment_results 
+        (position_id, applicant_id, application_code, education_score, training_score, 
+        experience_score, performance_score, outstanding_accomplishments_score, 
+        application_of_education_score, application_of_ld_score, potential_score, 
+        total_score, assessment_date, created_at) 
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())");
+    $stmt->bind_param("iisddddddddds", 
+        $positionId,
+        $applicantId,
+        $applicationCode,
+        $educationScore,
+        $trainingScore,
+        $experienceScore,
+        $performanceScore,
+        $outstandingAccomplishmentsScore,
+        $applicationOfEducationScore,
+        $applicationOfLdScore,
+        $potentialScore,
+        $totalScore,
+        $evaluationDate
+    );
     $stmt->execute();
-    $result = $stmt->get_result();
-    
-    if ($result->num_rows > 0) {
-        // Update existing CAR entry
-        $row = $result->fetch_assoc();
-        $carId = $row['id'];
-        
-        $stmt = $conn->prepare("UPDATE comparative_assessment_results SET 
-            application_code = ?,
-            education_score = ?,
-            training_score = ?,
-            experience_score = ?,
-            performance_score = ?,
-            outstanding_accomplishments_score = ?,
-            application_of_education_score = ?,
-            application_of_ld_score = ?,
-            potential_score = ?,
-            total_score = ?,
-            assessment_date = CURDATE(),
-            updated_at = NOW()
-            WHERE id = ?");
-        $stmt->bind_param("sdddddddddi", 
-            $applicationCode,
-            $educationScore,
-            $trainingScore,
-            $experienceScore,
-            $performanceScore,
-            $outstandingAccomplishmentsScore,
-            $applicationOfEducationScore,
-            $applicationOfLdScore,
-            $potentialScore,
-            $totalScore,
-            $carId
-        );
-        $stmt->execute();
-    } else {
-        // Insert new CAR entry
-        $stmt = $conn->prepare("INSERT INTO comparative_assessment_results 
-            (position_id, applicant_id, application_code, education_score, training_score, 
-            experience_score, performance_score, outstanding_accomplishments_score, 
-            application_of_education_score, application_of_ld_score, potential_score, 
-            total_score, assessment_date, created_at) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURDATE(), NOW())");
-        $stmt->bind_param("iisddddddddd", 
-            $positionId,
-            $applicantId,
-            $applicationCode,
-            $educationScore,
-            $trainingScore,
-            $experienceScore,
-            $performanceScore,
-            $outstandingAccomplishmentsScore,
-            $applicationOfEducationScore,
-            $applicationOfLdScore,
-            $potentialScore,
-            $totalScore
-        );
-        $stmt->execute();
-    }
     $stmt->close();
     
     // Commit transaction

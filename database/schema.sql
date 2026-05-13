@@ -158,7 +158,7 @@ CREATE TABLE IF NOT EXISTS comparative_assessment_results (
     INDEX idx_applicant_id (applicant_id),
     INDEX idx_total_score (total_score),
     INDEX idx_rank (rank),
-    UNIQUE KEY unique_position_applicant (position_id, applicant_id)
+    UNIQUE KEY unique_position_applicant_period (position_id, applicant_id, assessment_date)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Sample Data: Positions

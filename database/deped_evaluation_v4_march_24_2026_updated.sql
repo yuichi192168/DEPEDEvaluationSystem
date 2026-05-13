@@ -1490,7 +1490,7 @@ ALTER TABLE `baseline_qualifications`
 --
 ALTER TABLE `comparative_assessment_results`
   ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `unique_position_applicant` (`position_id`,`applicant_id`),
+  ADD UNIQUE KEY `unique_position_applicant_period` (`position_id`,`applicant_id`,`assessment_date`),
   ADD KEY `idx_position_id` (`position_id`),
   ADD KEY `idx_applicant_id` (`applicant_id`),
   ADD KEY `idx_total_score` (`total_score`),

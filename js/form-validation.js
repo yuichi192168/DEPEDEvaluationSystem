@@ -144,6 +144,14 @@ class FormValidator {
         return '';
     }
 
+    getCurrentEvaluationDate() {
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    }
+
     async generateAndSetApplicationCode(force = false) {
         if (this._autoGenerateInFlight) return;
 
@@ -874,32 +882,37 @@ class FormValidator {
     async checkDuplicateCombination(showBanner = false) {
         const codeEl = document.getElementById('application_code');
         const nameEl = document.getElementById('applicant_name');
+        const positionEl = document.getElementById('position_applied');
         if (!codeEl || !nameEl) return false;
 
         const code = codeEl.value.trim();
         const applicantName = nameEl.value.trim();
+        const positionApplied = positionEl ? positionEl.value.trim() : '';
         if (!code) return false;
 
         try {
             const params = new URLSearchParams({
                 application_code: code,
-                applicant_name: applicantName
+                applicant_name: applicantName,
+                position_applied: positionApplied,
+                evaluation_date: this.getCurrentEvaluationDate()
             });
             const resp = await fetch(`api/check_duplicate_application.php?${params.toString()}`);
             const json = await resp.json();
 
-            if (json && json.success && json.name_code_exists) {
+            if (json && json.success && (json.period_duplicate_exists || json.name_code_exists)) {
                 this.showFieldError('application_code');
                 const errEl = document.getElementById('application_code_error');
-                if (errEl) errEl.textContent = 'Duplicate applicant name and application code found';
+                if (errEl) errEl.textContent = 'Duplicate applicant evaluation found for this period';
                 nameEl.classList.add('invalid');
                 codeEl.classList.add('invalid');
+                if (positionEl) positionEl.classList.add('invalid');
 
                 nameEl.focus();
                 nameEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
 
                 if (showBanner) {
-                    this.showBanner('error', 'Duplicate found: Applicant Name and Application Code already exist.');
+                    this.showBanner('error', 'Duplicate found: this applicant already has an evaluation for the current period.');
                 }
                 return true;
             }
@@ -916,6 +929,7 @@ class FormValidator {
                 this.clearFieldError('application_code');
                 codeEl.classList.remove('invalid');
                 nameEl.classList.remove('invalid');
+                if (positionEl) positionEl.classList.remove('invalid');
             }
         } catch (e) {
             // ignore remote check failures
@@ -935,6 +949,7 @@ class FormValidator {
                 data[el.name] = el.value;
             }
         }
+        data.evaluation_date = this.getCurrentEvaluationDate();
 
         try {
             const resp = await fetch('api/validate_fields.php', {
