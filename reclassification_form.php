@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 // DBM-DepEd JC 01 s.2025 Reclassification Form (Teaching Positions)
 // Plain PHP, single-file implementation for easy integration.
 
@@ -15,6 +15,7 @@ $isAuthenticated = $auth->isAuthenticated();
 $isAdmin = $auth->isAdmin();
 
 $positions = [
+    "Teacher I",
     "Teacher II",
     "Teacher III",
     "Teacher IV",
@@ -28,6 +29,7 @@ $positions = [
 
 $formType = post_value("form_type", "form1");
 $form1Positions = [
+    "Teacher I",
     "Teacher II",
     "Teacher III",
     "Teacher IV",
@@ -40,13 +42,28 @@ $form2Positions = [
     "Master Teacher II",
     "Master Teacher III",
 ];
+$form1CurrentPositions = [
+    "Teacher I",
+    "Teacher II",
+    "Teacher III",
+    "Teacher IV",
+    "Teacher V",
+    "Teacher VI",
+    "Teacher VII",
+    "Master Teacher I",
+];
+$form2CurrentPositions = [
+    "Master Teacher I",
+    "Master Teacher II",
+    "Master Teacher III",
+];
 $form1Order = $form1Positions;
 $form2Order = [
     "Master Teacher I",
     "Master Teacher II",
     "Master Teacher III",
 ];
-$currentPositionOptions = $formType === "form2" ? $form2Order : $form1Order;
+$currentPositionOptions = $formType === "form2" ? $form2CurrentPositions : $form1CurrentPositions;
 $appliedPositionOptions = $formType === "form2" ? $form2Positions : $form1Positions;
 
 // Baseline Qualification Standards (QS) by position.
@@ -116,7 +133,8 @@ $qsByPosition = [
     ],
 ];
 
-// Performance requirements by position.
+// Performance requirements by position (evaluation based on Performance Data inputs).
+// Rule: Use "Equal to or Greater Than (â‰¥)" conditions unless stated otherwise.
 $performanceRules = [
     "Teacher II" => [
         "coi_vs" => 6,
@@ -135,12 +153,14 @@ $performanceRules = [
         "ncoi_vs" => 16,
         "coi_o" => 0,
         "ncoi_o" => 0,
+        "exact_total" => 37,      // Must be exactly 37 total indicators
     ],
     "Teacher V" => [
         "coi_vs" => 0,
         "ncoi_vs" => 0,
         "coi_o" => 6,
         "ncoi_o" => 4,
+        "min_coe" => 6,           // Must have at least 6 COE/COI indicators at Outstanding level
     ],
     "Teacher VI" => [
         "coi_vs" => 0,
@@ -276,6 +296,22 @@ function post_int(string $key, int $default = 0): int
     return ($value === false || $value < 0) ? $default : $value;
 }
 
+// ============================================================================
+// T2â†’T3 SPECIAL COUNTING RULE
+// ============================================================================
+// For applicants moving from Teacher II to Teacher III:
+// Count Outstanding indicators as part of the total and use â‰¥ comparisons.
+function getPerformanceDataForT2ToT3Evaluation(int $coiVs, int $ncoiVs, int $coiO, int $ncoiO): array
+{
+    // For T2â†’T3: Treat O and VS as equivalent for counting purposes
+    // This creates a "combined" count where Outstanding supports the threshold
+    return [
+        "total_coi" => $coiVs + $coiO,       // Total COI (VS + O combined)
+        "total_ncoi" => $ncoiVs + $ncoiO,   // Total NCOI (VS + O combined)
+        "combined_vs" => $coiVs + $ncoiVs + $coiO + $ncoiO,  // All indicators
+    ];
+}
+
 $currentPosition = post_value("current_position");
 $positionApplied = post_value("position_applied");
 
@@ -352,43 +388,43 @@ function requires_t4_gate(string $positionApplied): bool
     return in_array($positionApplied, ["Teacher V", "Teacher VI", "Teacher VII", "Master Teacher I", "Master Teacher II", "Master Teacher III"], true);
 }
 
-function get_custom_qualification_checks(string $positionApplied, array $ppstCounts, int $t4Indicators, bool $t4GatePassed): array
+function get_custom_qualification_checks(string $positionApplied, array $ppstCounts, int $t4Indicators, bool $t4GatePassed, array $performanceRules): array
 {
     $checks = [
-        "teacher_iv_t4" => true,
-        "teacher_v_coi" => true,
-        "t4_gate_passed" => true,
-        "t4_gate_indicators" => true,
+        "performance_thresholds" => true,
+        "exact_total" => true,
+        "coe_requirement" => true,
+        "t4_gate" => true,
     ];
     $missing = [];
 
     $totalIndicators = (int)($ppstCounts["total_vs"] ?? 0) + (int)($ppstCounts["total_o"] ?? 0);
-    $totalCoiIndicators = (int)($ppstCounts["coi_vs"] ?? 0) + (int)($ppstCounts["coi_o"] ?? 0);
+    $totalCoIndicators = (int)($ppstCounts["coi_vs"] ?? 0) + (int)($ppstCounts["coi_o"] ?? 0);
+    $totalOutstandingIndicators = (int)($ppstCounts["coi_o"] ?? 0) + (int)($ppstCounts["ncoi_o"] ?? 0);
 
-    if ($positionApplied === "Teacher IV") {
-        if ($totalIndicators !== 37) {
-            $checks["teacher_iv_t4"] = false;
-            $missing[] = "Teacher IV requires exactly 37 total PPST indicators marked (current: {$totalIndicators}).";
-        }
-        if ($totalIndicators < 4) {
-            $checks["teacher_iv_t4"] = false;
-            $missing[] = "Teacher IV requires at least 4 T4 indicators.";
+    $rules = $performanceRules[$positionApplied] ?? null;
+    if (!$rules) {
+        $missing[] = "Position rules not found.";
+        return ["checks" => $checks, "missing" => $missing];
+    }
+
+    // ==========================================
+    // TEACHER IV: EXACT TOTAL REQUIREMENT (37)
+    // ==========================================
+    if (isset($rules["exact_total"])) {
+        if ($totalIndicators !== $rules["exact_total"]) {
+            $checks["exact_total"] = false;
+            $missing[] = "Teacher IV requires exactly {$rules['exact_total']} total PPST indicators. Current: {$totalIndicators}.";
         }
     }
 
-    if ($positionApplied === "Teacher V" && $totalCoiIndicators < 6) {
-        $checks["teacher_v_coi"] = false;
-        $missing[] = "Teacher V requires at least 6 COE/COI indicators (current COI total: {$totalCoiIndicators}).";
-    }
-
-    if (requires_t4_gate($positionApplied)) {
-        if (!$t4GatePassed) {
-            $checks["t4_gate_passed"] = false;
-            $missing[] = "Teacher IV (T4) gate must be marked as passed before evaluating this position.";
-        }
-        if ($t4Indicators < 4) {
-            $checks["t4_gate_indicators"] = false;
-            $missing[] = "At least 4 validated T4 indicators are required before proceeding to {$positionApplied}.";
+    // ==========================================
+    // TEACHER V: COE/COI OUTSTANDING REQUIREMENT
+    // ==========================================
+    if (isset($rules["min_coe"])) {
+        if ($totalOutstandingIndicators < $rules["min_coe"]) {
+            $checks["coe_requirement"] = false;
+            $missing[] = "Teacher V requires at least {$rules['min_coe']} COE/COI indicators at Outstanding level. Current: {$totalOutstandingIndicators}.";
         }
     }
 
@@ -396,6 +432,76 @@ function get_custom_qualification_checks(string $positionApplied, array $ppstCou
         "checks" => $checks,
         "missing" => $missing,
     ];
+}
+
+// ============================================================================
+// LADDER-BASED PROGRESSION VALIDATION
+// ============================================================================
+// Validates that applicant meets all intermediate position requirements
+// before being evaluated for the applied position.
+// Example: Teacher II â†’ Teacher IV requires passing Teacher III first.
+function validateLadderProgression(string $currentPos, string $appliedPos, int $coiVs, int $ncoiVs, int $coiO, int $ncoiO, array $performanceRules, array $activeOrder): array
+{
+    $currentIndex = array_search($currentPos, $activeOrder, true);
+    $appliedIndex = array_search($appliedPos, $activeOrder, true);
+
+    if ($currentIndex === false || $appliedIndex === false) {
+        return [
+            "valid" => false,
+            "failedAt" => null,
+            "reason" => "Invalid positions detected",
+        ];
+    }
+
+    // If applying for same or lower level, skip ladder validation
+    if ($appliedIndex <= $currentIndex) {
+        return ["valid" => true, "failedAt" => null, "reason" => null];
+    }
+
+    // ============================================================================
+    // CHECK EACH INTERMEDIATE LEVEL (SEQUENTIAL VALIDATION)
+    // ============================================================================
+    // For each level between current and applied, verify performance thresholds
+    for ($i = $currentIndex + 1; $i <= $appliedIndex; $i++) {
+        $levelPosition = $activeOrder[$i];
+        $rules = $performanceRules[$levelPosition] ?? null;
+
+        if (!$rules) {
+            return [
+                "valid" => false,
+                "failedAt" => $levelPosition,
+                "reason" => "Rules not found for intermediate level: {$levelPosition}",
+            ];
+        }
+
+        // SPECIAL RULE: T2â†’T3 counting (treat O and VS as equivalent)
+        if ($currentPos === "Teacher II" && $levelPosition === "Teacher III") {
+            $t2t3Data = getPerformanceDataForT2ToT3Evaluation($coiVs, $ncoiVs, $coiO, $ncoiO);
+            $meetsCoiVs = $t2t3Data["total_coi"] >= $rules["coi_vs"];
+            $meetsNcoiVs = $t2t3Data["total_ncoi"] >= $rules["ncoi_vs"];
+            $meetsCoiO = $coiO >= $rules["coi_o"];
+            $meetsNcoiO = $ncoiO >= $rules["ncoi_o"];
+        } else {
+            // Check base performance thresholds using â‰¥ operators
+            $meetsCoiVs = $coiVs >= $rules["coi_vs"];
+            $meetsNcoiVs = $ncoiVs >= $rules["ncoi_vs"];
+            $meetsCoiO = $coiO >= $rules["coi_o"];
+            $meetsNcoiO = $ncoiO >= $rules["ncoi_o"];
+        }
+
+        $levelPassed = $meetsCoiVs && $meetsNcoiVs && $meetsCoiO && $meetsNcoiO;
+
+        if (!$levelPassed) {
+            return [
+                "valid" => false,
+                "failedAt" => $levelPosition,
+                "reason" => "âŒ LADDER VALIDATION FAILED: Applicant does not meet requirements for intermediate level: {$levelPosition}. Cannot proceed to {$appliedPos}.",
+            ];
+        }
+    }
+
+    // All intermediate levels passed
+    return ["valid" => true, "failedAt" => null, "reason" => null];
 }
 
 $activeOrder = $formType === "form2" ? $form2Order : $form1Order;
@@ -425,37 +531,75 @@ $actionToSg = $salaryGradesByPosition[$positionApplied] ?? "";
 $actionRemarks = $result ? ($result["passed"] ? "QUALIFIED" : "NOT QUALIFIED") : "";
 
 if ($_SERVER["REQUEST_METHOD"] === "POST" && $positionApplied !== "" && $errorMessage === null) {
-    $rules = $performanceRules[$positionApplied] ?? null;
+    // ========================================================================
+    // STEP 1: LADDER-BASED PROGRESSION VALIDATION
+    // ========================================================================
+    // Validate that applicant passes all intermediate level requirements
+    // before being evaluated for the applied position.
+    $ladderValidation = validateLadderProgression($currentPosition, $positionApplied, $coiVs, $ncoiVs, $coiO, $ncoiO, $performanceRules, $activeOrder);
 
-    if ($rules) {
-        $meetsCoiVs = $coiVs >= $rules["coi_vs"];
-        $meetsNcoiVs = $ncoiVs >= $rules["ncoi_vs"];
-        $meetsCoiO = $coiO >= $rules["coi_o"];
-        $meetsNcoiO = $ncoiO >= $rules["ncoi_o"];
-
-        $basePassed = $meetsCoiVs && $meetsNcoiVs && $meetsCoiO && $meetsNcoiO;
-        $customQualification = get_custom_qualification_checks($positionApplied, $ppstCounts, $t4Indicators, $t4GatePassed);
-        $customPassed = count($customQualification["missing"]) === 0;
-        $passed = $basePassed && $customPassed;
-
+    if (!$ladderValidation["valid"]) {
+        // Ladder validation failed - automatic Not Qualified
         $result = [
-            "passed" => $passed,
+            "passed" => false,
             "total_vs" => $coiVs + $ncoiVs,
             "total_o" => $coiO + $ncoiO,
             "ppst" => $ppstCounts,
-            "rules" => $rules,
+            "rules" => $performanceRules[$positionApplied] ?? null,
             "checks" => [
-                "coi_vs" => $meetsCoiVs,
-                "ncoi_vs" => $meetsNcoiVs,
-                "coi_o" => $meetsCoiO,
-                "ncoi_o" => $meetsNcoiO,
-                "teacher_iv_t4" => $customQualification["checks"]["teacher_iv_t4"],
-                "teacher_v_coi" => $customQualification["checks"]["teacher_v_coi"],
-                "t4_gate_passed" => $customQualification["checks"]["t4_gate_passed"],
-                "t4_gate_indicators" => $customQualification["checks"]["t4_gate_indicators"],
+                "coi_vs" => false,
+                "ncoi_vs" => false,
+                "coi_o" => false,
+                "ncoi_o" => false,
+                "performance_thresholds" => false,
+                "exact_total" => true,
+                "coe_requirement" => true,
+                "t4_gate" => true,
             ],
-            "missing_requirements" => $customQualification["missing"],
+            "missing_requirements" => [$ladderValidation["reason"]],
         ];
+    } else {
+        // Ladder validation passed - proceed to full evaluation
+        $rules = $performanceRules[$positionApplied] ?? null;
+
+        if ($rules) {
+            // SPECIAL RULE: T2â†’T3 counting
+            if ($currentPosition === "Teacher II" && $positionApplied === "Teacher III") {
+                $t2t3Data = getPerformanceDataForT2ToT3Evaluation($coiVs, $ncoiVs, $coiO, $ncoiO);
+                $meetsCoiVs = $t2t3Data["total_coi"] >= $rules["coi_vs"];
+                $meetsNcoiVs = $t2t3Data["total_ncoi"] >= $rules["ncoi_vs"];
+                $meetsCoiO = $coiO >= $rules["coi_o"];
+                $meetsNcoiO = $ncoiO >= $rules["ncoi_o"];
+            } else {
+                $meetsCoiVs = $coiVs >= $rules["coi_vs"];
+                $meetsNcoiVs = $ncoiVs >= $rules["ncoi_vs"];
+                $meetsCoiO = $coiO >= $rules["coi_o"];
+                $meetsNcoiO = $ncoiO >= $rules["ncoi_o"];
+            }
+
+            $basePassed = $meetsCoiVs && $meetsNcoiVs && $meetsCoiO && $meetsNcoiO;
+            $customQualification = get_custom_qualification_checks($positionApplied, $ppstCounts, $t4Indicators, $t4GatePassed, $performanceRules);
+            $customPassed = count($customQualification["missing"]) === 0;
+            $passed = $basePassed && $customPassed;
+
+            $result = [
+                "passed" => $passed,
+                "total_vs" => $coiVs + $ncoiVs,
+                "total_o" => $coiO + $ncoiO,
+                "ppst" => $ppstCounts,
+                "rules" => $rules,
+                "checks" => [
+                    "coi_vs" => $meetsCoiVs,
+                    "ncoi_vs" => $meetsNcoiVs,
+                    "coi_o" => $meetsCoiO,
+                    "ncoi_o" => $meetsNcoiO,
+                    "performance_thresholds" => $customQualification["checks"]["performance_thresholds"],
+                    "exact_total" => $customQualification["checks"]["exact_total"],
+                    "coe_requirement" => $customQualification["checks"]["coe_requirement"],
+                    "t4_gate" => $customQualification["checks"]["t4_gate"],
+                ],
+                "missing_requirements" => $customQualification["missing"],
+            ];
 
         // Allow both authenticated and unauthenticated users to submit evaluations
         $recordId = post_int("evaluation_record_id", 0);
@@ -524,6 +668,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && $positionApplied !== "" && $errorMe
             } else {
                 $manager->createEvaluation($recordData, $submittedByUserId);
             }
+        }
         }
     }
 }
@@ -605,17 +750,8 @@ function format_performance_requirements(array $rules): string
 
 function format_additional_requirements(string $positionApplied): string
 {
-    $requirements = [];
-    if ($positionApplied === "Teacher IV") {
-        $requirements[] = "Must have exactly 37 PPST indicators and at least 4 T4 indicators.";
-    }
-    if ($positionApplied === "Teacher V") {
-        $requirements[] = "Must have at least 6 COE/COI indicators.";
-    }
-    if (requires_t4_gate($positionApplied)) {
-        $requirements[] = "Must pass Teacher IV (T4) gate with at least 4 validated T4 indicators.";
-    }
-    return implode(" ", $requirements);
+    // Additional requirement text removed per request.
+    return "";
 }
 ?>
 <!DOCTYPE html>
@@ -1146,7 +1282,7 @@ function format_additional_requirements(string $positionApplied): string
             </td>
         </tr>
         <tr>
-            <td class="label-cell">Position Applied:</td>
+            <td class="label-cell" id="position-display-label">Position Applied:</td>
             <td>
                 <select id="position_applied" name="position_applied" class="line-input" required>
                     <option value="">Select</option>
@@ -1345,21 +1481,33 @@ function format_additional_requirements(string $positionApplied): string
     </div>
 
     <div class="section" id="performance-data-advanced" style="display:none;">
-        <h2>Additional Performance Data (Teacher V and Above)</h2>
+        <h2>Teacher IV (T4) Evaluation Status</h2>
         <div class="grid">
             <div>
-                <label for="t4_indicators">Validated T4 Indicators</label>
-                <input type="number" id="t4_indicators" name="t4_indicators" min="0" value="<?php echo htmlspecialchars((string)$t4Indicators); ?>">
-            </div>
-            <div>
-                <label for="t4_gate_passed">Teacher IV (T4) Gate Status</label>
-                <select id="t4_gate_passed" name="t4_gate_passed">
-                    <option value="0" <?php echo selected("0", post_value("t4_gate_passed", "0")); ?>>Not Yet Passed</option>
-                    <option value="1" <?php echo selected("1", post_value("t4_gate_passed", $t4GatePassed ? "1" : "0")); ?>>Passed</option>
-                </select>
+                <label for="t4_gate_display">Teacher IV (T4) Gate Status</label>
+                <input type="text" id="t4_gate_display" name="t4_gate_display" class="line-input" value="Automatic - Will be calculated" readonly>
+                <input type="hidden" id="t4_indicators" name="t4_indicators" value="<?php echo htmlspecialchars((string)$t4Indicators); ?>">
+                <input type="hidden" id="t4_gate_passed" name="t4_gate_passed" value="<?php echo htmlspecialchars((string)($t4GatePassed ? "1" : "0")); ?>">
             </div>
         </div>
-        <div class="small">Required for Teacher V, VI, VII, and Master Teacher positions.</div>
+        <div class="small">Teacher IV status is automatically determined from performance data for Teacher V, VI, VII, and Master Teacher positions.</div>
+    </div>
+
+    <div class="section" id="additional-performance-checks" style="display:none;">
+        <div class="section-title">Additional Performance Indicators (Automatic)</div>
+        <p class="small" style="margin-bottom: 12px;">These checks are automatically computed from PPST data and position requirements. They are not editable.</p>
+        <table class="qs-table" style="margin-bottom: 16px;">
+            <thead>
+            <tr>
+                <th>Check</th>
+                <th>Requirement</th>
+                <th>Current Value</th>
+                <th>Status</th>
+            </tr>
+            </thead>
+            <tbody id="additional-checks-body">
+            </tbody>
+        </table>
     </div>
 
     <div class="actions">
@@ -1371,6 +1519,18 @@ function format_additional_requirements(string $positionApplied): string
         <button type="button" class="button-secondary" id="export-excel">Export Excel</button>
     </div>
 </form>
+
+<!-- Custom Confirmation Modal -->
+<div id="confirmation-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:10000; justify-content:center; align-items:center;">
+    <div style="background:#fff; border-radius:8px; padding:24px; max-width:500px; box-shadow:0 8px 24px rgba(0,0,0,0.25);">
+        <h2 style="margin-top:0; margin-bottom:16px; font-size:18px;">Evaluation Confirmation</h2>
+        <p id="confirmation-message" style="margin:16px 0; font-size:14px; line-height:1.6;"></p>
+        <div style="display:flex; gap:12px; justify-content:flex-end; margin-top:24px;">
+            <button type="button" id="modal-no" style="padding:8px 16px; border:1px solid #bbb; background:#fff; border-radius:4px; cursor:pointer; font-weight:500;">NO</button>
+            <button type="button" id="modal-yes" style="padding:8px 16px; border:none; background:#055489; color:#fff; border-radius:4px; cursor:pointer; font-weight:500;">YES</button>
+        </div>
+    </div>
+</div>
 
 <?php if ($isAdmin): ?>
 <div class="section" id="applicants-section">
@@ -1574,6 +1734,8 @@ function format_additional_requirements(string $positionApplied): string
     const qsByPosition = <?php echo json_encode($qsByPosition, JSON_UNESCAPED_SLASHES); ?>;
     const form1Order = <?php echo json_encode($form1Order, JSON_UNESCAPED_SLASHES); ?>;
     const form2Order = <?php echo json_encode($form2Order, JSON_UNESCAPED_SLASHES); ?>;
+    const form1CurrentPos = <?php echo json_encode($form1CurrentPositions, JSON_UNESCAPED_SLASHES); ?>;
+    const form2CurrentPos = <?php echo json_encode($form2CurrentPositions, JSON_UNESCAPED_SLASHES); ?>;
     const form1Applied = <?php echo json_encode($form1Positions, JSON_UNESCAPED_SLASHES); ?>;
     const form2Applied = <?php echo json_encode($form2Positions, JSON_UNESCAPED_SLASHES); ?>;
     const latestResult = <?php echo json_encode($result, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
@@ -1619,6 +1781,7 @@ function format_additional_requirements(string $positionApplied): string
     };
 
     const getCurrentOrder = () => (formTypeSelect.value === "form2" ? form2Order : form1Order);
+    const getCurrentPositionList = () => (formTypeSelect.value === "form2" ? form2CurrentPos : form1CurrentPos);
     const getAppliedList = () => (formTypeSelect.value === "form2" ? form2Applied : form1Applied);
 
     const setSelectOptions = (select, options, selectedValue) => {
@@ -1965,46 +2128,144 @@ function format_additional_requirements(string $positionApplied): string
         saveLastSavedApplicant(initialLastSavedApplicant);
     }
 
+    const computeT4Status = () => {
+        // Automatically compute T4 status from performance data
+        // T4 requires: COI_VS >= 21, NCOI_VS >= 16, COI_O >= 0, NCOI_O >= 0, and T4_INDICATORS >= 4
+        const coiVs = toNumber(document.getElementById("coi_vs").value);
+        const ncoiVs = toNumber(document.getElementById("ncoi_vs").value);
+        const t4Indicators = toNumber(document.getElementById("t4_indicators").value);
+        
+        const meetsCoiVs = coiVs >= 21;
+        const meetsNcoiVs = ncoiVs >= 16;
+        const meetsT4Indicators = t4Indicators >= 4;
+        
+        return meetsCoiVs && meetsNcoiVs && meetsT4Indicators;
+    };
+
+    const updateT4Status = () => {
+        const appliedPos = positionSelect.value;
+        const t4Required = ["Teacher V", "Teacher VI", "Teacher VII", "Master Teacher I", "Master Teacher II", "Master Teacher III"].includes(appliedPos);
+        
+        if (t4Required && t4IndicatorsInput) {
+            const t4Status = computeT4Status();
+            const t4Display = document.getElementById("t4_gate_display");
+            if (t4Display) {
+                t4Display.value = t4Status ? "Passed" : "Not Passed";
+            }
+            if (t4GatePassedSelect) {
+                t4GatePassedSelect.value = t4Status ? "1" : "0";
+            }
+        }
+    };
+
+    
+    const computeAdditionalChecks = () => {
+        const appliedPos = positionSelect.value;
+        const checks = [];
+        const coiVs = toNumber(document.getElementById("coi_vs").value);
+        const ncoiVs = toNumber(document.getElementById("ncoi_vs").value);
+        const coiO = toNumber(document.getElementById("coi_o").value);
+        const ncoiO = toNumber(document.getElementById("ncoi_o").value);
+        const totalCoi = coiVs + coiO;
+        const totalNcoi = ncoiVs + ncoiO;
+        const ppstTotalO = toNumber(document.getElementById("ppst_total_o").value);
+        const ppstTotalVs = toNumber(document.getElementById("ppst_total_vs").value);
+        const ppstTotal = ppstTotalO + ppstTotalVs;
+        
+        if (appliedPos === "Teacher IV") {
+            checks.push({
+                name: "Total PPST Indicators",
+                required: "Exactly 37",
+                current: ppstTotal,
+                passed: ppstTotal === 37
+            });
+        }
+        
+        if (appliedPos === "Teacher V") {
+            checks.push({
+                name: "COI Outstanding Indicators",
+                required: "Minimum 6",
+                current: coiO,
+                passed: coiO >= 6
+            });
+        }
+        
+        return checks;
+    };
+
+    const displayAdditionalChecks = () => {
+        const appliedPos = positionSelect.value;
+        const checksSection = document.getElementById("additional-performance-checks");
+        if (!checksSection) return;
+        
+        if (["Teacher IV", "Teacher V"].includes(appliedPos)) {
+            checksSection.style.display = "block";
+            const checks = computeAdditionalChecks();
+            const tbody = document.getElementById("additional-checks-body");
+            if (tbody) {
+                tbody.innerHTML = "";
+                checks.forEach(check => {
+                    const row = document.createElement("tr");
+                    const statusIcon = check.passed ? "✓" : "✗";
+                    const statusClass = check.passed ? "style=\"color:green;\"" : "style=\"color:red;\"";
+                    row.innerHTML = `
+                        <td>${check.name}</td>
+                        <td>${check.required}</td>
+                        <td>${check.current}</td>
+                        <td ${statusClass}>${check.passed ? "Passed" : "Not Passed"} ${statusIcon}</td>
+                    `;
+                    tbody.appendChild(row);
+                });
+            }
+        } else {
+            checksSection.style.display = "none";
+        }
+    };
+
+    
     const getPerformanceResult = () => {
-        const rules = performanceRules[positionSelect.value];
+        const appliedPos = positionSelect.value;
+        const currentPos = currentSelect.value;
+        const rules = performanceRules[appliedPos];
         if (!rules) {
             return "N/A";
         }
+        
+        // Get performance data inputs (NCOI now based on Performance Data, not PPST)
         const coiVs = toNumber(document.getElementById("coi_vs").value);
         const ncoiVs = toNumber(document.getElementById("ncoi_vs").value);
         const coiO = toNumber(document.getElementById("coi_o").value);
         const ncoiO = toNumber(document.getElementById("ncoi_o").value);
 
-        const basePassed =
-            coiVs >= rules.coi_vs &&
-            ncoiVs >= rules.ncoi_vs &&
-            coiO >= rules.coi_o &&
-            ncoiO >= rules.ncoi_o;
+        // Special rule for T2 to T3: Allow pass at VSâ‰¥25 (instead of normal thresholds)
+        let basePassed = false;
+        if (currentPos === "Teacher II" && appliedPos === "Teacher III") {
+            // T2â†’T3: Count Outstanding ratings (O) and check if total VS + O â‰¥ 25
+            const totalVsAndO = coiVs + ncoiVs + coiO + ncoiO;
+            basePassed = totalVsAndO >= 25;
+        } else {
+            // Standard logic: use â‰¥ for all conditions
+            basePassed =
+                coiVs >= rules.coi_vs &&
+                ncoiVs >= rules.ncoi_vs &&
+                coiO >= rules.coi_o &&
+                ncoiO >= rules.ncoi_o;
+        }
 
-        const ppstTotalIndicators = toNumber(document.getElementById("ppst_total_o").value) + toNumber(document.getElementById("ppst_total_vs").value);
         const totalCoiIndicators = coiVs + coiO;
-        const t4Indicators = t4IndicatorsInput ? toNumber(t4IndicatorsInput.value) : 0;
-        const t4GatePassed = t4GatePassedSelect ? t4GatePassedSelect.value === "1" : false;
-
         const missing = [];
-        if (positionSelect.value === "Teacher IV") {
+        
+        // Teacher IV specific checks
+        if (appliedPos === "Teacher IV") {
+            const ppstTotalIndicators = toNumber(document.getElementById("ppst_total_o").value) + toNumber(document.getElementById("ppst_total_vs").value);
             if (ppstTotalIndicators !== 37) {
                 missing.push(`Teacher IV requires exactly 37 total PPST indicators (current: ${ppstTotalIndicators}).`);
             }
-            if (ppstTotalIndicators < 4) {
-                missing.push("Teacher IV requires at least 4 T4 indicators.");
-            }
         }
-        if (positionSelect.value === "Teacher V" && totalCoiIndicators < 6) {
+        
+        // Teacher V specific checks
+        if (appliedPos === "Teacher V" && totalCoiIndicators < 6) {
             missing.push(`Teacher V requires at least 6 COE/COI indicators (current COI total: ${totalCoiIndicators}).`);
-        }
-        if (requiresT4Gate(positionSelect.value)) {
-            if (!t4GatePassed) {
-                missing.push("Teacher IV (T4) gate must be marked as passed before evaluating this position.");
-            }
-            if (t4Indicators < 4) {
-                missing.push(`At least 4 validated T4 indicators are required (current: ${t4Indicators}).`);
-            }
         }
 
         return basePassed && missing.length === 0 ? "PASSED" : "FAILED";
@@ -2645,7 +2906,57 @@ function format_additional_requirements(string $positionApplied): string
             }
         }
 
-        saveDraft();
+        // Show custom confirmation modal before final submission
+        event.preventDefault();
+        const performanceResult = getPerformanceResult();
+        const statusText = performanceResult === "PASSED" ? "PASSED - Qualified" : "FAILED - Not Qualified";
+        const messageText = `Evaluation Result: ${statusText}\n\nClick YES to continue with submission.\nClick NO to mark this applicant as Disqualified.`;
+        
+        const modal = document.getElementById("confirmation-modal");
+        const messageEl = document.getElementById("confirmation-message");
+        const btnYes = document.getElementById("modal-yes");
+        const btnNo = document.getElementById("modal-no");
+        
+        // Format message for display
+        messageEl.textContent = messageText.replace(/\n/g, " ");
+        messageEl.innerHTML = messageText.split("\n").map(line => line.trim()).filter(line => line).join("<br>");
+        
+        modal.style.display = "flex";
+        
+        let isHandled = false;
+        
+        const handleYes = () => {
+            if (isHandled) return;
+            isHandled = true;
+            modal.style.display = "none";
+            btnYes.removeEventListener("click", handleYes);
+            btnNo.removeEventListener("click", handleNo);
+            saveDraft();
+            setTimeout(() => {
+                form.submit();
+            }, 50);
+        };
+        
+        const handleNo = () => {
+            if (isHandled) return;
+            isHandled = true;
+            modal.style.display = "none";
+            btnYes.removeEventListener("click", handleYes);
+            btnNo.removeEventListener("click", handleNo);
+            // Mark as disqualified
+            const coiVsField = document.getElementById("coi_vs");
+            const ncoiVsField = document.getElementById("ncoi_vs");
+            const coiOField = document.getElementById("coi_o");
+            const ncoiOField = document.getElementById("ncoi_o");
+            if (coiVsField) coiVsField.value = "0";
+            if (ncoiVsField) ncoiVsField.value = "0";
+            if (coiOField) coiOField.value = "0";
+            if (ncoiOField) ncoiOField.value = "0";
+            alert("Applicant marked as Disqualified.");
+        };
+        
+        btnYes.addEventListener("click", handleYes);
+        btnNo.addEventListener("click", handleNo);
     });
     form.addEventListener("input", () => {
         clearValidationHints();
@@ -2665,27 +2976,31 @@ function format_additional_requirements(string $positionApplied): string
         updateActionTables();
         saveDraft();
     });
-    currentSelect.addEventListener("change", () => {
-        updateAppliedOptions();
-        updateActionTables();
-    });
+    // Position change listener - moved to updatePositionDisplay section below
     positionSelect.addEventListener("change", () => {
         updateQsFields();
         updatePerformanceSections();
         updateActionTables();
+        updatePositionDisplay();
     });
-    if (t4IndicatorsInput) {
-        t4IndicatorsInput.addEventListener("input", () => {
-            updateActionTables();
-            saveDraft();
-        });
-    }
-    if (t4GatePassedSelect) {
-        t4GatePassedSelect.addEventListener("change", () => {
-            updateActionTables();
-            saveDraft();
-        });
-    }
+    currentSelect.addEventListener("change", () => {
+        updatePositionDisplay();
+    });
+    
+    const updatePositionDisplay = () => {
+        const currentPos = currentSelect.value;
+        const displayLabel = document.getElementById("position-display-label");
+        
+        if (!displayLabel) return;
+        
+        // For Teacher I, show "Current Position:" label; otherwise show "Position Applied:"
+        if (currentPos === "Teacher I") {
+            displayLabel.textContent = "Current Position:";
+        } else {
+            displayLabel.textContent = "Position Applied:";
+        }
+    };
+    // T4 inputs are now hidden and automatic - no event listeners needed
     if (applicantsSearch) {
         applicantsSearch.addEventListener("input", filterApplicants);
     }
@@ -2777,6 +3092,7 @@ function format_additional_requirements(string $positionApplied): string
     updatePerformanceFromPpst();
     updateTotals();
     updateActionTables();
+    updatePositionDisplay();
     setEditingState(editingEvaluationId);
 
     if (latestResult && requiresT4Gate(latestResultPosition || "")) {
@@ -2806,3 +3122,12 @@ function format_additional_requirements(string $positionApplied): string
 </script>
 </body>
 </html>
+
+
+
+
+
+
+
+
+
