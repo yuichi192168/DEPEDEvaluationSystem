@@ -132,8 +132,8 @@ $performanceRules = [
         "ncoi_o" => 0,
     ],
     "Teacher IV" => [
-        "coi_vs" => 21,
-        "ncoi_vs" => 16,
+        "coi_vs" => 1,
+        "ncoi_vs" => 1,
         "coi_o" => 0,
         "ncoi_o" => 0,
         "exact_total" => 37,      // Must be exactly 37 total indicators
