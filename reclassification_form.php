@@ -15,7 +15,6 @@ $isAuthenticated = $auth->isAuthenticated();
 $isAdmin = $auth->isAdmin();
 
 $positions = [
-    "Teacher I",
     "Teacher II",
     "Teacher III",
     "Teacher IV",
@@ -29,7 +28,6 @@ $positions = [
 
 $formType = post_value("form_type", "form1");
 $form1Positions = [
-    "Teacher I",
     "Teacher II",
     "Teacher III",
     "Teacher IV",
@@ -42,28 +40,13 @@ $form2Positions = [
     "Master Teacher II",
     "Master Teacher III",
 ];
-$form1CurrentPositions = [
-    "Teacher I",
-    "Teacher II",
-    "Teacher III",
-    "Teacher IV",
-    "Teacher V",
-    "Teacher VI",
-    "Teacher VII",
-    "Master Teacher I",
-];
-$form2CurrentPositions = [
-    "Master Teacher I",
-    "Master Teacher II",
-    "Master Teacher III",
-];
 $form1Order = $form1Positions;
 $form2Order = [
     "Master Teacher I",
     "Master Teacher II",
     "Master Teacher III",
 ];
-$currentPositionOptions = $formType === "form2" ? $form2CurrentPositions : $form1CurrentPositions;
+$currentPositionOptions = $formType === "form2" ? $form2Order : $form1Order;
 $appliedPositionOptions = $formType === "form2" ? $form2Positions : $form1Positions;
 
 // Baseline Qualification Standards (QS) by position.
@@ -134,7 +117,7 @@ $qsByPosition = [
 ];
 
 // Performance requirements by position (evaluation based on Performance Data inputs).
-// Rule: Use "Equal to or Greater Than (â‰¥)" conditions unless stated otherwise.
+// Rule: Use "Equal to or Greater Than (≥)" conditions unless stated otherwise.
 $performanceRules = [
     "Teacher II" => [
         "coi_vs" => 6,
@@ -154,6 +137,7 @@ $performanceRules = [
         "coi_o" => 0,
         "ncoi_o" => 0,
         "exact_total" => 37,      // Must be exactly 37 total indicators
+        "t4_required" => 4,       // T4 gate: minimum 4 indicators
     ],
     "Teacher V" => [
         "coi_vs" => 0,
@@ -161,36 +145,42 @@ $performanceRules = [
         "coi_o" => 6,
         "ncoi_o" => 4,
         "min_coe" => 6,           // Must have at least 6 COE/COI indicators at Outstanding level
+        "t4_required" => 4,       // T4 gate: minimum 4 indicators
     ],
     "Teacher VI" => [
         "coi_vs" => 0,
         "ncoi_vs" => 4,
         "coi_o" => 12,
         "ncoi_o" => 4,
+        "t4_required" => 4,       // T4 gate: minimum 4 indicators
     ],
     "Teacher VII" => [
         "coi_vs" => 0,
         "ncoi_vs" => 6,
         "coi_o" => 18,
         "ncoi_o" => 6,
+        "t4_required" => 4,       // T4 gate: minimum 4 indicators
     ],
     "Master Teacher I" => [
         "coi_vs" => 0,
         "ncoi_vs" => 8,
         "coi_o" => 21,
         "ncoi_o" => 8,
+        "t4_required" => 4,       // T4 gate: minimum 4 indicators
     ],
     "Master Teacher II" => [
         "coi_vs" => 0,
         "ncoi_vs" => 5,
         "coi_o" => 10,
         "ncoi_o" => 5,
+        "t4_required" => 4,       // T4 gate: minimum 4 indicators
     ],
     "Master Teacher III" => [
         "coi_vs" => 0,
         "ncoi_vs" => 8,
         "coi_o" => 21,
         "ncoi_o" => 8,
+        "t4_required" => 4,       // T4 gate: minimum 4 indicators
     ],
 ];
 
@@ -296,22 +286,6 @@ function post_int(string $key, int $default = 0): int
     return ($value === false || $value < 0) ? $default : $value;
 }
 
-// ============================================================================
-// T2â†’T3 SPECIAL COUNTING RULE
-// ============================================================================
-// For applicants moving from Teacher II to Teacher III:
-// Count Outstanding indicators as part of the total and use â‰¥ comparisons.
-function getPerformanceDataForT2ToT3Evaluation(int $coiVs, int $ncoiVs, int $coiO, int $ncoiO): array
-{
-    // For T2â†’T3: Treat O and VS as equivalent for counting purposes
-    // This creates a "combined" count where Outstanding supports the threshold
-    return [
-        "total_coi" => $coiVs + $coiO,       // Total COI (VS + O combined)
-        "total_ncoi" => $ncoiVs + $ncoiO,   // Total NCOI (VS + O combined)
-        "combined_vs" => $coiVs + $ncoiVs + $coiO + $ncoiO,  // All indicators
-    ];
-}
-
 $currentPosition = post_value("current_position");
 $positionApplied = post_value("position_applied");
 
@@ -408,13 +382,37 @@ function get_custom_qualification_checks(string $positionApplied, array $ppstCou
         return ["checks" => $checks, "missing" => $missing];
     }
 
+    // Note: T4 gate automatic disqualification removed per configuration.
+    // The system no longer performs an automatic disqualify based solely on T4 indicator count.
+    $checks["t4_gate"] = true;
+
     // ==========================================
-    // TEACHER IV: EXACT TOTAL REQUIREMENT (37)
+    // TEACHER IV: Allow Outstanding to count toward
+    // Very Satisfactory (flexible conversion) and
+    // require a minimum total of indicators (>=37)
     // ==========================================
-    if (isset($rules["exact_total"])) {
-        if ($totalIndicators !== $rules["exact_total"]) {
+    if ($positionApplied === "Teacher IV") {
+        // Combine COI and NCOI counts by rating category for Teacher IV
+        $total_vs = (int)($ppstCounts["coi_vs"] ?? 0) + (int)($ppstCounts["ncoi_vs"] ?? 0);
+        $total_o = (int)($ppstCounts["coi_o"] ?? 0) + (int)($ppstCounts["ncoi_o"] ?? 0);
+
+        $effective_total = $total_vs + $total_o; // Outstanding may be counted toward VS
+
+        // Require minimum total indicators (>= exact_total)
+        $minTotal = $rules['exact_total'] ?? 37;
+        if ($effective_total < $minTotal) {
             $checks["exact_total"] = false;
-            $missing[] = "Teacher IV requires exactly {$rules['exact_total']} total PPST indicators. Current: {$totalIndicators}.";
+            $missing[] = "Teacher IV requires at least {$minTotal} total PPST indicators (combined COI+NCOI across ratings). Current combined total (VS+O): {$effective_total}.";
+        }
+    } else {
+        // ==========================================
+        // Default behavior for other positions
+        // ==========================================
+        if (isset($rules["exact_total"])) {
+            if ($totalIndicators !== $rules["exact_total"]) {
+                $checks["exact_total"] = false;
+                $missing[] = "Teacher IV requires exactly {$rules['exact_total']} total PPST indicators. Current: {$totalIndicators}.";
+            }
         }
     }
 
@@ -439,7 +437,7 @@ function get_custom_qualification_checks(string $positionApplied, array $ppstCou
 // ============================================================================
 // Validates that applicant meets all intermediate position requirements
 // before being evaluated for the applied position.
-// Example: Teacher II â†’ Teacher IV requires passing Teacher III first.
+// Example: Teacher II → Teacher IV requires passing Teacher III first.
 function validateLadderProgression(string $currentPos, string $appliedPos, int $coiVs, int $ncoiVs, int $coiO, int $ncoiO, array $performanceRules, array $activeOrder): array
 {
     $currentIndex = array_search($currentPos, $activeOrder, true);
@@ -474,20 +472,18 @@ function validateLadderProgression(string $currentPos, string $appliedPos, int $
             ];
         }
 
-        // SPECIAL RULE: T2â†’T3 counting (treat O and VS as equivalent)
-        if ($currentPos === "Teacher II" && $levelPosition === "Teacher III") {
-            $t2t3Data = getPerformanceDataForT2ToT3Evaluation($coiVs, $ncoiVs, $coiO, $ncoiO);
-            $meetsCoiVs = $t2t3Data["total_coi"] >= $rules["coi_vs"];
-            $meetsNcoiVs = $t2t3Data["total_ncoi"] >= $rules["ncoi_vs"];
-            $meetsCoiO = $coiO >= $rules["coi_o"];
-            $meetsNcoiO = $ncoiO >= $rules["ncoi_o"];
-        } else {
-            // Check base performance thresholds using â‰¥ operators
-            $meetsCoiVs = $coiVs >= $rules["coi_vs"];
-            $meetsNcoiVs = $ncoiVs >= $rules["ncoi_vs"];
-            $meetsCoiO = $coiO >= $rules["coi_o"];
-            $meetsNcoiO = $ncoiO >= $rules["ncoi_o"];
+        // Check base performance thresholds using ≥ operators
+        // Special-case: allow Teacher III -> Teacher V+ to skip strict Teacher IV check
+        if ($levelPosition === "Teacher IV" && $currentPos === "Teacher III" && $appliedIndex > $i) {
+            // Treat Teacher IV as passed in ladder when applying from T3 to T5+;
+            // final qualification will be determined against the applied position's rules.
+            continue;
         }
+
+        $meetsCoiVs = $coiVs >= $rules["coi_vs"];
+        $meetsNcoiVs = $ncoiVs >= $rules["ncoi_vs"];
+        $meetsCoiO = $coiO >= $rules["coi_o"];
+        $meetsNcoiO = $ncoiO >= $rules["ncoi_o"];
 
         $levelPassed = $meetsCoiVs && $meetsNcoiVs && $meetsCoiO && $meetsNcoiO;
 
@@ -495,7 +491,7 @@ function validateLadderProgression(string $currentPos, string $appliedPos, int $
             return [
                 "valid" => false,
                 "failedAt" => $levelPosition,
-                "reason" => "âŒ LADDER VALIDATION FAILED: Applicant does not meet requirements for intermediate level: {$levelPosition}. Cannot proceed to {$appliedPos}.",
+                "reason" => "❌ LADDER VALIDATION FAILED: Applicant does not meet requirements for intermediate level: {$levelPosition}. Cannot proceed to {$appliedPos}.",
             ];
         }
     }
@@ -563,13 +559,14 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && $positionApplied !== "" && $errorMe
         $rules = $performanceRules[$positionApplied] ?? null;
 
         if ($rules) {
-            // SPECIAL RULE: T2â†’T3 counting
-            if ($currentPosition === "Teacher II" && $positionApplied === "Teacher III") {
-                $t2t3Data = getPerformanceDataForT2ToT3Evaluation($coiVs, $ncoiVs, $coiO, $ncoiO);
-                $meetsCoiVs = $t2t3Data["total_coi"] >= $rules["coi_vs"];
-                $meetsNcoiVs = $t2t3Data["total_ncoi"] >= $rules["ncoi_vs"];
-                $meetsCoiO = $coiO >= $rules["coi_o"];
-                $meetsNcoiO = $ncoiO >= $rules["ncoi_o"];
+            // For Teacher IV allow Outstanding to count toward Very Satisfactory
+            if ($positionApplied === "Teacher IV") {
+                // For Teacher IV, use combined COI+NCOI totals (checked in customQualification).
+                // Set base metric flags to true and let custom checks enforce totals.
+                $meetsCoiVs = true;
+                $meetsNcoiVs = true;
+                $meetsCoiO = true;
+                $meetsNcoiO = true;
             } else {
                 $meetsCoiVs = $coiVs >= $rules["coi_vs"];
                 $meetsNcoiVs = $ncoiVs >= $rules["ncoi_vs"];
@@ -750,8 +747,15 @@ function format_performance_requirements(array $rules): string
 
 function format_additional_requirements(string $positionApplied): string
 {
-    // Additional requirement text removed per request.
-    return "";
+    $requirements = [];
+    if ($positionApplied === "Teacher IV") {
+        $requirements[] = "Must have at least 37 PPST indicators. Outstanding may be counted toward Very Satisfactory totals.";
+    }
+    if ($positionApplied === "Teacher V") {
+        $requirements[] = "Must have at least 6 COE/COI indicators.";
+    }
+    // T4 gate requirement has been removed from automatic requirements.
+    return implode(" ", $requirements);
 }
 ?>
 <!DOCTYPE html>
@@ -1493,23 +1497,6 @@ function format_additional_requirements(string $positionApplied): string
         <div class="small">Teacher IV status is automatically determined from performance data for Teacher V, VI, VII, and Master Teacher positions.</div>
     </div>
 
-    <div class="section" id="additional-performance-checks" style="display:none;">
-        <div class="section-title">Additional Performance Indicators (Automatic)</div>
-        <p class="small" style="margin-bottom: 12px;">These checks are automatically computed from PPST data and position requirements. They are not editable.</p>
-        <table class="qs-table" style="margin-bottom: 16px;">
-            <thead>
-            <tr>
-                <th>Check</th>
-                <th>Requirement</th>
-                <th>Current Value</th>
-                <th>Status</th>
-            </tr>
-            </thead>
-            <tbody id="additional-checks-body">
-            </tbody>
-        </table>
-    </div>
-
     <div class="actions">
         <input type="hidden" id="evaluation_record_id" name="evaluation_record_id" value="<?php echo htmlspecialchars(post_value("evaluation_record_id")); ?>">
         <button type="submit">Evaluate Performance</button>
@@ -1734,8 +1721,6 @@ function format_additional_requirements(string $positionApplied): string
     const qsByPosition = <?php echo json_encode($qsByPosition, JSON_UNESCAPED_SLASHES); ?>;
     const form1Order = <?php echo json_encode($form1Order, JSON_UNESCAPED_SLASHES); ?>;
     const form2Order = <?php echo json_encode($form2Order, JSON_UNESCAPED_SLASHES); ?>;
-    const form1CurrentPos = <?php echo json_encode($form1CurrentPositions, JSON_UNESCAPED_SLASHES); ?>;
-    const form2CurrentPos = <?php echo json_encode($form2CurrentPositions, JSON_UNESCAPED_SLASHES); ?>;
     const form1Applied = <?php echo json_encode($form1Positions, JSON_UNESCAPED_SLASHES); ?>;
     const form2Applied = <?php echo json_encode($form2Positions, JSON_UNESCAPED_SLASHES); ?>;
     const latestResult = <?php echo json_encode($result, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
@@ -1781,7 +1766,6 @@ function format_additional_requirements(string $positionApplied): string
     };
 
     const getCurrentOrder = () => (formTypeSelect.value === "form2" ? form2Order : form1Order);
-    const getCurrentPositionList = () => (formTypeSelect.value === "form2" ? form2CurrentPos : form1CurrentPos);
     const getAppliedList = () => (formTypeSelect.value === "form2" ? form2Applied : form1Applied);
 
     const setSelectOptions = (select, options, selectedValue) => {
@@ -2128,101 +2112,6 @@ function format_additional_requirements(string $positionApplied): string
         saveLastSavedApplicant(initialLastSavedApplicant);
     }
 
-    const computeT4Status = () => {
-        // Automatically compute T4 status from performance data
-        // T4 requires: COI_VS >= 21, NCOI_VS >= 16, COI_O >= 0, NCOI_O >= 0, and T4_INDICATORS >= 4
-        const coiVs = toNumber(document.getElementById("coi_vs").value);
-        const ncoiVs = toNumber(document.getElementById("ncoi_vs").value);
-        const t4Indicators = toNumber(document.getElementById("t4_indicators").value);
-        
-        const meetsCoiVs = coiVs >= 21;
-        const meetsNcoiVs = ncoiVs >= 16;
-        const meetsT4Indicators = t4Indicators >= 4;
-        
-        return meetsCoiVs && meetsNcoiVs && meetsT4Indicators;
-    };
-
-    const updateT4Status = () => {
-        const appliedPos = positionSelect.value;
-        const t4Required = ["Teacher V", "Teacher VI", "Teacher VII", "Master Teacher I", "Master Teacher II", "Master Teacher III"].includes(appliedPos);
-        
-        if (t4Required && t4IndicatorsInput) {
-            const t4Status = computeT4Status();
-            const t4Display = document.getElementById("t4_gate_display");
-            if (t4Display) {
-                t4Display.value = t4Status ? "Passed" : "Not Passed";
-            }
-            if (t4GatePassedSelect) {
-                t4GatePassedSelect.value = t4Status ? "1" : "0";
-            }
-        }
-    };
-
-    
-    const computeAdditionalChecks = () => {
-        const appliedPos = positionSelect.value;
-        const checks = [];
-        const coiVs = toNumber(document.getElementById("coi_vs").value);
-        const ncoiVs = toNumber(document.getElementById("ncoi_vs").value);
-        const coiO = toNumber(document.getElementById("coi_o").value);
-        const ncoiO = toNumber(document.getElementById("ncoi_o").value);
-        const totalCoi = coiVs + coiO;
-        const totalNcoi = ncoiVs + ncoiO;
-        const ppstTotalO = toNumber(document.getElementById("ppst_total_o").value);
-        const ppstTotalVs = toNumber(document.getElementById("ppst_total_vs").value);
-        const ppstTotal = ppstTotalO + ppstTotalVs;
-        
-        if (appliedPos === "Teacher IV") {
-            checks.push({
-                name: "Total PPST Indicators",
-                required: "Exactly 37",
-                current: ppstTotal,
-                passed: ppstTotal === 37
-            });
-        }
-        
-        if (appliedPos === "Teacher V") {
-            checks.push({
-                name: "COI Outstanding Indicators",
-                required: "Minimum 6",
-                current: coiO,
-                passed: coiO >= 6
-            });
-        }
-        
-        return checks;
-    };
-
-    const displayAdditionalChecks = () => {
-        const appliedPos = positionSelect.value;
-        const checksSection = document.getElementById("additional-performance-checks");
-        if (!checksSection) return;
-        
-        if (["Teacher IV", "Teacher V"].includes(appliedPos)) {
-            checksSection.style.display = "block";
-            const checks = computeAdditionalChecks();
-            const tbody = document.getElementById("additional-checks-body");
-            if (tbody) {
-                tbody.innerHTML = "";
-                checks.forEach(check => {
-                    const row = document.createElement("tr");
-                    const statusIcon = check.passed ? "✓" : "✗";
-                    const statusClass = check.passed ? "style=\"color:green;\"" : "style=\"color:red;\"";
-                    row.innerHTML = `
-                        <td>${check.name}</td>
-                        <td>${check.required}</td>
-                        <td>${check.current}</td>
-                        <td ${statusClass}>${check.passed ? "Passed" : "Not Passed"} ${statusIcon}</td>
-                    `;
-                    tbody.appendChild(row);
-                });
-            }
-        } else {
-            checksSection.style.display = "none";
-        }
-    };
-
-    
     const getPerformanceResult = () => {
         const appliedPos = positionSelect.value;
         const currentPos = currentSelect.value;
@@ -2237,14 +2126,47 @@ function format_additional_requirements(string $positionApplied): string
         const coiO = toNumber(document.getElementById("coi_o").value);
         const ncoiO = toNumber(document.getElementById("ncoi_o").value);
 
-        // Special rule for T2 to T3: Allow pass at VSâ‰¥25 (instead of normal thresholds)
+        // Client-side ladder validation (mirror server-side rules)
+        const getActiveOrder = () => (formTypeSelect && formTypeSelect.value === 'form2') ? form2Order : form1Order;
+
+        const validateLadderProgressionClient = (currentPos, appliedPos, coiVs, ncoiVs, coiO, ncoiO) => {
+            const activeOrder = getActiveOrder();
+            const currentIndex = activeOrder.indexOf(currentPos);
+            const appliedIndex = activeOrder.indexOf(appliedPos);
+            if (currentIndex === -1 || appliedIndex === -1) {
+                return { valid: false, reason: 'Invalid positions detected' };
+            }
+            if (appliedIndex <= currentIndex) {
+                return { valid: true };
+            }
+            for (let i = currentIndex + 1; i <= appliedIndex; i++) {
+                const levelPosition = activeOrder[i];
+                const levelRules = performanceRules[levelPosition] || {};
+                // Skip strict Teacher IV check when applying from Teacher III to Teacher V+
+                if (levelPosition === 'Teacher IV' && currentPos === 'Teacher III' && appliedIndex > i) {
+                    continue;
+                }
+
+                const meetsCoiVs = coiVs >= (levelRules.coi_vs || 0);
+                const meetsNcoiVs = ncoiVs >= (levelRules.ncoi_vs || 0);
+                const meetsCoiO = coiO >= (levelRules.coi_o || 0);
+                const meetsNcoiO = ncoiO >= (levelRules.ncoi_o || 0);
+
+                if (!(meetsCoiVs && meetsNcoiVs && meetsCoiO && meetsNcoiO)) {
+                    return { valid: false, reason: `❌ LADDER VALIDATION FAILED: Applicant does not meet requirements for intermediate level: ${levelPosition}. Cannot proceed to ${appliedPos}.` };
+                }
+            }
+            return { valid: true };
+        };
+
+        // Special rule for T2 to T3: Allow pass at VS≥25 (instead of normal thresholds)
         let basePassed = false;
         if (currentPos === "Teacher II" && appliedPos === "Teacher III") {
-            // T2â†’T3: Count Outstanding ratings (O) and check if total VS + O â‰¥ 25
+            // T2→T3: Count Outstanding ratings (O) and check if total VS + O ≥ 25
             const totalVsAndO = coiVs + ncoiVs + coiO + ncoiO;
             basePassed = totalVsAndO >= 25;
         } else {
-            // Standard logic: use â‰¥ for all conditions
+            // Standard logic: use ≥ for all conditions
             basePassed =
                 coiVs >= rules.coi_vs &&
                 ncoiVs >= rules.ncoi_vs &&
@@ -2254,12 +2176,22 @@ function format_additional_requirements(string $positionApplied): string
 
         const totalCoiIndicators = coiVs + coiO;
         const missing = [];
+
+        // Run ladder validation and include any ladder failure as missing
+        const ladderResult = validateLadderProgressionClient(currentPos, appliedPos, coiVs, ncoiVs, coiO, ncoiO);
+        if (!ladderResult.valid) {
+            missing.push(ladderResult.reason);
+        }
         
-        // Teacher IV specific checks
+        // Teacher IV specific checks - allow Outstanding to count toward VS totals
         if (appliedPos === "Teacher IV") {
-            const ppstTotalIndicators = toNumber(document.getElementById("ppst_total_o").value) + toNumber(document.getElementById("ppst_total_vs").value);
-            if (ppstTotalIndicators !== 37) {
-                missing.push(`Teacher IV requires exactly 37 total PPST indicators (current: ${ppstTotalIndicators}).`);
+            const totalVs = coiVs + ncoiVs;
+            const totalO = coiO + ncoiO;
+            const effectiveTotal = totalVs + totalO;
+
+            const minTotal = rules.exact_total || 37;
+            if (effectiveTotal < minTotal) {
+                missing.push(`Teacher IV requires at least ${minTotal} total PPST indicators (combined COI+NCOI across ratings). Current combined total (VS+O): ${effectiveTotal}.`);
             }
         }
         
@@ -3122,12 +3054,3 @@ function format_additional_requirements(string $positionApplied): string
 </script>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
